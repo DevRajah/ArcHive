@@ -2,8 +2,9 @@ import Fastify from "fastify";
 import cors from "@fastify/cors";
 import { healthRoutes } from "./routes/health.routes";
 import { repositoryRoutes } from "./routes/repository.routes";
-
-
+import { engineeringEventRoutes } from "./routes/engineering-event.routes";
+import { timelineRoutes } from "./routes/timeline.routes";
+    
 // This makes future testing easier because I can import the app without starting the port.
 export const buildApp = async () => {
   const app = Fastify({
@@ -21,6 +22,14 @@ export const buildApp = async () => {
   });
 
    await app.register(repositoryRoutes, {
+    prefix: "/api/repositories",
+  });
+
+  await app.register(engineeringEventRoutes, {
+    prefix: "/api/repositories",
+  });
+
+  await app.register(timelineRoutes, {
     prefix: "/api/repositories",
   });
 

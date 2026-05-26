@@ -8,7 +8,7 @@
     "start": "node dist/server.js"
   },
   "dependencies": {
-    "@archive/database": "^1.0.0",
+    "@archive/database": "*",
     "@fastify/cors": "latest",
     "@fastify/env": "latest",
     "dotenv": "latest",
