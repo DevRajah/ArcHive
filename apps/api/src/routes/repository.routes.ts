@@ -61,4 +61,39 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
       data: repositories,
     };
   });
+
+  app.get<{ Params: { repositoryId: string } }>("/:repositoryId", async (request, reply) => {
+  const { repositoryId } = request.params;
+
+  const repository = await prisma.repository.findUnique({
+    where: { id: repositoryId },
+    include: {
+      timelineEntries: {
+        orderBy: { createdAt: "desc" },
+        take: 5,
+      },
+      architectureChanges: {
+        orderBy: { createdAt: "desc" },
+        take: 5,
+      },
+      events: {
+        orderBy: { occurredAt: "desc" },
+        take: 5,
+      },
+    },
+  });
+
+  if (!repository) {
+    return reply.status(404).send({
+      success: false,
+      message: "Repository not found",
+    });
+  }
+
+  return {
+    success: true,
+    message: "Repository details fetched successfully",
+    data: repository,
+  };
+});
 };

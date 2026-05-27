@@ -6,6 +6,8 @@ import { engineeringEventRoutes } from "./routes/engineering-event.routes";
 import { timelineRoutes } from "./routes/timeline.routes";
 import { architectureChangeRoutes } from "./routes/architecture-change.routes";
 import { queueRoutes } from "./routes/queue.routes";
+import { dashboardRoutes } from "./routes/dashboard.routes";
+
 
 // This makes future testing easier because I can import the app without starting the port.
 export const buildApp = async () => {
@@ -41,6 +43,10 @@ export const buildApp = async () => {
 
   await app.register(queueRoutes, {
     prefix: "/api/queues",
+  });
+
+  await app.register(dashboardRoutes, {
+    prefix: "/api/dashboard",
   });
 
   return app;

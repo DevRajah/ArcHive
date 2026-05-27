@@ -1,0 +1,9 @@
+{
+  "name": "@archive/detectors",
+  "version": "1.0.0",
+  "main": "src/index.ts",
+  "devDependencies": {
+    "@types/node": "latest",
+    "typescript": "latest"
+  }
+}

@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@archive/database": "*",
+    "@archive/detectors": "^1.0.0",
     "@archive/queue": "*",
     "bullmq": "latest",
     "dotenv": "latest",
