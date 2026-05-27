@@ -7,6 +7,7 @@ import { timelineRoutes } from "./routes/timeline.routes";
 import { architectureChangeRoutes } from "./routes/architecture-change.routes";
 import { queueRoutes } from "./routes/queue.routes";
 import { dashboardRoutes } from "./routes/dashboard.routes";
+import { githubRoutes } from "./routes/github.routes";
 
 
 // This makes future testing easier because I can import the app without starting the port.
@@ -47,6 +48,10 @@ export const buildApp = async () => {
 
   await app.register(dashboardRoutes, {
     prefix: "/api/dashboard",
+  });
+
+  await app.register(githubRoutes, {
+    prefix: "/api/github",
   });
 
   return app;
