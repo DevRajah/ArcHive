@@ -35,20 +35,72 @@ export const engineeringEventRoutes = async (app: FastifyInstance) => {
       }
 
       const event = await prisma.engineeringEvent.create({
-        data: {
-          repositoryId,
-          eventType,
-          source: source || "manual",
-          rawPayload,
-          occurredAt: occurredAt ? new Date(occurredAt) : new Date(),
-        },
-      });
+  data: {
+    repositoryId,
+    eventType,
+    source: source || "manual",
+    rawPayload,
+    occurredAt: occurredAt ? new Date(occurredAt) : new Date(),
+  },
+});
 
-      return reply.status(201).send({
-        success: true,
-        message: "Engineering event created successfully",
-        data: event,
-      });
+// This is ArcHive's first intelligence layer.
+// For now, we generate simple timeline entries from event types.
+// Later, the worker + AI layer will make this much smarter.
+const timelineTemplateMap: Partial<
+  Record<EngineeringEventType, { title: string; summary: string; importanceScore: number }>
+> = {
+  QUEUE_ADDED: {
+    title: "Queue-based processing introduced",
+    summary:
+      "The repository introduced queue-based background processing, improving how long-running or asynchronous tasks are handled.",
+    importanceScore: 5,
+  },
+  REDIS_ADDED: {
+    title: "Redis infrastructure added",
+    summary:
+      "Redis was introduced, likely to support caching, queues, sessions, rate limiting, or real-time infrastructure.",
+    importanceScore: 4,
+  },
+  DOCKER_ADDED: {
+    title: "Docker support introduced",
+    summary:
+      "Docker configuration was added to improve local development, deployment consistency, and environment portability.",
+    importanceScore: 4,
+  },
+  DATABASE_CHANGE: {
+    title: "Database architecture changed",
+    summary:
+      "The repository recorded a database-related change, which may affect persistence, schema design, or data access patterns.",
+    importanceScore: 4,
+  },
+};
+
+const timelineTemplate = timelineTemplateMap[eventType];
+
+let timelineEntry = null;
+
+if (timelineTemplate) {
+  timelineEntry = await prisma.timelineEntry.create({
+    data: {
+      repositoryId,
+      relatedEventId: event.id,
+      title: timelineTemplate.title,
+      summary: timelineTemplate.summary,
+      importanceScore: timelineTemplate.importanceScore,
+      generatedByAI: false,
+    },
+  });
+}
+
+return reply.status(201).send({
+  success: true,
+  message: "Engineering event created successfully",
+  data: {
+    event,
+    timelineEntry,
+  },
+});
     }
   );
 

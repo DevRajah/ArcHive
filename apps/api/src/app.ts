@@ -4,7 +4,8 @@ import { healthRoutes } from "./routes/health.routes";
 import { repositoryRoutes } from "./routes/repository.routes";
 import { engineeringEventRoutes } from "./routes/engineering-event.routes";
 import { timelineRoutes } from "./routes/timeline.routes";
-    
+import { architectureChangeRoutes } from "./routes/architecture-change.routes";
+
 // This makes future testing easier because I can import the app without starting the port.
 export const buildApp = async () => {
   const app = Fastify({
@@ -32,6 +33,10 @@ export const buildApp = async () => {
   await app.register(timelineRoutes, {
     prefix: "/api/repositories",
   });
+
+  await app.register(architectureChangeRoutes, {
+  prefix: "/api/repositories",
+});
 
   return app;
 };
