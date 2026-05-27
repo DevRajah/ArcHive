@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@archive/database": "*",
+    "@archive/queue": "^1.0.0",
     "@fastify/cors": "latest",
     "@fastify/env": "latest",
     "dotenv": "latest",

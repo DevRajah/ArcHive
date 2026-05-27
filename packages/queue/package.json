@@ -1,0 +1,13 @@
+{
+  "name": "@archive/queue",
+  "version": "1.0.0",
+  "main": "src/index.ts",
+  "dependencies": {
+    "bullmq": "latest",
+    "ioredis": "latest"
+  },
+  "devDependencies": {
+    "@types/node": "latest",
+    "typescript": "latest"
+  }
+}

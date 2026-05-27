@@ -1,0 +1,22 @@
+{
+  "name": "@archive/worker",
+  "version": "1.0.0",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@archive/database": "*",
+    "@archive/queue": "*",
+    "bullmq": "latest",
+    "dotenv": "latest",
+    "ioredis": "latest"
+  },
+  "devDependencies": {
+    "@types/node": "latest",
+    "tsx": "latest",
+    "typescript": "latest"
+  }
+}

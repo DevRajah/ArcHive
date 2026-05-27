@@ -12,5 +12,15 @@ services:
     volumes:
       - archive_postgres_data:/var/lib/postgresql/data
 
+  archive-redis:
+    image: redis:7
+    container_name: archive-redis
+    restart: always
+    ports:
+      - "6381:6379"
+    volumes:
+      - archive_redis_data:/data
+
 volumes:
   archive_postgres_data:
+  archive_redis_data:
