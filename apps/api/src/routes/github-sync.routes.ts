@@ -1,5 +1,6 @@
 import { FastifyInstance } from "fastify";
 import { prisma } from "@archive/database";
+import axios from "axios";
 
 type SyncRepositoryBody = {
     userId?: string;
@@ -59,4 +60,201 @@ export const githubSyncRoutes = async (app: FastifyInstance) => {
             data: repository,
         });
     });
+
+    app.post("/users/:userId/repositories/import", async (request, reply) => {
+        const { userId } = request.params as { userId: string };
+
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+        });
+
+        if (!user || !user.githubAccessToken) {
+            return reply.status(404).send({
+                success: false,
+                message: "GitHub-connected user not found",
+            });
+        }
+
+        const githubReposResponse = await axios.get("https://api.github.com/user/repos", {
+            headers: {
+                Authorization: `Bearer ${user.githubAccessToken}`,
+                Accept: "application/vnd.github+json",
+            },
+            params: {
+                per_page: 100,
+                sort: "updated",
+            },
+        });
+
+        const githubRepos = githubReposResponse.data as Array<{
+            id: number;
+            name: string;
+            full_name: string;
+            description: string | null;
+            default_branch: string;
+            owner: {
+                login: string;
+            };
+        }>;
+
+        const syncedRepositories = [];
+
+        for (const repo of githubRepos) {
+            const repository = await prisma.repository.upsert({
+                where: {
+                    fullName: repo.full_name,
+                },
+                create: {
+                    githubRepoId: String(repo.id),
+                    name: repo.name,
+                    owner: repo.owner.login,
+                    fullName: repo.full_name,
+                    description: repo.description,
+                    defaultBranch: repo.default_branch,
+                    userId: user.id,
+                },
+                update: {
+                    githubRepoId: String(repo.id),
+                    name: repo.name,
+                    owner: repo.owner.login,
+                    description: repo.description,
+                    defaultBranch: repo.default_branch,
+                    userId: user.id,
+                },
+            });
+
+            syncedRepositories.push(repository);
+        }
+
+        return {
+            success: true,
+            message: "GitHub repositories imported successfully",
+            data: {
+                importedCount: syncedRepositories.length,
+                repositories: syncedRepositories,
+            },
+        };
+    });
+
+    app.get("/users/:userId/repositories/available", async (request, reply) => {
+        const { userId } = request.params as { userId: string };
+
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+        });
+
+        if (!user || !user.githubAccessToken) {
+            return reply.status(404).send({
+                success: false,
+                message: "GitHub-connected user not found",
+            });
+        }
+
+        const githubReposResponse = await axios.get("https://api.github.com/user/repos", {
+            headers: {
+                Authorization: `Bearer ${user.githubAccessToken}`,
+                Accept: "application/vnd.github+json",
+            },
+            params: {
+                per_page: 100,
+                sort: "updated",
+            },
+        });
+
+        const repos = githubReposResponse.data as Array<{
+            id: number;
+            name: string;
+            full_name: string;
+            description: string | null;
+            default_branch: string;
+            private: boolean;
+            owner: {
+                login: string;
+            };
+        }>;
+
+        return {
+            success: true,
+            message: "Available GitHub repositories fetched successfully",
+            data: repos.map((repo) => ({
+                githubRepoId: String(repo.id),
+                name: repo.name,
+                owner: repo.owner.login,
+                fullName: repo.full_name,
+                description: repo.description,
+                defaultBranch: repo.default_branch,
+                private: repo.private,
+            })),
+        };
+    });
+
+    app.post("/users/:userId/repositories/import-selected", async (request, reply) => {
+        const { userId } = request.params as { userId: string };
+        const { repositories } = request.body as {
+            repositories?: Array<{
+                githubRepoId: string;
+                name: string;
+                owner: string;
+                fullName: string;
+                description?: string | null;
+                defaultBranch: string;
+            }>;
+        };
+
+        if (!repositories || repositories.length === 0) {
+            return reply.status(400).send({
+                success: false,
+                message: "At least one repository is required",
+            });
+        }
+
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+        });
+
+        if (!user || !user.githubAccessToken) {
+            return reply.status(404).send({
+                success: false,
+                message: "GitHub-connected user not found",
+            });
+        }
+
+        const syncedRepositories = [];
+
+        for (const repo of repositories) {
+            // I still attach repos to the authenticated GitHub user, not a manually typed owner.
+            const repository = await prisma.repository.upsert({
+                where: { fullName: repo.fullName },
+                create: {
+                    githubRepoId: repo.githubRepoId,
+                    name: repo.name,
+                    owner: repo.owner,
+                    fullName: repo.fullName,
+                    description: repo.description,
+                    defaultBranch: repo.defaultBranch,
+                    userId: user.id,
+                },
+                update: {
+                    githubRepoId: repo.githubRepoId,
+                    name: repo.name,
+                    owner: repo.owner,
+                    description: repo.description,
+                    defaultBranch: repo.defaultBranch,
+                    userId: user.id,
+                },
+            });
+
+            syncedRepositories.push(repository);
+        }
+
+        return {
+            success: true,
+            message: "Selected GitHub repositories imported successfully",
+            data: {
+                importedCount: syncedRepositories.length,
+                repositories: syncedRepositories,
+            },
+        };
+    });
+
 };

@@ -32,6 +32,8 @@ model User {
   email       String?
   avatarUrl   String?
 
+  githubAccessToken String?
+
   repositories Repository[]
 
   createdAt   DateTime @default(now())

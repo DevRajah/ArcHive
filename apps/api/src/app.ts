@@ -12,6 +12,7 @@ import fastifyRawBody from "fastify-raw-body";
 import { githubSyncRoutes } from "./routes/github-sync.routes";
 import { devRoutes } from "./routes/dev.routes";
 import { userRoutes } from "./routes/user.routes";
+import { githubOAuthRoutes } from "./routes/github-oauth.routes";
 
 // This makes future testing easier because I can import the app without starting the port.
 export const buildApp = async () => {
@@ -74,6 +75,10 @@ export const buildApp = async () => {
 
   await app.register(userRoutes, {
   prefix: "/api/users",
+});
+
+await app.register(githubOAuthRoutes, {
+  prefix: "/api/github/oauth",
 });
 
   return app;

@@ -12,6 +12,7 @@
     "@archive/queue": "^1.0.0",
     "@fastify/cors": "latest",
     "@fastify/env": "latest",
+    "axios": "^1.16.1",
     "dotenv": "latest",
     "fastify": "latest",
     "fastify-raw-body": "^5.0.0"
