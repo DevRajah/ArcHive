@@ -8,7 +8,8 @@ import { architectureChangeRoutes } from "./routes/architecture-change.routes";
 import { queueRoutes } from "./routes/queue.routes";
 import { dashboardRoutes } from "./routes/dashboard.routes";
 import { githubRoutes } from "./routes/github.routes";
-
+import fastifyRawBody from "fastify-raw-body";
+import { githubSyncRoutes } from "./routes/github-sync.routes";
 
 // This makes future testing easier because I can import the app without starting the port.
 export const buildApp = async () => {
@@ -20,6 +21,13 @@ export const buildApp = async () => {
     origin: true,
     credentials: true,
   });
+
+  await app.register(fastifyRawBody, {
+  field: "rawBody",
+  global: false,
+  encoding: "utf8",
+  runFirst: true,
+});
 
   // I keep routes modular so ArcHive does not become messy as it grows.
   await app.register(healthRoutes, {
@@ -51,6 +59,10 @@ export const buildApp = async () => {
   });
 
   await app.register(githubRoutes, {
+    prefix: "/api/github",
+  });
+
+  await app.register(githubSyncRoutes, {
     prefix: "/api/github",
   });
 

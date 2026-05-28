@@ -13,7 +13,8 @@
     "@fastify/cors": "latest",
     "@fastify/env": "latest",
     "dotenv": "latest",
-    "fastify": "latest"
+    "fastify": "latest",
+    "fastify-raw-body": "^5.0.0"
   },
   "devDependencies": {
     "@types/node": "latest",

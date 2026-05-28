@@ -32,6 +32,30 @@ const timelineTemplateMap: Partial<
             "The repository recorded a database-related change affecting persistence, schema design, or data access patterns.",
         importanceScore: 4,
     },
+    PUSH: {
+        title: "Code changes pushed",
+        summary:
+            "A push event was recorded for the repository. ArcHive stored the change for historical context, but no specific architecture pattern was detected.",
+        importanceScore: 1,
+    },
+    UNKNOWN: {
+        title: "Unclassified engineering activity recorded",
+        summary:
+            "ArcHive recorded engineering activity, but it was not classified as a major architecture change.",
+        importanceScore: 1,
+    },
+    PR_MERGED: {
+        title: "Pull request merged",
+        summary:
+            "A pull request was merged into the repository, representing a reviewed and accepted engineering change.",
+        importanceScore: 3,
+    },
+    PULL_REQUEST: {
+        title: "Pull request activity recorded",
+        summary:
+            "Pull request activity was recorded, helping preserve context around proposed engineering changes.",
+        importanceScore: 2,
+    },
 };
 
 const worker = new Worker<ProcessEngineeringEventJob>(
