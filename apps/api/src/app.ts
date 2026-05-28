@@ -10,6 +10,8 @@ import { dashboardRoutes } from "./routes/dashboard.routes";
 import { githubRoutes } from "./routes/github.routes";
 import fastifyRawBody from "fastify-raw-body";
 import { githubSyncRoutes } from "./routes/github-sync.routes";
+import { devRoutes } from "./routes/dev.routes";
+import { userRoutes } from "./routes/user.routes";
 
 // This makes future testing easier because I can import the app without starting the port.
 export const buildApp = async () => {
@@ -65,6 +67,14 @@ export const buildApp = async () => {
   await app.register(githubSyncRoutes, {
     prefix: "/api/github",
   });
+
+  await app.register(devRoutes, {
+    prefix: "/api/dev",
+  });
+
+  await app.register(userRoutes, {
+  prefix: "/api/users",
+});
 
   return app;
 };
