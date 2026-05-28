@@ -1,6 +1,9 @@
 node_modules
 dist
 .env
+*.env
+apps/*/.env
+packages/*/.env
 .prisma
 coverage
 .next
