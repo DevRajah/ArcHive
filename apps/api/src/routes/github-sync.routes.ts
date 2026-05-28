@@ -257,4 +257,117 @@ export const githubSyncRoutes = async (app: FastifyInstance) => {
         };
     });
 
+    app.get("/users/:userId/repositories/tracked", async (request, reply) => {
+        const { userId } = request.params as { userId: string };
+
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+        });
+
+        if (!user) {
+            return reply.status(404).send({
+                success: false,
+                message: "User not found",
+            });
+        }
+
+        const repositories = await prisma.repository.findMany({
+            where: { userId },
+            orderBy: { updatedAt: "desc" },
+            include: {
+                _count: {
+                    select: {
+                        events: true,
+                        timelineEntries: true,
+                        architectureChanges: true,
+                    },
+                },
+            },
+        });
+
+        return {
+            success: true,
+            message: "Tracked repositories fetched successfully",
+            data: repositories,
+        };
+    });
+
+    app.patch("/users/:userId/repositories/:repositoryId/untrack", async (request, reply) => {
+        const { userId, repositoryId } = request.params as {
+            userId: string;
+            repositoryId: string;
+        };
+
+        const repository = await prisma.repository.findFirst({
+            where: {
+                id: repositoryId,
+                userId,
+            },
+        });
+
+        if (!repository) {
+            return reply.status(404).send({
+                success: false,
+                message: "Tracked repository not found for this user",
+            });
+        }
+
+        // I detach the repo instead of deleting it so historical events/timeline data can remain available later.
+        const updatedRepository = await prisma.repository.update({
+            where: { id: repositoryId },
+            data: { userId: null },
+        });
+
+        return {
+            success: true,
+            message: "Repository untracked successfully",
+            data: updatedRepository,
+        };
+    });
+
+    app.patch("/users/:userId/repositories/retrack", async (request, reply) => {
+        const { userId } = request.params as { userId: string };
+        const { fullName } = request.body as { fullName?: string };
+
+        if (!fullName) {
+            return reply.status(400).send({
+                success: false,
+                message: "fullName is required",
+            });
+        }
+
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+        });
+
+        if (!user) {
+            return reply.status(404).send({
+                success: false,
+                message: "User not found",
+            });
+        }
+
+        const repository = await prisma.repository.findUnique({
+            where: { fullName },
+        });
+
+        if (!repository) {
+            return reply.status(404).send({
+                success: false,
+                message: "Repository does not exist in ArcHive yet. Import it first.",
+            });
+        }
+
+        const updatedRepository = await prisma.repository.update({
+            where: { id: repository.id },
+            data: { userId },
+        });
+
+        return {
+            success: true,
+            message: "Repository retracked successfully",
+            data: updatedRepository,
+        };
+    });
+
 };

@@ -7,14 +7,10 @@ export const userRoutes = async (app: FastifyInstance) => {
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      include: {
-        repositories: {
-          include: {
-            events: true,
-            timelineEntries: true,
-            architectureChanges: true,
-          },
-        },
+      select: {
+        id: true,
+        username: true,
+        avatarUrl: true,
       },
     });
 
@@ -25,72 +21,94 @@ export const userRoutes = async (app: FastifyInstance) => {
       });
     }
 
-    const repositories = user.repositories;
+    const repositories = await prisma.repository.findMany({
+      where: { userId },
+      orderBy: { updatedAt: "desc" },
+      include: {
+        _count: {
+          select: {
+            events: true,
+            timelineEntries: true,
+            architectureChanges: true,
+          },
+        },
+      },
+    });
 
-    const totalRepositories = repositories.length;
+    const repositoryIds = repositories.map((repo) => repo.id);
 
-    const totalEngineeringEvents = repositories.reduce(
-      (sum, repo) => sum + repo.events.length,
-      0
-    );
+    const [
+      totalEngineeringEvents,
+      totalTimelineEntries,
+      totalArchitectureChanges,
+      recentTimelineEntries,
+      recentEvents,
+    ] = await Promise.all([
+      prisma.engineeringEvent.count({
+        where: { repositoryId: { in: repositoryIds } },
+      }),
+      prisma.timelineEntry.count({
+        where: { repositoryId: { in: repositoryIds } },
+      }),
+      prisma.architectureChange.count({
+        where: { repositoryId: { in: repositoryIds } },
+      }),
+      prisma.timelineEntry.findMany({
+        where: { repositoryId: { in: repositoryIds } },
+        orderBy: { createdAt: "desc" },
+        take: 10,
+        include: {
+          repository: {
+            select: {
+              name: true,
+              fullName: true,
+            },
+          },
+        },
+      }),
+      prisma.engineeringEvent.findMany({
+        where: { repositoryId: { in: repositoryIds } },
+        orderBy: { occurredAt: "desc" },
+        take: 10,
+        include: {
+          repository: {
+            select: {
+              name: true,
+              fullName: true,
+            },
+          },
+        },
+      }),
+    ]);
 
-    const totalTimelineEntries = repositories.reduce(
-      (sum, repo) => sum + repo.timelineEntries.length,
-      0
-    );
-
-    const totalArchitectureChanges = repositories.reduce(
-      (sum, repo) => sum + repo.architectureChanges.length,
-      0
-    );
-
-    // I rank repositories by engineering activity so the dashboard surfaces the most active projects first.
-    const repositoryActivity = repositories
+    // I calculate repo activity from database counts instead of loading every event into memory.
+    const mostActiveRepositories = repositories
       .map((repo) => ({
         id: repo.id,
         name: repo.name,
         fullName: repo.fullName,
-        eventCount: repo.events.length,
-        timelineCount: repo.timelineEntries.length,
-        architectureChangeCount: repo.architectureChanges.length,
+        description: repo.description,
+        defaultBranch: repo.defaultBranch,
+        eventCount: repo._count.events,
+        timelineCount: repo._count.timelineEntries,
+        architectureChangeCount: repo._count.architectureChanges,
       }))
       .sort((a, b) => b.eventCount - a.eventCount);
-
-    const recentTimelineEntries = repositories
-      .flatMap((repo) =>
-        repo.timelineEntries.map((entry) => ({
-          repositoryName: repo.name,
-          repositoryFullName: repo.fullName,
-          entry,
-        }))
-      )
-      .sort(
-        (a, b) =>
-          new Date(b.entry.createdAt).getTime() -
-          new Date(a.entry.createdAt).getTime()
-      )
-      .slice(0, 15);
 
     return {
       success: true,
       message: "User dashboard fetched successfully",
       data: {
-        user: {
-          id: user.id,
-          username: user.username,
-          avatarUrl: user.avatarUrl,
-        },
-
+        user,
         metrics: {
-          totalRepositories,
+          totalRepositories: repositories.length,
           totalEngineeringEvents,
           totalTimelineEntries,
           totalArchitectureChanges,
         },
-
-        mostActiveRepositories: repositoryActivity,
-
+        mostActiveRepositories,
         recentTimelineEntries,
+        recentEvents,
       },
     };
   });
