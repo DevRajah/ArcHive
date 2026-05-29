@@ -1,21 +1,24 @@
 import { api } from "@/lib/api";
+import { getUserId } from "@/lib/auth";
 import { ApiResponse } from "@/types/api.types";
 import { GithubRepository, Repository } from "@/types/repository.types";
 
-const USER_ID = process.env.NEXT_PUBLIC_DEV_USER_ID;
+function requireUserId() {
+  const userId = getUserId();
 
-function getUserId() {
-  if (!USER_ID) {
-    throw new Error("NEXT_PUBLIC_DEV_USER_ID is missing in .env.local");
+  if (!userId) {
+    throw new Error(
+      "No ArcHive user ID found. Please connect GitHub or set NEXT_PUBLIC_DEV_USER_ID."
+    );
   }
 
-  return USER_ID;
+  return userId;
 }
 
 export const repositoryService = {
   async getTrackedRepositories() {
     const response = await api.get<ApiResponse<Repository[]>>(
-      `/github/users/${getUserId()}/repositories/tracked`
+      `/github/users/${requireUserId()}/repositories/tracked`
     );
 
     return response.data.data;
@@ -23,7 +26,7 @@ export const repositoryService = {
 
   async getGithubRepositories() {
     const response = await api.get<ApiResponse<GithubRepository[]>>(
-      `/github/users/${getUserId()}/repositories/available`
+      `/github/users/${requireUserId()}/repositories/available`
     );
 
     return response.data.data;
@@ -31,7 +34,7 @@ export const repositoryService = {
 
   async importSelectedRepositories(repositories: GithubRepository[]) {
     const response = await api.post<ApiResponse<Repository[]>>(
-      `/github/users/${getUserId()}/repositories/import-selected`,
+      `/github/users/${requireUserId()}/repositories/import-selected`,
       { repositories }
     );
 
@@ -47,16 +50,14 @@ export const repositoryService = {
   },
 
   async getRepositoryOverview(repositoryId: string) {
-    const response = await api.get(
-      `/repositories/${repositoryId}/overview`
-    );
+    const response = await api.get(`/repositories/${repositoryId}/overview`);
 
     return response.data.data;
   },
 
   async untrackRepository(repositoryId: string) {
     const response = await api.patch(
-      `/github/users/${getUserId()}/repositories/${repositoryId}/untrack`
+      `/github/users/${requireUserId()}/repositories/${repositoryId}/untrack`
     );
 
     return response.data.data;
