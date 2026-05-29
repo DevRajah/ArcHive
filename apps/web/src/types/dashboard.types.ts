@@ -4,6 +4,16 @@ export interface QueueMetrics {
   completed: number;
   failed: number;
   delayed: number;
+  paused?: number;
+}
+
+export interface RecentEngineeringEvent {
+  id: string;
+  eventType: string;
+  source?: string;
+  repositoryName?: string;
+  repositoryFullName?: string;
+  createdAt: string;
 }
 
 export interface DashboardSummary {
@@ -12,4 +22,5 @@ export interface DashboardSummary {
   timelineEntries: number;
   architectureChanges: number;
   queueMetrics?: QueueMetrics;
+  recentEngineeringEvents?: RecentEngineeringEvent[];
 }

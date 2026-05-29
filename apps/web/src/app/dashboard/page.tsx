@@ -52,7 +52,7 @@ export default function DashboardPage() {
 
         <div className="grid min-w-0 gap-6 xl:grid-cols-[1.4fr_1fr]">
           <RepositoryHealthChart />
-          <RecentActivity />
+          <RecentActivity events={summary?.recentEngineeringEvents} />
         </div>
 
         <div className="grid min-w-0 gap-6 xl:grid-cols-[1fr_1fr]">
