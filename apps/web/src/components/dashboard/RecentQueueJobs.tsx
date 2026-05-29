@@ -96,7 +96,9 @@ export function RecentQueueJobs() {
             >
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <p className="text-sm font-medium">{job.name}</p>
+                  <p className="text-sm font-medium">
+                    Engineering Event Processing
+                  </p>
 
                   <p className="mt-1 text-xs text-muted-foreground">
                     Queue: {getQueueName(job)}
@@ -108,18 +110,28 @@ export function RecentQueueJobs() {
                 </Badge>
               </div>
 
-              <div className="mt-3 space-y-1 text-xs text-muted-foreground">
-                <p>{formatJobTime(job)}</p>
+              <div className="mt-3 space-y-2 text-sm text-muted-foreground">
+                <p>
+                  Processed: {formatJobTime(job)}
+                </p>
 
                 {job.attemptsMade !== undefined && (
-                  <p>Attempts: {job.attemptsMade}</p>
+                  <p>
+                    Attempts: {job.attemptsMade}
+                  </p>
                 )}
 
-                {job.data?.repositoryId && (
-                  <p>Repository ID: {job.data.repositoryId}</p>
+                {job.data?.repositoryFullName && (
+                  <p>
+                    Repository: {job.data.repositoryFullName}
+                  </p>
                 )}
 
-                {job.data?.eventId && <p>Event ID: {job.data.eventId}</p>}
+                {job.data?.eventTitle && (
+                  <p>
+                    Event: {job.data.eventTitle}
+                  </p>
+                )}
               </div>
 
               {job.failedReason && (

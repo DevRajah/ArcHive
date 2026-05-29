@@ -68,7 +68,19 @@ export function RepositoryHealthChart({
                 axisLine={false}
               />
 
-              <Tooltip />
+              <Tooltip
+                formatter={(value, name) => {
+                  if (name === "architectureChanges") {
+                    return [value, "Architecture Changes"];
+                  }
+
+                  if (name === "events") {
+                    return [value, "Engineering Events"];
+                  }
+
+                  return [value, name];
+                }}
+              />
 
               <Bar
                 dataKey="events"
@@ -82,7 +94,19 @@ export function RepositoryHealthChart({
                 radius={[6, 6, 0, 0]}
               />
 
-              <Legend />
+              <Legend
+                formatter={(value) => {
+                  if (value === "architectureChanges") {
+                    return "Architecture Changes";
+                  }
+
+                  if (value === "events") {
+                    return "Engineering Events";
+                  }
+
+                  return value;
+                }}
+              />
             </BarChart>
           </ResponsiveContainer>
         </div>

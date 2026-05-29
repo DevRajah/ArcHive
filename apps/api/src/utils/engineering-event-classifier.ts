@@ -79,7 +79,7 @@ export const classifyEngineeringEventForDashboard = ({
       },
       PULL_REQUEST: {
         eventType: "PULL_REQUEST",
-        title: "Pull Request Activity",
+        title: "Repository pull request activity detected",
         summary: `${repo} recorded pull request activity.`,
       },
       PUSH: {
@@ -96,7 +96,7 @@ export const classifyEngineeringEventForDashboard = ({
   if (payloadText.includes("bullmq") || payloadText.includes("queue")) {
     return {
       eventType: "QUEUE_ADDED",
-      title: "Queue Added",
+      title: "Queue processing layer added",
       summary: `${repo} introduced or updated queue-based processing.`,
     };
   }

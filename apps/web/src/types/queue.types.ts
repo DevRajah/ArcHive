@@ -13,6 +13,13 @@ export interface QueueRecentJob {
   data?: {
     eventId?: string;
     repositoryId?: string;
+
+    repositoryName?: string;
+    repositoryFullName?: string;
+
+    eventType?: string;
+    eventTitle?: string;
+
     queueName?: string;
   };
   attemptsMade?: number;
