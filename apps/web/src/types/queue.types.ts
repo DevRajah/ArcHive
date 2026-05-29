@@ -10,10 +10,16 @@ export interface QueueMetrics {
 export interface QueueRecentJob {
   id: string;
   name: string;
-  status?: string;
-  queueName?: string;
-  createdAt?: string;
+  data?: {
+    eventId?: string;
+    repositoryId?: string;
+    queueName?: string;
+  };
+  attemptsMade?: number;
+  failedReason?: string | null;
+  timestamp?: number;
   processedOn?: number;
   finishedOn?: number;
-  failedReason?: string | null;
+  status: string;
+  queueName?: string;
 }

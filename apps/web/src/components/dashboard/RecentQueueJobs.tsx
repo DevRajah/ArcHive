@@ -3,22 +3,47 @@
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useRecentQueueJobs } from "@/hooks/useQueue";
+import { QueueRecentJob } from "@/types/queue.types";
 
-function formatJobTime(jobTime?: number | string) {
+function formatJobTime(job: QueueRecentJob) {
+  const jobTime = job.finishedOn || job.processedOn || job.timestamp;
+
   if (!jobTime) return "Unknown time";
 
-  const date =
-    typeof jobTime === "number" ? new Date(jobTime) : new Date(jobTime);
+  const date = new Date(jobTime);
 
   if (Number.isNaN(date.getTime())) return "Unknown time";
 
   return date.toLocaleString();
 }
 
-function getJobStatus(job: { status?: string; failedReason?: string | null }) {
-  if (job.status) return job.status;
-  if (job.failedReason) return "failed";
-  return "processed";
+function formatStatus(status?: string) {
+  if (!status) return "Unknown";
+
+  return status
+    .toLowerCase()
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
+function getQueueName(job: QueueRecentJob) {
+  return (
+    job.queueName ||
+    job.data?.queueName ||
+    job.name ||
+    "Unknown queue job"
+  );
+}
+
+function getBadgeVariant(status?: string) {
+  const normalized = status?.toLowerCase();
+
+  if (normalized === "failed") return "destructive";
+  if (normalized === "active") return "default";
+  if (normalized === "waiting" || normalized === "delayed") return "secondary";
+
+  return "secondary";
 }
 
 export function RecentQueueJobs() {
@@ -28,6 +53,7 @@ export function RecentQueueJobs() {
     <div className="rounded-xl border border-border bg-card p-6">
       <div>
         <h2 className="text-lg font-semibold">Recent Queue Jobs</h2>
+
         <p className="mt-1 text-sm text-muted-foreground">
           Latest background jobs processed by ArcHive workers.
         </p>
@@ -46,6 +72,7 @@ export function RecentQueueJobs() {
           <p className="text-sm font-medium text-destructive">
             Failed to load recent jobs
           </p>
+
           <p className="mt-1 text-xs text-muted-foreground">
             {error instanceof Error
               ? error.message
@@ -62,39 +89,46 @@ export function RecentQueueJobs() {
 
       {!isLoading && !isError && jobs && jobs.length > 0 && (
         <div className="mt-6 space-y-4">
-          {jobs.slice(0, 5).map((job) => {
-            const status = getJobStatus(job);
+          {jobs.slice(0, 5).map((job) => (
+            <div
+              key={job.id}
+              className="rounded-xl border border-border bg-background p-4"
+            >
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm font-medium">{job.name}</p>
 
-            return (
-              <div
-                key={job.id}
-                className="rounded-xl border border-border bg-background p-4"
-              >
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <p className="text-sm font-medium">{job.name}</p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Queue: {job.queueName || "repository-intelligence"}
-                    </p>
-                  </div>
-
-                  <Badge variant={status === "failed" ? "destructive" : "secondary"}>
-                    {status}
-                  </Badge>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Queue: {getQueueName(job)}
+                  </p>
                 </div>
 
-                <p className="mt-3 text-xs text-muted-foreground">
-                  {formatJobTime(job.finishedOn || job.processedOn || job.createdAt)}
-                </p>
-
-                {job.failedReason && (
-                  <p className="mt-2 text-xs text-destructive">
-                    {job.failedReason}
-                  </p>
-                )}
+                <Badge variant={getBadgeVariant(job.status)}>
+                  {formatStatus(job.status)}
+                </Badge>
               </div>
-            );
-          })}
+
+              <div className="mt-3 space-y-1 text-xs text-muted-foreground">
+                <p>{formatJobTime(job)}</p>
+
+                {job.attemptsMade !== undefined && (
+                  <p>Attempts: {job.attemptsMade}</p>
+                )}
+
+                {job.data?.repositoryId && (
+                  <p>Repository ID: {job.data.repositoryId}</p>
+                )}
+
+                {job.data?.eventId && <p>Event ID: {job.data.eventId}</p>}
+              </div>
+
+              {job.failedReason && (
+                <p className="mt-2 text-xs text-destructive">
+                  {job.failedReason}
+                </p>
+              )}
+            </div>
+          ))}
         </div>
       )}
     </div>
