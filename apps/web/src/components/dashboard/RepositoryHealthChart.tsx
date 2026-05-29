@@ -8,6 +8,7 @@ import {
   Tooltip,
   XAxis,
   YAxis,
+  Legend,
 } from "recharts";
 
 import { RepositoryIntelligence } from "@/types/dashboard.types";
@@ -71,13 +72,17 @@ export function RepositoryHealthChart({
 
               <Bar
                 dataKey="events"
+                fill="#3b82f6"
                 radius={[6, 6, 0, 0]}
               />
 
               <Bar
                 dataKey="architectureChanges"
+                fill="#8b5cf6"
                 radius={[6, 6, 0, 0]}
               />
+
+              <Legend />
             </BarChart>
           </ResponsiveContainer>
         </div>

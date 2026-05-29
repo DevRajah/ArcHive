@@ -5,7 +5,13 @@ interface RecentActivityProps {
   events?: RecentEngineeringEvent[];
 }
 
-function formatEventType(eventType: string) {
+function formatEventType(eventType?: string) {
+  if (!eventType) return "Engineering Event";
+
+  if (eventType === "UNKNOWN") {
+    return "Engineering Event";
+  }
+
   return eventType
     .toLowerCase()
     .split("_")
@@ -13,11 +19,35 @@ function formatEventType(eventType: string) {
     .join(" ");
 }
 
-function getEventIcon(eventType: string) {
-  if (eventType.includes("WEBHOOK")) return Webhook;
-  if (eventType.includes("PULL")) return GitPullRequest;
-  if (eventType.includes("COMMIT")) return GitCommit;
-  if (eventType.includes("ARCHITECTURE") || eventType.includes("QUEUE")) {
+function getEventIcon(eventType?: string) {
+  if (!eventType || eventType === "UNKNOWN") {
+    return Activity;
+  }
+
+  if (
+    eventType.includes("WEBHOOK")
+  ) {
+    return Webhook;
+  }
+
+  if (
+    eventType.includes("PULL") ||
+    eventType.includes("PR")
+  ) {
+    return GitPullRequest;
+  }
+
+  if (
+    eventType.includes("COMMIT")
+  ) {
+    return GitCommit;
+  }
+
+  if (
+    eventType.includes("ARCHITECTURE") ||
+    eventType.includes("QUEUE") ||
+    eventType.includes("REDIS")
+  ) {
     return Network;
   }
 
@@ -43,6 +73,7 @@ export function RecentActivity({ events = [] }: RecentActivityProps) {
       {events.length > 0 && (
         <div className="mt-6 space-y-5">
           {events.slice(0, 6).map((event) => {
+
             const Icon = getEventIcon(event.eventType);
 
             return (
