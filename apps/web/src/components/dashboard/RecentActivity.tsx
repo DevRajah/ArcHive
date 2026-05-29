@@ -85,20 +85,27 @@ export function RecentActivity({ events = [] }: RecentActivityProps) {
                 <div className="flex-1">
                   <div className="flex items-center justify-between gap-4">
                     <p className="text-sm font-medium">
-                      {formatEventType(event.eventType)}
-                    </p>
+                      {event.title || formatEventType(event.eventType)}                    </p>
 
                     <p className="text-xs text-muted-foreground">
                       {new Date(event.createdAt).toLocaleString()}
                     </p>
                   </div>
 
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {event.repositoryFullName ||
-                      event.repositoryName ||
-                      "Repository activity"}
-                    {event.source ? ` · ${event.source}` : ""}
-                  </p>
+                  <div className="mt-1 text-sm text-muted-foreground">
+                    <p>
+                      {event.repositoryFullName ||
+                        event.repositoryName ||
+                        "Repository activity"}
+                      {event.source ? ` · ${event.source}` : ""}
+                    </p>
+
+                    {event.summary && (
+                      <p className="mt-1">
+                        {event.summary}
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
             );

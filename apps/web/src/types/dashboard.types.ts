@@ -10,10 +10,12 @@ export interface QueueMetrics {
 export interface RecentEngineeringEvent {
   id: string;
   eventType: string;
+  title?: string;
+  summary?: string;
   source?: string;
+  createdAt: string;
   repositoryName?: string;
   repositoryFullName?: string;
-  createdAt: string;
 }
 
 export interface DashboardSummary {

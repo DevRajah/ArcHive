@@ -1,5 +1,42 @@
 import { prisma } from "@archive/database";
 import { engineeringEventQueue } from "@archive/queue";
+import { classifyEngineeringEventForDashboard } from "../utils/engineering-event-classifier";
+
+
+const humanizeEventType = (eventType?: string | null) => {
+    if (!eventType || eventType.trim().length === 0) {
+        return "Engineering Event";
+    }
+
+    return eventType
+        .toLowerCase()
+        .split("_")
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(" ");
+};
+
+const buildEventSummary = ({
+    eventType,
+    repositoryName,
+}: {
+    eventType: string;
+    repositoryName: string;
+}) => {
+    const summaries: Record<string, string> = {
+        QUEUE_ADDED: `${repositoryName} introduced queue-based background processing.`,
+        REDIS_ADDED: `${repositoryName} added Redis infrastructure for caching, queues, or realtime workflows.`,
+        DOCKER_ADDED: `${repositoryName} added Docker support for environment consistency.`,
+        DATABASE_CHANGE: `${repositoryName} recorded a database-level architecture change.`,
+        PR_MERGED: `${repositoryName} merged a pull request into the codebase.`,
+        PULL_REQUEST: `${repositoryName} recorded pull request activity.`,
+        UNKNOWN: `${repositoryName} recorded engineering activity that was not classified into a specific architecture category.`,
+    };
+
+    return (
+        summaries[eventType] ||
+        `${repositoryName} recorded a ${humanizeEventType(eventType).toLowerCase()} event.`
+    );
+};
 
 export const getUserDashboardSummary = async (userId: string) => {
     const user = await prisma.user.findUnique({
@@ -10,6 +47,8 @@ export const getUserDashboardSummary = async (userId: string) => {
     if (!user) {
         return null;
     }
+
+
 
     const trackedRepositories = await prisma.repository.findMany({
         where: { userId },
@@ -76,6 +115,7 @@ export const getUserDashboardSummary = async (userId: string) => {
                 eventType: true,
                 source: true,
                 createdAt: true,
+                rawPayload: true,
                 repository: {
                     select: {
                         name: true,
@@ -99,19 +139,26 @@ export const getUserDashboardSummary = async (userId: string) => {
         timelineEntries,
         architectureChanges,
         queueMetrics,
-        recentEngineeringEvents: recentEngineeringEvents.map((event) => ({
-            id: event.id,
-            // I always return a safe event type so the frontend never has to render undefined/null.
-            // If the database ever contains a bad value, the dashboard still gets a stable fallback.
-            eventType:
-                typeof event.eventType === "string" && event.eventType.trim().length > 0
-                    ? event.eventType
-                    : "ENGINEERING_EVENT",
-            source: event.source || "unknown",
-            createdAt: event.createdAt,
-            repositoryName: event.repository.name,
-            repositoryFullName: event.repository.fullName,
-        })),
+        recentEngineeringEvents: recentEngineeringEvents.map((event) => {
+            const classification = classifyEngineeringEventForDashboard({
+                rawEventType: event.eventType,
+                rawPayload: event.rawPayload as Record<string, any>,
+                repositoryName: event.repository.name,
+            });
+
+            return {
+                id: event.id,
+                eventType: classification.eventType,
+                title: classification.title,
+                summary: classification.summary,
+                source: event.source || "unknown",
+                createdAt: event.createdAt,
+                repositoryName: event.repository.name,
+                repositoryFullName: event.repository.fullName,
+            };
+        }),
         repositoryIntelligence,
     };
+
+
 };

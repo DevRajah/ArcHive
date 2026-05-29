@@ -6,5 +6,6 @@ export function useDashboardSummary() {
   return useQuery({
     queryKey: QUERY_KEYS.DASHBOARD_SUMMARY,
     queryFn: dashboardService.getDashboardSummary,
+    refetchInterval: 1000 * 15,
   });
 }
