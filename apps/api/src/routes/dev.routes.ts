@@ -66,4 +66,33 @@ export const devRoutes = async (app: FastifyInstance) => {
     },
   };
 });
+
+app.delete("/reset-user-repositories/:userId", async (request, reply) => {
+  const { userId } = request.params as { userId: string };
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+  });
+
+  if (!user) {
+    return reply.status(404).send({
+      success: false,
+      message: "User not found",
+    });
+  }
+
+  // I detach repos instead of deleting them so old timeline/event data is not destroyed during testing.
+  const result = await prisma.repository.updateMany({
+    where: { userId },
+    data: { userId: null },
+  });
+
+  return {
+    success: true,
+    message: "User repositories detached successfully",
+    data: {
+      detachedCount: result.count,
+    },
+  };
+});
 };

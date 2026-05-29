@@ -1,46 +1,41 @@
 "use client";
 
+import Link from "next/link";
 import { AppShell } from "@/components/layout/AppShell";
-import { Badge } from "@/components/ui/badge";
+import { RepositoryCard } from "@/components/repositories/RepositoryCard";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  useGithubRepositories,
-  useImportSelectedRepositories,
-} from "@/hooks/useRepositories";
-import { GithubRepository } from "@/types/repository.types";
+import { useTrackedRepositories } from "@/hooks/useRepositories";
 
-export default function ImportRepositoryPage() {
+export default function RepositoriesPage() {
   const {
     data: repositories,
     isLoading,
     isError,
     error,
-  } = useGithubRepositories();
-
-  const importMutation = useImportSelectedRepositories();
-
-  function handleImportRepository(repository: GithubRepository) {
-    importMutation.mutate([repository]);
-  }
+  } = useTrackedRepositories();
 
   return (
     <AppShell>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            Import Repository
-          </h1>
+        <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Repositories</h1>
 
-          <p className="mt-2 text-muted-foreground">
-            Select GitHub repositories to track and analyze with ArcHive.
-          </p>
+            <p className="mt-2 text-muted-foreground">
+              Manage tracked repositories and inspect engineering intelligence.
+            </p>
+          </div>
+
+          <Button asChild>
+            <Link href="/repositories/import">Import Repository</Link>
+          </Button>
         </div>
 
         {isLoading && (
-          <div className="space-y-4">
+          <div className="grid gap-6 xl:grid-cols-3">
             {[1, 2, 3].map((item) => (
-              <Skeleton key={item} className="h-32 rounded-xl" />
+              <Skeleton key={item} className="h-44 rounded-xl" />
             ))}
           </div>
         )}
@@ -48,13 +43,13 @@ export default function ImportRepositoryPage() {
         {isError && (
           <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-6">
             <p className="font-medium text-destructive">
-              Failed to load GitHub repositories
+              Failed to load repositories
             </p>
 
             <p className="mt-2 text-sm text-muted-foreground">
               {error instanceof Error
                 ? error.message
-                : "Please check your backend, GitHub OAuth session, and user ID."}
+                : "Please check that your backend is running."}
             </p>
           </div>
         )}
@@ -62,49 +57,34 @@ export default function ImportRepositoryPage() {
         {!isLoading && !isError && repositories?.length === 0 && (
           <div className="rounded-xl border border-border bg-card p-10 text-center">
             <h2 className="text-xl font-semibold">
-              No GitHub repositories available
+              No repositories tracked yet
             </h2>
 
             <p className="mt-2 text-muted-foreground">
-              Connect your GitHub account or check that your backend can access
-              your repositories.
+              Import GitHub repositories to start building engineering memory.
             </p>
+
+            <Button asChild className="mt-6">
+              <Link href="/repositories/import">
+                Import your first repository
+              </Link>
+            </Button>
           </div>
         )}
 
         {!isLoading && !isError && repositories && repositories.length > 0 && (
-          <div className="space-y-4">
+          <div className="grid gap-6 xl:grid-cols-3">
             {repositories.map((repo) => (
-              <div
-                key={repo.githubRepoId}
-                className="flex flex-col justify-between gap-4 rounded-xl border border-border bg-card p-6 md:flex-row md:items-center"
-              >
-                <div>
-                  <div className="flex flex-wrap items-center gap-3">
-                    <h2 className="font-semibold">{repo.fullName}</h2>
-
-                    <Badge variant="secondary">
-                      {repo.isPrivate ? "Private" : "Public"}
-                    </Badge>
-                  </div>
-
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    {repo.description || "No description provided."}
-                  </p>
-
-                  <div className="mt-3 flex flex-wrap gap-4 text-sm text-muted-foreground">
-                    <span>{repo.language || "Unknown language"}</span>
-                    <span>Default branch: {repo.defaultBranch || "main"}</span>
-                  </div>
-                </div>
-
-                <Button
-                  onClick={() => handleImportRepository(repo)}
-                  disabled={importMutation.isPending}
-                >
-                  {importMutation.isPending ? "Importing..." : "Import"}
-                </Button>
-              </div>
+              <RepositoryCard
+                key={repo.id}
+                id={repo.id}
+                name={repo.name}
+                description={repo.description || "No description provided."}
+                language={repo.language || "Unknown"}
+                stars={repo.stars || 0}
+                forks={repo.forks || 0}
+                status={repo.isTracked === false ? "UNTRACKED" : "TRACKED"}
+              />
             ))}
           </div>
         )}
