@@ -13,7 +13,17 @@ export const getUserDashboardSummary = async (userId: string) => {
 
   const trackedRepositories = await prisma.repository.findMany({
     where: { userId },
-    select: { id: true },
+    select: {
+      id: true,
+      name: true,
+      fullName: true,
+      _count: {
+        select: {
+          events: true,
+          architectureChanges: true,
+        },
+      },
+    },
   });
 
   const repositoryIds = trackedRepositories.map((repo) => repo.id);
@@ -76,6 +86,13 @@ export const getUserDashboardSummary = async (userId: string) => {
     }),
   ]);
 
+  const repositoryIntelligence = trackedRepositories.map((repo) => ({
+    name: repo.name,
+    fullName: repo.fullName,
+    events: repo._count.events,
+    architectureChanges: repo._count.architectureChanges,
+  }));
+
   return {
     repositories: trackedRepositories.length,
     engineeringEvents,
@@ -90,5 +107,6 @@ export const getUserDashboardSummary = async (userId: string) => {
       repositoryName: event.repository.name,
       repositoryFullName: event.repository.fullName,
     })),
+    repositoryIntelligence,
   };
 };

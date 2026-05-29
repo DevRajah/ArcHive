@@ -1,8 +1,8 @@
 "use client";
 
 import {
-  Bar,
   BarChart,
+  Bar,
   CartesianGrid,
   ResponsiveContainer,
   Tooltip,
@@ -10,36 +10,78 @@ import {
   YAxis,
 } from "recharts";
 
-const data = [
-  { name: "API", events: 120, changes: 18 },
-  { name: "Worker", events: 86, changes: 12 },
-  { name: "Web", events: 142, changes: 24 },
-  { name: "Auth", events: 64, changes: 9 },
-  { name: "Queues", events: 94, changes: 16 },
-];
+import { RepositoryIntelligence } from "@/types/dashboard.types";
 
-export function RepositoryHealthChart() {
+interface RepositoryHealthChartProps {
+  repositories?: RepositoryIntelligence[];
+}
+
+export function RepositoryHealthChart({
+  repositories = [],
+}: RepositoryHealthChartProps) {
   return (
-    <div className="rounded-xl border border-border bg-card p-6 min-w-0">
+    <div className="rounded-xl border border-border bg-card p-6">
       <div>
-        <h2 className="text-lg font-semibold">Repository Intelligence</h2>
+        <h2 className="text-lg font-semibold">
+          Repository Intelligence Overview
+        </h2>
+
         <p className="mt-1 text-sm text-muted-foreground">
-          Engineering activity and architecture change signals by module.
+          Engineering events and architecture evolution activity across tracked
+          repositories.
         </p>
       </div>
 
-      <div className="mt-6 h-[320px] w-full min-w-0">
-        <ResponsiveContainer width="100%" height={320}>
-          <BarChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="name" fontSize={12} />
-            <YAxis fontSize={12} />
-            <Tooltip />
-            <Bar dataKey="events" radius={[6, 6, 0, 0]} />
-            <Bar dataKey="changes" radius={[6, 6, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
+      {repositories.length === 0 && (
+        <div className="flex h-[320px] items-center justify-center">
+          <p className="text-sm text-muted-foreground">
+            No repository intelligence available yet.
+          </p>
+        </div>
+      )}
+
+      {repositories.length > 0 && (
+        <div className="mt-6 h-[320px] w-full min-w-0">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart
+              data={repositories}
+              margin={{
+                top: 10,
+                right: 10,
+                left: -10,
+                bottom: 0,
+              }}
+            >
+              <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
+
+              <XAxis
+                dataKey="name"
+                tick={{ fontSize: 12 }}
+                tickLine={false}
+                axisLine={false}
+              />
+
+              <YAxis
+                tick={{ fontSize: 12 }}
+                tickLine={false}
+                axisLine={false}
+              />
+
+              <Tooltip />
+
+              <Bar
+                dataKey="events"
+                radius={[6, 6, 0, 0]}
+              />
+
+              <Bar
+                dataKey="architectureChanges"
+                radius={[6, 6, 0, 0]}
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
     </div>
   );
 }

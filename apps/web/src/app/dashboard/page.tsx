@@ -51,8 +51,9 @@ export default function DashboardPage() {
         {!isLoading && !isError && <DashboardStats summary={summary} />}
 
         <div className="grid min-w-0 gap-6 xl:grid-cols-[1.4fr_1fr]">
-          <RepositoryHealthChart />
-          <RecentActivity events={summary?.recentEngineeringEvents} />
+          <RepositoryHealthChart
+            repositories={summary?.repositoryIntelligence}
+          />          <RecentActivity events={summary?.recentEngineeringEvents} />
         </div>
 
         <div className="grid min-w-0 gap-6 xl:grid-cols-[1fr_1fr]">

@@ -23,4 +23,12 @@ export interface DashboardSummary {
   architectureChanges: number;
   queueMetrics?: QueueMetrics;
   recentEngineeringEvents?: RecentEngineeringEvent[];
+  repositoryIntelligence?: RepositoryIntelligence[];
+}
+
+export interface RepositoryIntelligence {
+  name: string;
+  fullName: string;
+  events: number;
+  architectureChanges: number;
 }
