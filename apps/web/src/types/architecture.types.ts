@@ -5,5 +5,5 @@ export interface ArchitectureChange {
   changeType?: string;
   severity?: string;
   createdAt: string;
-  repositoryId: string;
+  //repositoryId: string;
 }

@@ -5,7 +5,10 @@ import { timelineService } from "@/services/timeline.service";
 export function useRepositoryTimeline(repositoryId: string) {
   return useQuery({
     queryKey: QUERY_KEYS.REPOSITORY_TIMELINE(repositoryId),
-    queryFn: () => timelineService.getRepositoryTimeline(repositoryId),
+
+    queryFn: () =>
+      timelineService.getRepositoryTimeline(repositoryId),
+
     enabled: Boolean(repositoryId),
   });
 }

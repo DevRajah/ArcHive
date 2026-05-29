@@ -3,6 +3,6 @@ export interface TimelineEntry {
   title: string;
   summary?: string;
   eventType?: string;
+  source?: string;
   createdAt: string;
-  repositoryId: string;
 }
