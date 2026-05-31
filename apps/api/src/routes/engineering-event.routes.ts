@@ -1,6 +1,6 @@
 import { FastifyInstance } from "fastify";
 import { prisma } from "@archive/database";
-import { EngineeringEventType } from "@prisma/client";
+import { EngineeringEventType, Prisma } from "@prisma/client";
 import { engineeringEventQueue } from "@archive/queue";
 
 type CreateEngineeringEventBody = {
@@ -40,7 +40,7 @@ export const engineeringEventRoutes = async (app: FastifyInstance) => {
           repositoryId,
           eventType,
           source: source || "manual",
-          rawPayload,
+          rawPayload: rawPayload as Prisma.InputJsonValue,
           occurredAt: occurredAt ? new Date(occurredAt) : new Date(),
         },
       });
@@ -48,7 +48,7 @@ export const engineeringEventRoutes = async (app: FastifyInstance) => {
       // I queue the heavy processing instead of creating timeline entries inside the API request.
       // This keeps the API fast and lets the worker handle retries safely.
       await engineeringEventQueue.add(
-        "process-engineering-event",
+        "process-engineering-event" as any,
         {
           eventId: event.id,
           repositoryId: event.repositoryId,

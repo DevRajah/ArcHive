@@ -16,6 +16,6 @@ export type ProcessEngineeringEventJob = {
 export const engineeringEventQueue = new Queue<ProcessEngineeringEventJob>(
   "engineering-event-processing",
   {
-    connection: redisConnection,
+    connection: redisConnection as any,
   }
 );
