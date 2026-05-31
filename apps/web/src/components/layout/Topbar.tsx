@@ -1,13 +1,21 @@
 "use client";
 
-import { Bell, Search } from "lucide-react";
+import { Bell, LogOut, Search } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 
 export function Topbar() {
-  const { session } = useAuth();
+  const router = useRouter();
+  const { session, logout } = useAuth();
 
-  const displayName = session?.username || "Michael";
+  const displayName = session?.username || "User";
+
+  function handleLogout() {
+    logout();
+    router.replace("/connect-github");
+  }
 
   return (
     <header className="border-b border-border bg-background/80 backdrop-blur-xl">
@@ -34,13 +42,17 @@ export function Topbar() {
               </AvatarFallback>
             </Avatar>
 
-            <div>
+            <div className="hidden sm:block">
               <p className="text-sm font-medium">{displayName}</p>
               <p className="text-xs text-muted-foreground">
                 Engineering Workspace
               </p>
             </div>
           </div>
+
+          <Button variant="ghost" size="icon" onClick={handleLogout}>
+            <LogOut className="h-4 w-4" />
+          </Button>
         </div>
       </div>
     </header>

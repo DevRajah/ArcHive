@@ -1,3 +1,4 @@
+import { RequireSession } from "@/components/auth/RequireSession";
 import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
 
@@ -7,16 +8,16 @@ interface AppShellProps {
 
 export function AppShell({ children }: AppShellProps) {
   return (
-    <div className="flex min-h-screen bg-background">
-      {/* Sidebar */}
-      <Sidebar />
+    <RequireSession>
+      <div className="flex min-h-screen bg-background">
+        <Sidebar />
 
-      {/* Main Content */}
-      <div className="flex flex-1 flex-col">
-        <Topbar />
+        <div className="flex flex-1 flex-col">
+          <Topbar />
 
-        <main className="flex-1 p-6">{children}</main>
+          <main className="flex-1 p-6">{children}</main>
+        </div>
       </div>
-    </div>
+    </RequireSession>
   );
 }
