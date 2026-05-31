@@ -2,129 +2,178 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { ArrowLeft, GitBranch, Network } from "lucide-react";
+import {
+  ArrowLeft,
+  Activity,
+  GitBranch,
+  GitCommit,
+  GitPullRequest,
+  Network,
+  Webhook,
+} from "lucide-react";
 
 import { AppShell } from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useRepositoryOverview } from "@/hooks/useRepositoryOverview";
-import { RepositoryMetricCards } from "@/components/repositories/RepositoryMetricCards";
-import { RepositoryRecentEvents } from "@/components/repositories/RepositoryRecentEvents";
-import { RepositoryTimelinePreview } from "@/components/repositories/RepositoryTimelinePreview";
-import { RepositoryArchitecturePreview } from "@/components/repositories/RepositoryArchitecturePreview";
+import { useRepositoryTimeline } from "@/hooks/useTimeline";
 
-export default function RepositoryDetailPage() {
+function formatEventType(eventType?: string) {
+  if (!eventType || eventType === "UNKNOWN") return "Engineering Event";
+
+  return eventType
+    .toLowerCase()
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
+function getEventIcon(eventType?: string) {
+  if (!eventType || eventType === "UNKNOWN") return Activity;
+  if (eventType.includes("WEBHOOK")) return Webhook;
+  if (eventType.includes("PULL") || eventType.includes("PR")) return GitPullRequest;
+  if (eventType.includes("COMMIT")) return GitCommit;
+
+  if (
+    eventType.includes("ARCHITECTURE") ||
+    eventType.includes("QUEUE") ||
+    eventType.includes("REDIS") ||
+    eventType.includes("API")
+  ) {
+    return Network;
+  }
+
+  return GitBranch;
+}
+
+export default function TimelinePage() {
   const params = useParams<{ repoId: string }>();
   const repoId = params.repoId;
 
-  const { data, isLoading, isError, error } = useRepositoryOverview(repoId);
+  const {
+    data: timelineEntries,
+    isLoading,
+    isError,
+    error,
+  } = useRepositoryTimeline(repoId);
 
   return (
     <AppShell>
       <div className="space-y-6">
         <Button asChild variant="ghost" className="px-0">
-          <Link href="/repositories">
+          <Link href={`/repositories/${repoId}`}>
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to repositories
+            Back to repository overview
           </Link>
         </Button>
 
-        {isLoading && (
-          <div className="space-y-6">
-            <Skeleton className="h-32 rounded-xl" />
-            <div className="grid gap-6 md:grid-cols-3">
-              <Skeleton className="h-32 rounded-xl" />
-              <Skeleton className="h-32 rounded-xl" />
-              <Skeleton className="h-32 rounded-xl" />
+        <div className="rounded-xl border border-border bg-card p-6">
+          <div className="flex flex-col justify-between gap-4 md:flex-row md:items-start">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">
+                Engineering Timeline
+              </h1>
+
+              <p className="mt-2 max-w-3xl text-muted-foreground">
+                Chronological engineering memory showing how this repository
+                has evolved through commits, webhooks, architecture changes, and
+                background processing.
+              </p>
             </div>
-            <Skeleton className="h-72 rounded-xl" />
+
+            <Badge variant="secondary">
+              {timelineEntries?.length || 0} entries
+            </Badge>
+          </div>
+        </div>
+
+        {isLoading && (
+          <div className="space-y-4">
+            {[1, 2, 3, 4].map((item) => (
+              <Skeleton key={item} className="h-32 rounded-xl" />
+            ))}
           </div>
         )}
 
         {isError && (
           <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-6">
             <p className="font-medium text-destructive">
-              Failed to load repository overview
+              Failed to load engineering timeline
             </p>
 
             <p className="mt-2 text-sm text-muted-foreground">
-              {error instanceof Error ? error.message : "Please check backend."}
+              {error instanceof Error
+                ? error.message
+                : "Please check backend connection."}
             </p>
           </div>
         )}
 
-        {!isLoading && !isError && data && (
-          <>
+        {!isLoading &&
+          !isError &&
+          timelineEntries &&
+          timelineEntries.length === 0 && (
+            <div className="rounded-xl border border-border bg-card p-10 text-center">
+              <h2 className="text-xl font-semibold">
+                No timeline entries found
+              </h2>
+
+              <p className="mt-2 text-muted-foreground">
+                ArcHive has not generated engineering timeline memory for this
+                repository yet.
+              </p>
+            </div>
+          )}
+
+        {!isLoading &&
+          !isError &&
+          timelineEntries &&
+          timelineEntries.length > 0 && (
             <div className="rounded-xl border border-border bg-card p-6">
-              <div className="flex flex-col justify-between gap-6 md:flex-row md:items-start">
-                <div>
-                  <div className="mb-3 flex flex-wrap items-center gap-3">
-                    <h1 className="text-3xl font-bold tracking-tight">
-                      {data.repository?.fullName ||
-                        data.repository?.name ||
-                        repoId}
-                    </h1>
+              <div className="relative space-y-8">
+                <div className="absolute left-5 top-2 h-[calc(100%-1rem)] w-px bg-border" />
 
-                    <Badge>TRACKED</Badge>
-                  </div>
+                {timelineEntries.map((entry) => {
+                  const Icon = getEventIcon(entry.eventType);
 
-                  <p className="max-w-3xl text-muted-foreground">
-                    {data.repository?.description ||
-                      "Repository intelligence overview and engineering activity."}
-                  </p>
+                  return (
+                    <div key={entry.id} className="relative flex gap-5">
+                      <div className="z-10 flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-background">
+                        <Icon className="h-4 w-4 text-primary" />
+                      </div>
 
-                  <div className="mt-4 flex flex-wrap gap-3 text-sm text-muted-foreground">
-                    <span>
-                      Default branch:{" "}
-                      {data.repository?.defaultBranch || "main"}
-                    </span>
+                      <div className="flex-1 rounded-xl border border-border bg-background p-5">
+                        <div className="flex flex-col justify-between gap-3 md:flex-row md:items-start">
+                          <div>
+                            <h2 className="font-semibold">
+                              {entry.title || formatEventType(entry.eventType)}
+                            </h2>
 
-                    <span>Repository ID: {data.repository?.id || repoId}</span>
-                  </div>
-                </div>
+                            <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                              {entry.summary ||
+                                "No engineering summary available."}
+                            </p>
+                          </div>
 
-                <div className="flex flex-wrap gap-3">
-                  <Button asChild variant="outline">
-                    <Link href={`/repositories/${repoId}/timeline`}>
-                      <GitBranch className="mr-2 h-4 w-4" />
-                      Timeline
-                    </Link>
-                  </Button>
+                          <Badge variant="secondary">
+                            {formatEventType(entry.eventType)}
+                          </Badge>
+                        </div>
 
-                  <Button asChild>
-                    <Link href={`/repositories/${repoId}/architecture`}>
-                      <Network className="mr-2 h-4 w-4" />
-                      Architecture
-                    </Link>
-                  </Button>
-                </div>
+                        <div className="mt-4 flex flex-wrap gap-3 text-xs text-muted-foreground">
+                          {entry.source && <span>Source: {entry.source}</span>}
+
+                          <span>
+                            {new Date(entry.createdAt).toLocaleString()}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
-
-            <RepositoryMetricCards
-              totalEvents={data.metrics?.totalEvents ?? 0}
-              totalTimelineEntries={data.metrics?.totalTimelineEntries ?? 0}
-              totalArchitectureChanges={
-                data.metrics?.totalArchitectureChanges ?? 0
-              }
-            />
-
-            <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-              <RepositoryRecentEvents events={data.recentEvents} />
-
-              <RepositoryArchitecturePreview
-                repositoryId={repoId}
-                changes={data.recentArchitectureChanges}
-              />
-            </div>
-
-            <RepositoryTimelinePreview
-              repositoryId={repoId}
-              entries={data.recentTimelineEntries}
-            />
-          </>
-        )}
+          )}
       </div>
     </AppShell>
   );
