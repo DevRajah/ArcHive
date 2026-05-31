@@ -45,6 +45,167 @@ const getPayloadText = (rawPayload?: RawPayload) => {
   return `${commitMessages} ${filesChanged} ${commits}`.toLowerCase();
 };
 
+const generateEngineeringSummary = ({
+  repositoryName,
+  eventType,
+  payloadText,
+}: {
+  repositoryName: string;
+  eventType: string;
+  payloadText: string;
+}) => {
+  const repo = humanRepository(repositoryName);
+  const text = payloadText.toLowerCase();
+
+  if (eventType === "AUTH_SYSTEM_CHANGED") {
+    if (
+      text.includes("oauth") ||
+      text.includes("github-auth") ||
+      text.includes("github oauth") ||
+      text.includes("provider")
+    ) {
+      return `${repo} updated OAuth authentication infrastructure and provider integration logic.`;
+    }
+
+    if (
+      text.includes("login") ||
+      text.includes("register") ||
+      text.includes("signup")
+    ) {
+      return `${repo} updated user login, registration, or account access flows.`;
+    }
+
+    if (
+      text.includes("jwt") ||
+      text.includes("token") ||
+      text.includes("refresh-token") ||
+      text.includes("middleware")
+    ) {
+      return `${repo} updated token authentication or authorization middleware.`;
+    }
+
+    if (
+      text.includes("rbac") ||
+      text.includes("role") ||
+      text.includes("permission")
+    ) {
+      return `${repo} updated role-based access control or permission rules.`;
+    }
+
+    if (
+      text.includes("signature") ||
+      text.includes("webhook secret") ||
+      text.includes("x-hub-signature")
+    ) {
+      return `${repo} updated webhook authentication and request verification logic.`;
+    }
+
+    return `${repo} updated authentication or security-related infrastructure.`;
+  }
+
+  if (
+    eventType === "QUEUE_ADDED" ||
+    eventType === "QUEUE_INFRASTRUCTURE_UPDATED"
+  ) {
+    if (
+      text.includes("retry") ||
+      text.includes("attempt") ||
+      text.includes("backoff")
+    ) {
+      return `${repo} updated queue retry handling and background job resilience.`;
+    }
+
+    if (
+      text.includes("worker") ||
+      text.includes("bullmq") ||
+      text.includes("job")
+    ) {
+      return `${repo} updated asynchronous job processing and worker infrastructure.`;
+    }
+
+    return `${repo} updated queue-based background processing infrastructure.`;
+  }
+
+  if (
+    eventType === "REDIS_INFRASTRUCTURE_ADDED" ||
+    eventType === "REDIS_INFRASTRUCTURE_UPDATED"
+  ) {
+    return `${repo} updated Redis-backed caching, queue, or realtime infrastructure.`;
+  }
+
+  if (
+    eventType === "DOCKER_INFRASTRUCTURE_CHANGED" ||
+    eventType === "DOCKER_INFRASTRUCTURE_UPDATED"
+  ) {
+    return `${repo} updated Docker or container-based development infrastructure.`;
+  }
+
+  if (
+    eventType === "DATABASE_SCHEMA_CHANGED" ||
+    eventType === "DATABASE_SCHEMA_UPDATED"
+  ) {
+    return `${repo} updated database schema or persistence-layer infrastructure.`;
+  }
+
+  if (eventType === "API_ENDPOINT_CHANGED") {
+    if (text.includes("controller")) {
+      return `${repo} updated controller logic for API request handling.`;
+    }
+
+    if (text.includes("route")) {
+      return `${repo} updated API routing or endpoint definitions.`;
+    }
+
+    if (text.includes("service")) {
+      return `${repo} updated service-layer business logic.`;
+    }
+
+    return `${repo} updated API routes, controllers, or service-layer logic.`;
+  }
+
+  if (eventType === "DEPENDENCY_CHANGED") {
+    return `${repo} updated project dependencies or package configuration.`;
+  }
+
+  if (eventType === "FRONTEND_UI_CHANGED") {
+    return `${repo} updated frontend UI, dashboard components, or client-side application logic.`;
+  }
+
+  if (eventType === "PR_MERGED") {
+    return `${repo} merged a pull request into the codebase.`;
+  }
+
+  if (eventType === "PULL_REQUEST") {
+    return `${repo} recorded pull request activity.`;
+  }
+
+  if (eventType === "COMMIT_PUSHED") {
+    return `${repo} received new code changes from GitHub.`;
+  }
+
+  return "ArcHive detected repository activity that could not yet be mapped to a known architecture category.";
+};
+
+const buildKnownEvent = ({
+  eventType,
+  title,
+  repositoryName,
+  payloadText,
+}: {
+  eventType: string;
+  title: string;
+  repositoryName: string;
+  payloadText: string;
+}): ClassifiedEngineeringEvent => ({
+  eventType,
+  title,
+  summary: generateEngineeringSummary({
+    repositoryName,
+    eventType,
+    payloadText,
+  }),
+});
+
 export const classifyEngineeringEventForDashboard = ({
   rawEventType,
   rawPayload,
@@ -66,136 +227,158 @@ export const classifyEngineeringEventForDashboard = ({
 
   const known: Record<string, ClassifiedEngineeringEvent> = {
     QUEUE_ADDED: history?.hasQueueHistory
-      ? {
+      ? buildKnownEvent({
           eventType: "QUEUE_INFRASTRUCTURE_UPDATED",
           title: "Queue Processing Updated",
-          summary: `${repo} updated queue-based background processing or job infrastructure.`,
-        }
-      : {
+          repositoryName: repo,
+          payloadText,
+        })
+      : buildKnownEvent({
           eventType: "QUEUE_ADDED",
           title: "Queue Infrastructure Added",
-          summary: `${repo} introduced queue-based background processing.`,
-        },
+          repositoryName: repo,
+          payloadText,
+        }),
 
-    QUEUE_INFRASTRUCTURE_UPDATED: {
+    QUEUE_INFRASTRUCTURE_UPDATED: buildKnownEvent({
       eventType: "QUEUE_INFRASTRUCTURE_UPDATED",
       title: "Queue Processing Updated",
-      summary: `${repo} updated queue-based background processing or job infrastructure.`,
-    },
+      repositoryName: repo,
+      payloadText,
+    }),
 
     REDIS_ADDED: history?.hasRedisHistory
-      ? {
+      ? buildKnownEvent({
           eventType: "REDIS_INFRASTRUCTURE_UPDATED",
           title: "Redis Infrastructure Updated",
-          summary: `${repo} updated Redis-related infrastructure for caching, queues, or realtime workflows.`,
-        }
-      : {
+          repositoryName: repo,
+          payloadText,
+        })
+      : buildKnownEvent({
           eventType: "REDIS_INFRASTRUCTURE_ADDED",
           title: "Redis Infrastructure Added",
-          summary: `${repo} introduced Redis infrastructure for caching, queues, or realtime workflows.`,
-        },
+          repositoryName: repo,
+          payloadText,
+        }),
 
-    REDIS_INFRASTRUCTURE_ADDED: {
+    REDIS_INFRASTRUCTURE_ADDED: buildKnownEvent({
       eventType: "REDIS_INFRASTRUCTURE_ADDED",
       title: "Redis Infrastructure Added",
-      summary: `${repo} introduced Redis infrastructure for caching, queues, or realtime workflows.`,
-    },
+      repositoryName: repo,
+      payloadText,
+    }),
 
-    REDIS_INFRASTRUCTURE_UPDATED: {
+    REDIS_INFRASTRUCTURE_UPDATED: buildKnownEvent({
       eventType: "REDIS_INFRASTRUCTURE_UPDATED",
       title: "Redis Infrastructure Updated",
-      summary: `${repo} updated Redis-related infrastructure for caching, queues, or realtime workflows.`,
-    },
+      repositoryName: repo,
+      payloadText,
+    }),
 
     DOCKER_ADDED: history?.hasDockerHistory
-      ? {
+      ? buildKnownEvent({
           eventType: "DOCKER_INFRASTRUCTURE_UPDATED",
           title: "Docker Infrastructure Updated",
-          summary: `${repo} updated Docker or container infrastructure.`,
-        }
-      : {
+          repositoryName: repo,
+          payloadText,
+        })
+      : buildKnownEvent({
           eventType: "DOCKER_INFRASTRUCTURE_CHANGED",
           title: "Docker Infrastructure Added",
-          summary: `${repo} introduced Docker or container infrastructure.`,
-        },
+          repositoryName: repo,
+          payloadText,
+        }),
 
-    DOCKER_INFRASTRUCTURE_CHANGED: {
+    DOCKER_INFRASTRUCTURE_CHANGED: buildKnownEvent({
       eventType: "DOCKER_INFRASTRUCTURE_CHANGED",
       title: "Docker Infrastructure Added",
-      summary: `${repo} introduced Docker or container infrastructure.`,
-    },
+      repositoryName: repo,
+      payloadText,
+    }),
 
-    DOCKER_INFRASTRUCTURE_UPDATED: {
+    DOCKER_INFRASTRUCTURE_UPDATED: buildKnownEvent({
       eventType: "DOCKER_INFRASTRUCTURE_UPDATED",
       title: "Docker Infrastructure Updated",
-      summary: `${repo} updated Docker or container infrastructure.`,
-    },
+      repositoryName: repo,
+      payloadText,
+    }),
 
     DATABASE_CHANGE: history?.hasDatabaseHistory
-      ? {
+      ? buildKnownEvent({
           eventType: "DATABASE_SCHEMA_UPDATED",
           title: "Database Schema Updated",
-          summary: `${repo} updated its database schema or persistence layer.`,
-        }
-      : {
+          repositoryName: repo,
+          payloadText,
+        })
+      : buildKnownEvent({
           eventType: "DATABASE_SCHEMA_CHANGED",
           title: "Database Schema Changed",
-          summary: `${repo} introduced a database or persistence-layer change.`,
-        },
+          repositoryName: repo,
+          payloadText,
+        }),
 
-    DATABASE_SCHEMA_CHANGED: {
+    DATABASE_SCHEMA_CHANGED: buildKnownEvent({
       eventType: "DATABASE_SCHEMA_CHANGED",
       title: "Database Schema Changed",
-      summary: `${repo} changed its database schema or persistence layer.`,
-    },
+      repositoryName: repo,
+      payloadText,
+    }),
 
-    DATABASE_SCHEMA_UPDATED: {
+    DATABASE_SCHEMA_UPDATED: buildKnownEvent({
       eventType: "DATABASE_SCHEMA_UPDATED",
       title: "Database Schema Updated",
-      summary: `${repo} updated its database schema or persistence layer.`,
-    },
+      repositoryName: repo,
+      payloadText,
+    }),
 
-    API_ENDPOINT_CHANGED: {
+    API_ENDPOINT_CHANGED: buildKnownEvent({
       eventType: "API_ENDPOINT_CHANGED",
       title: "API Layer Changed",
-      summary: `${repo} updated API routes, controllers, or service logic.`,
-    },
+      repositoryName: repo,
+      payloadText,
+    }),
 
-    AUTH_SYSTEM_CHANGED: {
+    AUTH_SYSTEM_CHANGED: buildKnownEvent({
       eventType: "AUTH_SYSTEM_CHANGED",
       title: "Auth System Changed",
-      summary: `${repo} updated authentication or security-related logic.`,
-    },
+      repositoryName: repo,
+      payloadText,
+    }),
 
-    DEPENDENCY_CHANGED: {
+    DEPENDENCY_CHANGED: buildKnownEvent({
       eventType: "DEPENDENCY_CHANGED",
       title: "Dependencies Changed",
-      summary: `${repo} updated project dependencies.`,
-    },
+      repositoryName: repo,
+      payloadText,
+    }),
 
-    FRONTEND_UI_CHANGED: {
+    FRONTEND_UI_CHANGED: buildKnownEvent({
       eventType: "FRONTEND_UI_CHANGED",
       title: "Frontend UI Changed",
-      summary: `${repo} updated frontend UI or application components.`,
-    },
+      repositoryName: repo,
+      payloadText,
+    }),
 
-    PR_MERGED: {
+    PR_MERGED: buildKnownEvent({
       eventType: "PR_MERGED",
       title: "Pull Request Merged",
-      summary: `${repo} merged a pull request into the codebase.`,
-    },
+      repositoryName: repo,
+      payloadText,
+    }),
 
-    PULL_REQUEST: {
+    PULL_REQUEST: buildKnownEvent({
       eventType: "PULL_REQUEST",
       title: "Pull Request Activity",
-      summary: `${repo} recorded pull request activity.`,
-    },
+      repositoryName: repo,
+      payloadText,
+    }),
 
-    COMMIT_PUSHED: {
+    COMMIT_PUSHED: buildKnownEvent({
       eventType: "COMMIT_PUSHED",
       title: "Code Pushed",
-      summary: `${repo} received new code changes from GitHub.`,
-    },
+      repositoryName: repo,
+      payloadText,
+    }),
 
     ENGINEERING_EVENT: {
       eventType: "ENGINEERING_EVENT",
@@ -212,8 +395,8 @@ export const classifyEngineeringEventForDashboard = ({
     },
   };
 
-  // known database event types are handled before keyword inference.
-  // This prevents QUEUE_INFRASTRUCTURE_UPDATED from accidentally being reclassified as QUEUE_ADDED.
+  // I handle known database event types before keyword inference.
+  // This prevents an already-classified update from being downgraded into a generic "added" event.
   if (known[safeRawType]) {
     return known[safeRawType];
   }
@@ -238,67 +421,82 @@ export const classifyEngineeringEventForDashboard = ({
     payloadText.includes("database");
 
   if (hasQueueSignal) {
-    if (history?.hasQueueHistory) {
-      return {
-        eventType: "QUEUE_INFRASTRUCTURE_UPDATED",
-        title: "Queue Processing Updated",
-        summary: `${repo} updated queue-based background processing or job infrastructure.`,
-      };
-    }
-
-    return {
-      eventType: "QUEUE_ADDED",
-      title: "Queue Infrastructure Added",
-      summary: `${repo} introduced queue-based background processing.`,
-    };
+    return history?.hasQueueHistory
+      ? buildKnownEvent({
+          eventType: "QUEUE_INFRASTRUCTURE_UPDATED",
+          title: "Queue Processing Updated",
+          repositoryName: repo,
+          payloadText,
+        })
+      : buildKnownEvent({
+          eventType: "QUEUE_ADDED",
+          title: "Queue Infrastructure Added",
+          repositoryName: repo,
+          payloadText,
+        });
   }
 
   if (hasRedisSignal) {
-    if (history?.hasRedisHistory) {
-      return {
-        eventType: "REDIS_INFRASTRUCTURE_UPDATED",
-        title: "Redis Infrastructure Updated",
-        summary: `${repo} updated Redis-related infrastructure for caching, queues, or realtime workflows.`,
-      };
-    }
-
-    return {
-      eventType: "REDIS_INFRASTRUCTURE_ADDED",
-      title: "Redis Infrastructure Added",
-      summary: `${repo} introduced Redis infrastructure for caching, queues, or realtime workflows.`,
-    };
+    return history?.hasRedisHistory
+      ? buildKnownEvent({
+          eventType: "REDIS_INFRASTRUCTURE_UPDATED",
+          title: "Redis Infrastructure Updated",
+          repositoryName: repo,
+          payloadText,
+        })
+      : buildKnownEvent({
+          eventType: "REDIS_INFRASTRUCTURE_ADDED",
+          title: "Redis Infrastructure Added",
+          repositoryName: repo,
+          payloadText,
+        });
   }
 
   if (hasDockerSignal) {
-    if (history?.hasDockerHistory) {
-      return {
-        eventType: "DOCKER_INFRASTRUCTURE_UPDATED",
-        title: "Docker Infrastructure Updated",
-        summary: `${repo} updated Docker or container infrastructure.`,
-      };
-    }
-
-    return {
-      eventType: "DOCKER_INFRASTRUCTURE_CHANGED",
-      title: "Docker Infrastructure Added",
-      summary: `${repo} introduced Docker or container infrastructure.`,
-    };
+    return history?.hasDockerHistory
+      ? buildKnownEvent({
+          eventType: "DOCKER_INFRASTRUCTURE_UPDATED",
+          title: "Docker Infrastructure Updated",
+          repositoryName: repo,
+          payloadText,
+        })
+      : buildKnownEvent({
+          eventType: "DOCKER_INFRASTRUCTURE_CHANGED",
+          title: "Docker Infrastructure Added",
+          repositoryName: repo,
+          payloadText,
+        });
   }
 
   if (hasDatabaseSignal) {
-    if (history?.hasDatabaseHistory) {
-      return {
-        eventType: "DATABASE_SCHEMA_UPDATED",
-        title: "Database Schema Updated",
-        summary: `${repo} updated its database schema or persistence layer.`,
-      };
-    }
+    return history?.hasDatabaseHistory
+      ? buildKnownEvent({
+          eventType: "DATABASE_SCHEMA_UPDATED",
+          title: "Database Schema Updated",
+          repositoryName: repo,
+          payloadText,
+        })
+      : buildKnownEvent({
+          eventType: "DATABASE_SCHEMA_CHANGED",
+          title: "Database Schema Changed",
+          repositoryName: repo,
+          payloadText,
+        });
+  }
 
-    return {
-      eventType: "DATABASE_SCHEMA_CHANGED",
-      title: "Database Schema Changed",
-      summary: `${repo} introduced a database or persistence-layer change.`,
-    };
+  if (
+    payloadText.includes("auth") ||
+    payloadText.includes("jwt") ||
+    payloadText.includes("oauth") ||
+    payloadText.includes("security") ||
+    payloadText.includes("signature")
+  ) {
+    return buildKnownEvent({
+      eventType: "AUTH_SYSTEM_CHANGED",
+      title: "Auth System Changed",
+      repositoryName: repo,
+      payloadText,
+    });
   }
 
   if (
@@ -306,48 +504,38 @@ export const classifyEngineeringEventForDashboard = ({
     payloadText.includes("controller") ||
     payloadText.includes("service")
   ) {
-    return {
+    return buildKnownEvent({
       eventType: "API_ENDPOINT_CHANGED",
       title: "API Layer Changed",
-      summary: `${repo} updated API routes, controllers, or service logic.`,
-    };
-  }
-
-  if (
-    payloadText.includes("auth") ||
-    payloadText.includes("jwt") ||
-    payloadText.includes("oauth") ||
-    payloadText.includes("security")
-  ) {
-    return {
-      eventType: "AUTH_SYSTEM_CHANGED",
-      title: "Auth System Changed",
-      summary: `${repo} updated authentication or security-related logic.`,
-    };
+      repositoryName: repo,
+      payloadText,
+    });
   }
 
   if (
     payloadText.includes("package.json") ||
     payloadText.includes("package-lock.json")
   ) {
-    return {
+    return buildKnownEvent({
       eventType: "DEPENDENCY_CHANGED",
       title: "Dependencies Changed",
-      summary: `${repo} updated project dependencies.`,
-    };
+      repositoryName: repo,
+      payloadText,
+    });
   }
 
   if (
     payloadText.includes(".tsx") ||
     payloadText.includes(".jsx") ||
     payloadText.includes("components") ||
-    payloadText.includes("app/")
+    payloadText.includes("apps/web")
   ) {
-    return {
+    return buildKnownEvent({
       eventType: "FRONTEND_UI_CHANGED",
       title: "Frontend UI Changed",
-      summary: `${repo} updated frontend UI or application components.`,
-    };
+      repositoryName: repo,
+      payloadText,
+    });
   }
 
   return {

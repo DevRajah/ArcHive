@@ -96,13 +96,15 @@ export function RecentQueueJobs() {
             >
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <p className="text-sm font-medium">
-                    Engineering Event Processing
-                  </p>
+                  <div>
+                    <p className="text-sm font-medium">
+                      {job.data?.eventTitle || "Engineering Event Processed"}
+                    </p>
 
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Queue: {getQueueName(job)}
-                  </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {job.data?.repositoryFullName || "Unknown Repository"}
+                    </p>
+                  </div>
                 </div>
 
                 <Badge variant={getBadgeVariant(job.status)}>
@@ -121,17 +123,9 @@ export function RecentQueueJobs() {
                   </p>
                 )}
 
-                {job.data?.repositoryFullName && (
-                  <p>
-                    Repository: {job.data.repositoryFullName}
-                  </p>
-                )}
-
-                {job.data?.eventTitle && (
-                  <p>
-                    Event: {job.data.eventTitle}
-                  </p>
-                )}
+                <p>
+                  Queue: {getQueueName(job)}
+                </p>
               </div>
 
               {job.failedReason && (
