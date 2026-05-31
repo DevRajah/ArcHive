@@ -61,6 +61,117 @@ export const githubSyncRoutes = async (app: FastifyInstance) => {
         });
     });
 
+    app.post(
+        "/users/:userId/repositories/:repositoryId/webhook/install",
+        async (request, reply) => {
+            const { userId, repositoryId } = request.params as {
+                userId: string;
+                repositoryId: string;
+            };
+
+            const publicWebhookUrl = process.env.PUBLIC_WEBHOOK_URL;
+            const webhookSecret = process.env.GITHUB_WEBHOOK_SECRET;
+
+            if (!publicWebhookUrl || !webhookSecret) {
+                return reply.status(500).send({
+                    success: false,
+                    message: "PUBLIC_WEBHOOK_URL and GITHUB_WEBHOOK_SECRET are required",
+                });
+            }
+
+            const user = await prisma.user.findUnique({
+                where: { id: userId },
+            });
+
+            if (!user || !user.githubAccessToken) {
+                return reply.status(404).send({
+                    success: false,
+                    message: "GitHub-connected user not found",
+                });
+            }
+
+            const repository = await prisma.repository.findFirst({
+                where: {
+                    id: repositoryId,
+                    userId,
+                },
+            });
+
+            if (!repository) {
+                return reply.status(404).send({
+                    success: false,
+                    message: "Tracked repository not found for this user",
+                });
+            }
+
+            const webhookUrl = `${publicWebhookUrl}/api/github/webhook`;
+
+            // I ask GitHub for existing hooks first so I do not install duplicate webhooks
+            // every time the frontend button is clicked.
+            const existingHooksResponse = await axios.get(
+                `https://api.github.com/repos/${repository.fullName}/hooks`,
+                {
+                    headers: {
+                        Authorization: `Bearer ${user.githubAccessToken}`,
+                        Accept: "application/vnd.github+json",
+                    },
+                }
+            );
+
+            const existingHook = existingHooksResponse.data.find(
+                (hook: any) => hook.config?.url === webhookUrl
+            );
+
+            if (existingHook) {
+                return reply.status(200).send({
+                    success: true,
+                    message: "Webhook already installed for this repository",
+                    data: {
+                        repositoryId: repository.id,
+                        repositoryFullName: repository.fullName,
+                        webhookId: existingHook.id,
+                        webhookUrl,
+                        alreadyInstalled: true,
+                    },
+                });
+            }
+
+            const hookResponse = await axios.post(
+                `https://api.github.com/repos/${repository.fullName}/hooks`,
+                {
+                    name: "web",
+                    active: true,
+                    events: ["push", "pull_request"],
+                    config: {
+                        url: webhookUrl,
+                        content_type: "json",
+                        secret: webhookSecret,
+                        insecure_ssl: "0",
+                    },
+                },
+                {
+                    headers: {
+                        Authorization: `Bearer ${user.githubAccessToken}`,
+                        Accept: "application/vnd.github+json",
+                    },
+                }
+            );
+
+            return reply.status(201).send({
+                success: true,
+                message: "Repository webhook installed successfully",
+                data: {
+                    repositoryId: repository.id,
+                    repositoryFullName: repository.fullName,
+                    webhookId: hookResponse.data.id,
+                    webhookUrl,
+                    events: hookResponse.data.events,
+                    active: hookResponse.data.active,
+                },
+            });
+        }
+    );
+
     app.post("/users/:userId/repositories/import", async (request, reply) => {
         const { userId } = request.params as { userId: string };
 

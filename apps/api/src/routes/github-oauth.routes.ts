@@ -30,7 +30,7 @@ export const githubOAuthRoutes = async (app: FastifyInstance) => {
         const params = new URLSearchParams({
             client_id: clientId,
             redirect_uri: callbackUrl,
-            scope: "read:user repo",
+            scope: "read:user repo admin:repo_hook",
         });
 
         return reply.redirect(`https://github.com/login/oauth/authorize?${params.toString()}`);
