@@ -12,6 +12,78 @@ type SyncRepositoryBody = {
     defaultBranch?: string;
 };
 
+
+const installRepositoryWebhook = async ({
+    githubAccessToken,
+    repositoryFullName,
+}: {
+    githubAccessToken: string;
+    repositoryFullName: string;
+}) => {
+    const publicWebhookUrl = process.env.PUBLIC_WEBHOOK_URL;
+    const webhookSecret = process.env.GITHUB_WEBHOOK_SECRET;
+
+    if (!publicWebhookUrl || !webhookSecret) {
+        return {
+            installed: false,
+            reason: "PUBLIC_WEBHOOK_URL or GITHUB_WEBHOOK_SECRET is missing",
+        };
+    }
+
+    const webhookUrl = `${publicWebhookUrl}/api/github/webhook`;
+
+    const existingHooksResponse = await axios.get(
+        `https://api.github.com/repos/${repositoryFullName}/hooks`,
+        {
+            headers: {
+                Authorization: `Bearer ${githubAccessToken}`,
+                Accept: "application/vnd.github+json",
+            },
+        }
+    );
+
+    const existingHook = existingHooksResponse.data.find(
+        (hook: any) => hook.config?.url === webhookUrl
+    );
+
+    if (existingHook) {
+        return {
+            installed: true,
+            alreadyInstalled: true,
+            webhookId: existingHook.id,
+            webhookUrl,
+        };
+    }
+
+    const hookResponse = await axios.post(
+        `https://api.github.com/repos/${repositoryFullName}/hooks`,
+        {
+            name: "web",
+            active: true,
+            events: ["push", "pull_request"],
+            config: {
+                url: webhookUrl,
+                content_type: "json",
+                secret: webhookSecret,
+                insecure_ssl: "0",
+            },
+        },
+        {
+            headers: {
+                Authorization: `Bearer ${githubAccessToken}`,
+                Accept: "application/vnd.github+json",
+            },
+        }
+    );
+
+    return {
+        installed: true,
+        alreadyInstalled: false,
+        webhookId: hookResponse.data.id,
+        webhookUrl,
+    };
+};
+
 export const githubSyncRoutes = async (app: FastifyInstance) => {
     app.post("/repositories/sync", async (request, reply) => {
         const {
@@ -61,8 +133,7 @@ export const githubSyncRoutes = async (app: FastifyInstance) => {
         });
     });
 
-    app.post(
-        "/users/:userId/repositories/:repositoryId/webhook/install",
+    app.post("/users/:userId/repositories/:repositoryId/webhook/install",
         async (request, reply) => {
             const { userId, repositoryId } = request.params as {
                 userId: string;
@@ -301,6 +372,7 @@ export const githubSyncRoutes = async (app: FastifyInstance) => {
 
     app.post("/users/:userId/repositories/import-selected", async (request, reply) => {
         const { userId } = request.params as { userId: string };
+
         const { repositories } = request.body as {
             repositories?: Array<{
                 githubRepoId: string;
@@ -333,7 +405,6 @@ export const githubSyncRoutes = async (app: FastifyInstance) => {
         const syncedRepositories = [];
 
         for (const repo of repositories) {
-            // I still attach repos to the authenticated GitHub user, not a manually typed owner.
             const repository = await prisma.repository.upsert({
                 where: { fullName: repo.fullName },
                 create: {
@@ -341,7 +412,7 @@ export const githubSyncRoutes = async (app: FastifyInstance) => {
                     name: repo.name,
                     owner: repo.owner,
                     fullName: repo.fullName,
-                    description: repo.description,
+                    description: repo.description || null,
                     defaultBranch: repo.defaultBranch,
                     userId: user.id,
                 },
@@ -349,18 +420,28 @@ export const githubSyncRoutes = async (app: FastifyInstance) => {
                     githubRepoId: repo.githubRepoId,
                     name: repo.name,
                     owner: repo.owner,
-                    description: repo.description,
+                    description: repo.description || null,
                     defaultBranch: repo.defaultBranch,
                     userId: user.id,
                 },
             });
 
-            syncedRepositories.push(repository);
+            // I automatically install the GitHub webhook when a repo is imported/tracked.
+            // This makes the frontend import button enough to enable live ArcHive tracking.
+            const webhookInstallation = await installRepositoryWebhook({
+                githubAccessToken: user.githubAccessToken,
+                repositoryFullName: repo.fullName,
+            });
+
+            syncedRepositories.push({
+                ...repository,
+                webhook: webhookInstallation,
+            });
         }
 
         return {
             success: true,
-            message: "Selected GitHub repositories imported successfully",
+            message: "Selected GitHub repositories imported and live tracking configured successfully",
             data: {
                 importedCount: syncedRepositories.length,
                 repositories: syncedRepositories,
