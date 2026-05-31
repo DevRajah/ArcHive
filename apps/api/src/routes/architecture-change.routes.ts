@@ -5,7 +5,7 @@ type CreateArchitectureChangeBody = {
   changeType: string;
   detectedTechnology?: string;
   fileAffected?: string;
-  summary: string;
+  summary: string; 
 };
 
 export const architectureChangeRoutes = async (app: FastifyInstance) => {
