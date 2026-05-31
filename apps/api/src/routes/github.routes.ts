@@ -2,6 +2,8 @@ import { FastifyInstance } from "fastify";
 import { prisma } from "@archive/database";
 import { EngineeringEventType } from "@prisma/client";
 import { engineeringEventQueue } from "@archive/queue";
+import { classifyGitHubPushEvent } from "../utils/github-push-classifier";
+
 
 export const githubRoutes = async (app: FastifyInstance) => {
     app.post("/webhook", async (request, reply) => {

@@ -16,6 +16,39 @@ const getJobStatus = (job: {
   return "waiting";
 };
 
+const getRepositoryHistory = async (repositoryId?: string) => {
+  if (!repositoryId) {
+    return {
+      hasQueueHistory: false,
+      hasRedisHistory: false,
+      hasDockerHistory: false,
+      hasDatabaseHistory: false,
+    };
+  }
+
+  const architectureHistory = await prisma.architectureChange.findMany({
+    where: { repositoryId },
+    select: {
+      changeType: true,
+      detectedTechnology: true,
+    },
+  });
+
+  const historyText = architectureHistory
+    .map((change) => `${change.changeType} ${change.detectedTechnology || ""}`)
+    .join(" ")
+    .toLowerCase();
+
+  return {
+    hasQueueHistory:
+      historyText.includes("queue") || historyText.includes("bullmq"),
+    hasRedisHistory: historyText.includes("redis"),
+    hasDockerHistory: historyText.includes("docker"),
+    hasDatabaseHistory:
+      historyText.includes("database") || historyText.includes("schema"),
+  };
+};
+
 export const queueRoutes = async (app: FastifyInstance) => {
   app.get("/metrics", async () => {
     const counts = await engineeringEventQueue.getJobCounts(
@@ -80,10 +113,17 @@ export const queueRoutes = async (app: FastifyInstance) => {
               })
             : null;
 
+        // ADDED: I load repository history before classifying the queue job.
+        // This prevents repeated queue-related commits from always showing as "Queue Infrastructure Added".
+        const history = await getRepositoryHistory(repository?.id || repositoryId);
+
         const classification = classifyEngineeringEventForDashboard({
           rawEventType: event?.eventType,
           rawPayload: event?.rawPayload as Record<string, any> | undefined,
           repositoryName: repository?.name || "Repository",
+
+          // ADDED: pass history into the classifier so it can decide "added" vs "updated".
+          history,
         });
 
         return {

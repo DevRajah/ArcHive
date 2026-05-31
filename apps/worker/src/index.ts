@@ -56,6 +56,84 @@ const timelineTemplateMap: Partial<
             "Pull request activity was recorded, helping preserve context around proposed engineering changes.",
         importanceScore: 2,
     },
+    QUEUE_INFRASTRUCTURE_UPDATED: {
+  title: "Queue processing updated",
+  summary:
+    "The repository updated queue-based background processing or job infrastructure.",
+  importanceScore: 3,
+},
+REDIS_INFRASTRUCTURE_ADDED: {
+  title: "Redis infrastructure added",
+  summary:
+    "Redis infrastructure was introduced to support caching, queues, sessions, rate limiting, or realtime workflows.",
+  importanceScore: 4,
+},
+REDIS_INFRASTRUCTURE_UPDATED: {
+  title: "Redis infrastructure updated",
+  summary:
+    "Redis-related infrastructure was updated, improving cache, queue, or realtime system behaviour.",
+  importanceScore: 3,
+},
+DOCKER_INFRASTRUCTURE_CHANGED: {
+  title: "Docker infrastructure added",
+  summary:
+    "Docker or container infrastructure was introduced for environment consistency and deployment readiness.",
+  importanceScore: 4,
+},
+DOCKER_INFRASTRUCTURE_UPDATED: {
+  title: "Docker infrastructure updated",
+  summary:
+    "Docker or container configuration was updated to improve environment or deployment consistency.",
+  importanceScore: 3,
+},
+DATABASE_SCHEMA_CHANGED: {
+  title: "Database schema changed",
+  summary:
+    "The repository introduced database schema or persistence-layer changes.",
+  importanceScore: 4,
+},
+DATABASE_SCHEMA_UPDATED: {
+  title: "Database schema updated",
+  summary:
+    "The repository updated database schema or persistence-layer behaviour.",
+  importanceScore: 3,
+},
+API_ENDPOINT_CHANGED: {
+  title: "API layer changed",
+  summary:
+    "The repository updated API routes, controllers, or service logic.",
+  importanceScore: 3,
+},
+AUTH_SYSTEM_CHANGED: {
+  title: "Auth system changed",
+  summary:
+    "The repository updated authentication or security-related logic.",
+  importanceScore: 4,
+},
+DEPENDENCY_CHANGED: {
+  title: "Dependencies changed",
+  summary:
+    "The repository updated project dependencies.",
+  importanceScore: 2,
+},
+FRONTEND_UI_CHANGED: {
+  title: "Frontend UI changed",
+  summary:
+    "The repository updated frontend UI or application components.",
+  importanceScore: 2,
+},
+ENGINEERING_EVENT: {
+  title: "Engineering activity recorded",
+  summary:
+    "ArcHive detected repository activity that could not yet be mapped to a known architecture category.",
+  importanceScore: 1,
+},
+COMMIT_PUSHED: {
+  title: "Code pushed",
+  summary:
+    "New code changes were pushed to the repository.",
+  importanceScore: 1,
+},
 };
 
 const worker = new Worker<ProcessEngineeringEventJob>(
