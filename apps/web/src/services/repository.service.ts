@@ -2,6 +2,7 @@ import { api } from "@/lib/api";
 import { getUserId } from "@/lib/auth";
 import { ApiResponse } from "@/types/api.types";
 import { GithubRepository, Repository } from "@/types/repository.types";
+import { RepositoryOverview } from "@/types/repository-overview.types";
 
 function requireUserId() {
   const userId = getUserId();
@@ -49,8 +50,10 @@ export const repositoryService = {
     return response.data.data;
   },
 
-  async getRepositoryOverview(repositoryId: string) {
-    const response = await api.get(`/repositories/${repositoryId}/overview`);
+  async getRepositoryOverview(repositoryId: string): Promise<RepositoryOverview> {
+    const response = await api.get<ApiResponse<RepositoryOverview>>(
+      `/repositories/${repositoryId}/overview`
+    );
 
     return response.data.data;
   },

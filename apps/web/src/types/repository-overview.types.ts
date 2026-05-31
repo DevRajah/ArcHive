@@ -16,6 +16,8 @@ export interface RepositoryOverview {
   recentEvents?: Array<{
     id: string;
     eventType: string;
+    title?: string;
+    summary?: string;
     source?: string;
     createdAt: string;
   }>;
@@ -32,6 +34,7 @@ export interface RepositoryOverview {
     title: string;
     description?: string;
     severity?: string;
+    changeType?: string;
     createdAt: string;
   }>;
 }
