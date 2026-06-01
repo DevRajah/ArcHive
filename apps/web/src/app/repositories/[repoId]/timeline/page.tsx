@@ -1,15 +1,55 @@
 "use client";
 
+import Link from "next/link";
 import { useParams } from "next/navigation";
-import { GitBranch } from "lucide-react";
+import {
+  ArrowLeft,
+  Activity,
+  GitBranch,
+  GitCommit,
+  GitPullRequest,
+  Network,
+  Webhook,
+} from "lucide-react";
 
 import { AppShell } from "@/components/layout/AppShell";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useRepositoryTimeline } from "@/hooks/useTimeline";
 
+function formatEventType(eventType?: string) {
+  if (!eventType || eventType === "UNKNOWN") return "Engineering Event";
+
+  return eventType
+    .toLowerCase()
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
+function getEventIcon(eventType?: string) {
+  if (!eventType || eventType === "UNKNOWN") return Activity;
+  if (eventType.includes("WEBHOOK")) return Webhook;
+  if (eventType.includes("PULL") || eventType.includes("PR")) {
+    return GitPullRequest;
+  }
+  if (eventType.includes("COMMIT")) return GitCommit;
+
+  if (
+    eventType.includes("ARCHITECTURE") ||
+    eventType.includes("QUEUE") ||
+    eventType.includes("REDIS") ||
+    eventType.includes("API")
+  ) {
+    return Network;
+  }
+
+  return GitBranch;
+}
+
 export default function TimelinePage() {
   const params = useParams<{ repoId: string }>();
-
   const repoId = params.repoId;
 
   const {
@@ -22,27 +62,41 @@ export default function TimelinePage() {
   return (
     <AppShell>
       <div className="space-y-6">
-        {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            Engineering Timeline
-          </h1>
+        <Button asChild variant="ghost" className="px-0">
+          <Link href={`/repositories/${repoId}`}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to repository overview
+          </Link>
+        </Button>
 
-          <p className="mt-2 text-muted-foreground">
-            Historical engineering memory and repository evolution.
-          </p>
+        <div className="rounded-xl border border-border bg-card p-6">
+          <div className="flex flex-col justify-between gap-4 md:flex-row md:items-start">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">
+                Engineering Timeline
+              </h1>
+
+              <p className="mt-2 max-w-3xl text-muted-foreground">
+                Chronological engineering memory showing how this repository
+                has evolved through commits, webhooks, architecture changes, and
+                background processing.
+              </p>
+            </div>
+
+            <Badge variant="secondary">
+              {timelineEntries?.length || 0} entries
+            </Badge>
+          </div>
         </div>
 
-        {/* Loading */}
         {isLoading && (
           <div className="space-y-4">
-            {[1, 2, 3].map((item) => (
+            {[1, 2, 3, 4].map((item) => (
               <Skeleton key={item} className="h-32 rounded-xl" />
             ))}
           </div>
         )}
 
-        {/* Error */}
         {isError && (
           <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-6">
             <p className="font-medium text-destructive">
@@ -57,7 +111,6 @@ export default function TimelinePage() {
           </div>
         )}
 
-        {/* Empty */}
         {!isLoading &&
           !isError &&
           timelineEntries &&
@@ -74,46 +127,52 @@ export default function TimelinePage() {
             </div>
           )}
 
-        {/* Timeline */}
         {!isLoading &&
           !isError &&
           timelineEntries &&
           timelineEntries.length > 0 && (
             <div className="rounded-xl border border-border bg-card p-6">
-              <div className="space-y-6">
-                {timelineEntries.map((entry) => (
-                  <div
-                    key={entry.id}
-                    className="flex gap-4 border-b border-border pb-6 last:border-0"
-                  >
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                      <GitBranch className="h-4 w-4 text-primary" />
-                    </div>
+              <div className="relative space-y-8">
+                <div className="absolute left-5 top-2 h-[calc(100%-1rem)] w-px bg-border" />
 
-                    <div className="flex-1">
-                      <div className="flex flex-wrap items-center justify-between gap-4">
-                        <h2 className="font-semibold">
-                          {entry.title}
-                        </h2>
+                {timelineEntries.map((entry) => {
+                  const Icon = getEventIcon(entry.eventType);
 
-                        <p className="text-xs text-muted-foreground">
-                          {new Date(entry.createdAt).toLocaleString()}
-                        </p>
+                  return (
+                    <div key={entry.id} className="relative flex gap-5">
+                      <div className="z-10 flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-background">
+                        <Icon className="h-4 w-4 text-primary" />
                       </div>
 
-                      <p className="mt-2 text-sm text-muted-foreground">
-                        {entry.summary ||
-                          "No engineering summary available."}
-                      </p>
+                      <div className="flex-1 rounded-xl border border-border bg-background p-5">
+                        <div className="flex flex-col justify-between gap-3 md:flex-row md:items-start">
+                          <div>
+                            <h2 className="font-semibold">
+                              {entry.title || formatEventType(entry.eventType)}
+                            </h2>
 
-                      {entry.eventType && (
-                        <div className="mt-3 inline-flex rounded-full border border-border px-3 py-1 text-xs text-muted-foreground">
-                          {entry.eventType}
+                            <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                              {entry.summary ||
+                                "No engineering summary available."}
+                            </p>
+                          </div>
+
+                          <Badge variant="secondary">
+                            {formatEventType(entry.eventType)}
+                          </Badge>
                         </div>
-                      )}
+
+                        <div className="mt-4 flex flex-wrap gap-3 text-xs text-muted-foreground">
+                          {entry.source && <span>Source: {entry.source}</span>}
+
+                          <span>
+                            {new Date(entry.createdAt).toLocaleString()}
+                          </span>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}

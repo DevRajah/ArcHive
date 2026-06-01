@@ -1,19 +1,41 @@
 "use client";
 
 import Link from "next/link";
+import { useMemo, useState } from "react";
+
 import { AppShell } from "@/components/layout/AppShell";
 import { RepositoryCard } from "@/components/repositories/RepositoryCard";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTrackedRepositories } from "@/hooks/useRepositories";
 
 export default function RepositoriesPage() {
+  const [search, setSearch] = useState("");
+
   const {
     data: repositories,
     isLoading,
     isError,
     error,
   } = useTrackedRepositories();
+
+  const filteredRepositories = useMemo(() => {
+    if (!repositories) return [];
+
+    const query = search.toLowerCase().trim();
+
+    if (!query) return repositories;
+
+    return repositories.filter((repo) => {
+      return (
+        repo.name.toLowerCase().includes(query) ||
+        repo.fullName?.toLowerCase().includes(query) ||
+        repo.description?.toLowerCase().includes(query) ||
+        repo.language?.toLowerCase().includes(query)
+      );
+    });
+  }, [repositories, search]);
 
   return (
     <AppShell>
@@ -31,6 +53,15 @@ export default function RepositoriesPage() {
             <Link href="/repositories/import">Import Repository</Link>
           </Button>
         </div>
+
+        {!isLoading && !isError && repositories && repositories.length > 0 && (
+          <Input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search tracked repositories..."
+            className="max-w-md"
+          />
+        )}
 
         {isLoading && (
           <div className="grid gap-6 xl:grid-cols-3">
@@ -72,22 +103,42 @@ export default function RepositoriesPage() {
           </div>
         )}
 
-        {!isLoading && !isError && repositories && repositories.length > 0 && (
-          <div className="grid gap-6 xl:grid-cols-3">
-            {repositories.map((repo) => (
-              <RepositoryCard
-                key={repo.id}
-                id={repo.id}
-                name={repo.name}
-                description={repo.description || "No description provided."}
-                language={repo.language || "Unknown"}
-                stars={repo.stars || 0}
-                forks={repo.forks || 0}
-                status={repo.isTracked === false ? "UNTRACKED" : "TRACKED"}
-              />
-            ))}
-          </div>
-        )}
+        {!isLoading &&
+          !isError &&
+          repositories &&
+          repositories.length > 0 &&
+          filteredRepositories.length === 0 && (
+            <div className="rounded-xl border border-border bg-card p-10 text-center">
+              <h2 className="text-xl font-semibold">
+                No matching repositories
+              </h2>
+
+              <p className="mt-2 text-muted-foreground">
+                Try searching by repository name, language, or description.
+              </p>
+            </div>
+          )}
+
+        {!isLoading &&
+          !isError &&
+          repositories &&
+          repositories.length > 0 &&
+          filteredRepositories.length > 0 && (
+            <div className="grid gap-6 xl:grid-cols-3">
+              {filteredRepositories.map((repo) => (
+                <RepositoryCard
+                  key={repo.id}
+                  id={repo.id}
+                  name={repo.name}
+                  description={repo.description || "No description provided."}
+                  language={repo.language || "Unknown"}
+                  stars={repo.stars || 0}
+                  forks={repo.forks || 0}
+                  status={repo.isTracked === false ? "UNTRACKED" : "TRACKED"}
+                />
+              ))}
+            </div>
+          )}
       </div>
     </AppShell>
   );

@@ -20,10 +20,12 @@ export const buildApp = async () => {
     logger: true,
   });
 
-  await app.register(cors, {
-    origin: true,
-    credentials: true,
-  });
+await app.register(cors, {
+  origin: true,
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+});
 
   await app.register(fastifyRawBody, {
   field: "rawBody",

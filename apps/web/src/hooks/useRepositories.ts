@@ -10,6 +10,25 @@ export function useTrackedRepositories() {
   });
 }
 
+export function useUntrackRepository() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (repositoryId: string) =>
+      repositoryService.untrackRepository(repositoryId),
+
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.REPOSITORIES,
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.DASHBOARD_SUMMARY,
+      });
+    },
+  });
+}
+
 export function useGithubRepositories() {
   return useQuery({
     queryKey: QUERY_KEYS.GITHUB_REPOSITORIES,

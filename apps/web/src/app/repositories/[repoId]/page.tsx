@@ -1,179 +1,198 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
-import {
-  ArrowLeft,
-  Activity,
-  GitBranch,
-  GitCommit,
-  GitPullRequest,
-  Network,
-  Webhook,
-} from "lucide-react";
+import { useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { ArrowLeft, GitBranch, Network, Trash2 } from "lucide-react";
 
 import { AppShell } from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useRepositoryTimeline } from "@/hooks/useTimeline";
+import { useRepositoryOverview } from "@/hooks/useRepositoryOverview";
+import { useUntrackRepository } from "@/hooks/useRepositories";
+import { RepositoryMetricCards } from "@/components/repositories/RepositoryMetricCards";
+import { RepositoryRecentEvents } from "@/components/repositories/RepositoryRecentEvents";
+import { RepositoryTimelinePreview } from "@/components/repositories/RepositoryTimelinePreview";
+import { RepositoryArchitecturePreview } from "@/components/repositories/RepositoryArchitecturePreview";
 
-function formatEventType(eventType?: string) {
-  if (!eventType || eventType === "UNKNOWN") return "Engineering Event";
-
-  return eventType
-    .toLowerCase()
-    .split("_")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
-}
-
-function getEventIcon(eventType?: string) {
-  if (!eventType || eventType === "UNKNOWN") return Activity;
-  if (eventType.includes("WEBHOOK")) return Webhook;
-  if (eventType.includes("PULL") || eventType.includes("PR")) return GitPullRequest;
-  if (eventType.includes("COMMIT")) return GitCommit;
-
-  if (
-    eventType.includes("ARCHITECTURE") ||
-    eventType.includes("QUEUE") ||
-    eventType.includes("REDIS") ||
-    eventType.includes("API")
-  ) {
-    return Network;
-  }
-
-  return GitBranch;
-}
-
-export default function TimelinePage() {
+export default function RepositoryDetailPage() {
   const params = useParams<{ repoId: string }>();
   const repoId = params.repoId;
+  const router = useRouter();
 
-  const {
-    data: timelineEntries,
-    isLoading,
-    isError,
-    error,
-  } = useRepositoryTimeline(repoId);
+  const [feedback, setFeedback] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
+
+  const { data, isLoading, isError, error } = useRepositoryOverview(repoId);
+  const untrackMutation = useUntrackRepository();
+
+  function handleUntrackRepository() {
+    untrackMutation.mutate(repoId, {
+      onSuccess: () => {
+        setFeedback({
+          type: "success",
+          message: "Repository untracked successfully.",
+        });
+
+        setTimeout(() => {
+          router.push("/repositories");
+        }, 1000);
+      },
+
+      onError: (error) => {
+        setFeedback({
+          type: "error",
+          message:
+            error instanceof Error
+              ? error.message
+              : "Failed to untrack repository.",
+        });
+      },
+    });
+  }
+
+  useEffect(() => {
+    if (!feedback) return;
+
+    const timer = setTimeout(() => {
+      setFeedback(null);
+    }, 5000);
+
+    return () => clearTimeout(timer);
+  }, [feedback]);
 
   return (
     <AppShell>
       <div className="space-y-6">
         <Button asChild variant="ghost" className="px-0">
-          <Link href={`/repositories/${repoId}`}>
+          <Link href="/repositories">
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to repository overview
+            Back to repositories
           </Link>
         </Button>
 
-        <div className="rounded-xl border border-border bg-card p-6">
-          <div className="flex flex-col justify-between gap-4 md:flex-row md:items-start">
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight">
-                Engineering Timeline
-              </h1>
-
-              <p className="mt-2 max-w-3xl text-muted-foreground">
-                Chronological engineering memory showing how this repository
-                has evolved through commits, webhooks, architecture changes, and
-                background processing.
-              </p>
-            </div>
-
-            <Badge variant="secondary">
-              {timelineEntries?.length || 0} entries
-            </Badge>
+        {feedback?.type === "success" && (
+          <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4">
+            <p className="text-sm font-medium text-emerald-500">
+              {feedback.message}
+            </p>
           </div>
-        </div>
+        )}
+
+        {feedback?.type === "error" && (
+          <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-4">
+            <p className="text-sm font-medium text-destructive">
+              {feedback.message}
+            </p>
+          </div>
+        )}
 
         {isLoading && (
-          <div className="space-y-4">
-            {[1, 2, 3, 4].map((item) => (
-              <Skeleton key={item} className="h-32 rounded-xl" />
-            ))}
+          <div className="space-y-6">
+            <Skeleton className="h-32 rounded-xl" />
+
+            <div className="grid gap-6 md:grid-cols-3">
+              <Skeleton className="h-32 rounded-xl" />
+              <Skeleton className="h-32 rounded-xl" />
+              <Skeleton className="h-32 rounded-xl" />
+            </div>
+
+            <Skeleton className="h-72 rounded-xl" />
           </div>
         )}
 
         {isError && (
           <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-6">
             <p className="font-medium text-destructive">
-              Failed to load engineering timeline
+              Failed to load repository overview
             </p>
 
             <p className="mt-2 text-sm text-muted-foreground">
-              {error instanceof Error
-                ? error.message
-                : "Please check backend connection."}
+              {error instanceof Error ? error.message : "Please check backend."}
             </p>
           </div>
         )}
 
-        {!isLoading &&
-          !isError &&
-          timelineEntries &&
-          timelineEntries.length === 0 && (
-            <div className="rounded-xl border border-border bg-card p-10 text-center">
-              <h2 className="text-xl font-semibold">
-                No timeline entries found
-              </h2>
-
-              <p className="mt-2 text-muted-foreground">
-                ArcHive has not generated engineering timeline memory for this
-                repository yet.
-              </p>
-            </div>
-          )}
-
-        {!isLoading &&
-          !isError &&
-          timelineEntries &&
-          timelineEntries.length > 0 && (
+        {!isLoading && !isError && data && (
+          <>
             <div className="rounded-xl border border-border bg-card p-6">
-              <div className="relative space-y-8">
-                <div className="absolute left-5 top-2 h-[calc(100%-1rem)] w-px bg-border" />
+              <div className="flex flex-col justify-between gap-6 md:flex-row md:items-start">
+                <div>
+                  <div className="mb-3 flex flex-wrap items-center gap-3">
+                    <h1 className="text-3xl font-bold tracking-tight">
+                      {data.repository?.fullName ||
+                        data.repository?.name ||
+                        repoId}
+                    </h1>
 
-                {timelineEntries.map((entry) => {
-                  const Icon = getEventIcon(entry.eventType);
+                    <Badge>TRACKED</Badge>
+                  </div>
 
-                  return (
-                    <div key={entry.id} className="relative flex gap-5">
-                      <div className="z-10 flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-background">
-                        <Icon className="h-4 w-4 text-primary" />
-                      </div>
+                  <p className="max-w-3xl text-muted-foreground">
+                    {data.repository?.description ||
+                      "Repository intelligence overview and engineering activity."}
+                  </p>
 
-                      <div className="flex-1 rounded-xl border border-border bg-background p-5">
-                        <div className="flex flex-col justify-between gap-3 md:flex-row md:items-start">
-                          <div>
-                            <h2 className="font-semibold">
-                              {entry.title || formatEventType(entry.eventType)}
-                            </h2>
+                  <div className="mt-4 flex flex-wrap gap-3 text-sm text-muted-foreground">
+                    <span>
+                      Default branch: {data.repository?.defaultBranch || "main"}
+                    </span>
+                  </div>
+                </div>
 
-                            <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                              {entry.summary ||
-                                "No engineering summary available."}
-                            </p>
-                          </div>
+                <div className="flex flex-wrap gap-3">
+                  <Button asChild variant="outline">
+                    <Link href={`/repositories/${repoId}/timeline`}>
+                      <GitBranch className="mr-2 h-4 w-4" />
+                      Timeline
+                    </Link>
+                  </Button>
 
-                          <Badge variant="secondary">
-                            {formatEventType(entry.eventType)}
-                          </Badge>
-                        </div>
+                  <Button asChild>
+                    <Link href={`/repositories/${repoId}/architecture`}>
+                      <Network className="mr-2 h-4 w-4" />
+                      Architecture
+                    </Link>
+                  </Button>
 
-                        <div className="mt-4 flex flex-wrap gap-3 text-xs text-muted-foreground">
-                          {entry.source && <span>Source: {entry.source}</span>}
-
-                          <span>
-                            {new Date(entry.createdAt).toLocaleString()}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
+                  <Button
+                    variant="destructive"
+                    onClick={handleUntrackRepository}
+                    disabled={untrackMutation.isPending}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    {untrackMutation.isPending ? "Untracking..." : "Untrack"}
+                  </Button>
+                </div>
               </div>
             </div>
-          )}
+
+            <RepositoryMetricCards
+              totalEvents={data.metrics?.totalEvents ?? 0}
+              totalTimelineEntries={data.metrics?.totalTimelineEntries ?? 0}
+              totalArchitectureChanges={
+                data.metrics?.totalArchitectureChanges ?? 0
+              }
+            />
+
+            <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+              <RepositoryRecentEvents events={data.recentEvents} />
+
+              <RepositoryArchitecturePreview
+                repositoryId={repoId}
+                changes={data.recentArchitectureChanges}
+              />
+            </div>
+
+            <RepositoryTimelinePreview
+              repositoryId={repoId}
+              entries={data.recentTimelineEntries}
+            />
+          </>
+        )}
       </div>
     </AppShell>
   );
