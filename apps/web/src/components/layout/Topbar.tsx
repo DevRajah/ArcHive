@@ -24,7 +24,7 @@ export function Topbar() {
           <Search className="h-4 w-4 text-muted-foreground" />
 
           <input
-            placeholder="Search repositories..."
+            placeholder="Global search coming soon..."
             className="w-full bg-transparent text-sm outline-none"
           />
         </div>
