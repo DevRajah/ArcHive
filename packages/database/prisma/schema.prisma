@@ -66,6 +66,10 @@ model Repository {
   description    String?
   defaultBranch  String
 
+  language          String?
+  stars             Int      @default(0)
+  forks             Int      @default(0)
+
   userId String?
   user   User? @relation(fields: [userId], references: [id])
 

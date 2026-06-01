@@ -165,6 +165,6 @@ export const githubOAuthRoutes = async (app: FastifyInstance) => {
       request.log.error(error);
 
       return redirectToOAuthFailure(reply);
-    }
+    } 
   });
 };
