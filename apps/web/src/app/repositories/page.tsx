@@ -2,9 +2,13 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { FolderGit2, SearchX } from "lucide-react";
 
 import { AppShell } from "@/components/layout/AppShell";
 import { RepositoryCard } from "@/components/repositories/RepositoryCard";
+import { EmptyState } from "@/components/shared/EmptyState";
+import { ErrorState } from "@/components/shared/ErrorState";
+import { PageHeader } from "@/components/shared/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -28,39 +32,49 @@ export default function RepositoriesPage() {
     if (!query) return repositories;
 
     return repositories.filter((repo) => {
-      return (
-        repo.name.toLowerCase().includes(query) ||
-        repo.fullName?.toLowerCase().includes(query) ||
-        repo.description?.toLowerCase().includes(query) ||
-        repo.language?.toLowerCase().includes(query)
-      );
+      const searchableText = [
+        repo.name,
+        repo.fullName,
+        repo.description,
+        repo.language,
+        repo.owner,
+        repo.defaultBranch,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
+      return searchableText.includes(query);
     });
   }, [repositories, search]);
 
   return (
     <AppShell>
       <div className="space-y-6">
-        <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Repositories</h1>
-
-            <p className="mt-2 text-muted-foreground">
-              Manage tracked repositories and inspect engineering intelligence.
-            </p>
-          </div>
-
-          <Button asChild>
-            <Link href="/repositories/import">Import Repository</Link>
-          </Button>
-        </div>
+        <PageHeader
+          title="Repositories"
+          description="Manage tracked repositories and inspect engineering intelligence."
+          action={
+            <Button asChild>
+              <Link href="/repositories/import">Import Repository</Link>
+            </Button>
+          }
+        />
 
         {!isLoading && !isError && repositories && repositories.length > 0 && (
-          <Input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search tracked repositories..."
-            className="max-w-md"
-          />
+          <div className="space-y-2">
+            <Input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search tracked repositories..."
+              className="max-w-md"
+            />
+
+            <p className="text-sm text-muted-foreground">
+              Showing {filteredRepositories.length} of {repositories.length}{" "}
+              repositories
+            </p>
+          </div>
         )}
 
         {isLoading && (
@@ -72,35 +86,26 @@ export default function RepositoriesPage() {
         )}
 
         {isError && (
-          <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-6">
-            <p className="font-medium text-destructive">
-              Failed to load repositories
-            </p>
-
-            <p className="mt-2 text-sm text-muted-foreground">
-              {error instanceof Error
+          <ErrorState
+            title="Failed to load repositories"
+            message={
+              error instanceof Error
                 ? error.message
-                : "Please check that your backend is running."}
-            </p>
-          </div>
+                : "Please check that your backend is running."
+            }
+          />
         )}
 
         {!isLoading && !isError && repositories?.length === 0 && (
-          <div className="rounded-xl border border-border bg-card p-10 text-center">
-            <h2 className="text-xl font-semibold">
-              No repositories tracked yet
-            </h2>
-
-            <p className="mt-2 text-muted-foreground">
-              Import GitHub repositories to start building engineering memory.
-            </p>
-
-            <Button asChild className="mt-6">
-              <Link href="/repositories/import">
-                Import your first repository
-              </Link>
-            </Button>
-          </div>
+          <EmptyState
+            icon={FolderGit2}
+            title="No repositories tracked yet"
+            description="Import GitHub repositories to start building engineering memory."
+            actionLabel="Import your first repository"
+            onAction={() => {
+              window.location.href = "/repositories/import";
+            }}
+          />
         )}
 
         {!isLoading &&
@@ -108,15 +113,11 @@ export default function RepositoriesPage() {
           repositories &&
           repositories.length > 0 &&
           filteredRepositories.length === 0 && (
-            <div className="rounded-xl border border-border bg-card p-10 text-center">
-              <h2 className="text-xl font-semibold">
-                No matching repositories
-              </h2>
-
-              <p className="mt-2 text-muted-foreground">
-                Try searching by repository name, language, or description.
-              </p>
-            </div>
+            <EmptyState
+              icon={SearchX}
+              title="No matching repositories"
+              description="Try searching by repository name, language, owner, branch, or description."
+            />
           )}
 
         {!isLoading &&

@@ -15,6 +15,7 @@ import { RepositoryMetricCards } from "@/components/repositories/RepositoryMetri
 import { RepositoryRecentEvents } from "@/components/repositories/RepositoryRecentEvents";
 import { RepositoryTimelinePreview } from "@/components/repositories/RepositoryTimelinePreview";
 import { RepositoryArchitecturePreview } from "@/components/repositories/RepositoryArchitecturePreview";
+import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 
 export default function RepositoryDetailPage() {
   const params = useParams<{ repoId: string }>();
@@ -25,6 +26,7 @@ export default function RepositoryDetailPage() {
     type: "success" | "error";
     message: string;
   } | null>(null);
+  const [isUntrackDialogOpen, setIsUntrackDialogOpen] = useState(false);
 
   const { data, isLoading, isError, error } = useRepositoryOverview(repoId);
   const untrackMutation = useUntrackRepository();
@@ -32,6 +34,8 @@ export default function RepositoryDetailPage() {
   function handleUntrackRepository() {
     untrackMutation.mutate(repoId, {
       onSuccess: () => {
+        setIsUntrackDialogOpen(false);
+        
         setFeedback({
           type: "success",
           message: "Repository untracked successfully.",
@@ -160,7 +164,7 @@ export default function RepositoryDetailPage() {
 
                   <Button
                     variant="destructive"
-                    onClick={handleUntrackRepository}
+                    onClick={() => setIsUntrackDialogOpen(true)}
                     disabled={untrackMutation.isPending}
                   >
                     <Trash2 className="mr-2 h-4 w-4" />
@@ -191,7 +195,19 @@ export default function RepositoryDetailPage() {
               repositoryId={repoId}
               entries={data.recentTimelineEntries}
             />
+
+            <ConfirmDialog
+              open={isUntrackDialogOpen}
+              onOpenChange={setIsUntrackDialogOpen}
+              title="Untrack repository?"
+              description="This will remove the repository from your ArcHive workspace. Historical intelligence may remain stored, but it will no longer appear in your tracked repositories."
+              confirmLabel="Untrack Repository"
+              isLoading={untrackMutation.isPending}
+              onConfirm={handleUntrackRepository}
+            />
           </>
+
+
         )}
       </div>
     </AppShell>
