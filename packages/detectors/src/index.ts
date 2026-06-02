@@ -150,7 +150,7 @@ export const detectArchitectureChanges = (
           "worker",
           "bullmq",
           "engineering-event-classifier",
-        ]),
+        ]) || filesChanged[0],
         importanceScore: wasUpdated ? 3 : 5,
       })
     );
@@ -171,7 +171,7 @@ export const detectArchitectureChanges = (
           ? "REDIS_INFRASTRUCTURE_UPDATED"
           : "REDIS_INFRASTRUCTURE_ADDED",
         detectedTechnology: "Redis",
-        fileAffected: firstMatchingFile(filesChanged, ["redis", "ioredis", "cache"]),
+        fileAffected: firstMatchingFile(filesChanged, ["redis", "ioredis", "cache"]) || filesChanged[0],
         importanceScore: wasUpdated ? 3 : 4,
       })
     );
@@ -196,7 +196,7 @@ export const detectArchitectureChanges = (
           "dockerfile",
           "docker-compose",
           "docker",
-        ]),
+        ]) || filesChanged[0],
         importanceScore: wasUpdated ? 3 : 4,
       })
     );
@@ -222,7 +222,7 @@ export const detectArchitectureChanges = (
           "migration",
           "database",
           "prisma",
-        ]),
+        ]) || filesChanged[0],
         importanceScore: wasUpdated ? 3 : 4,
       })
     );
@@ -244,7 +244,7 @@ export const detectArchitectureChanges = (
           "controller",
           "service",
           "endpoint",
-        ]),
+        ]) || filesChanged[0],
         importanceScore: 3,
       })
     );
@@ -278,7 +278,7 @@ export const detectArchitectureChanges = (
           "jwt",
           "security",
           "signature",
-        ]),
+        ]) || filesChanged[0],
         importanceScore: 4,
       })
     );
@@ -287,11 +287,12 @@ export const detectArchitectureChanges = (
   const hasArchitectureIntelligenceSignal = includesAny(payloadText, [
     "architecture-summary",
     "engineering-event-classifier",
+    "github-push-classifier",
     "detector",
-    "architecture preview",
+    "detectors",
+    "detectarchitecturechanges",
     "repository intelligence",
     "architecture intelligence",
-    "detectarchitecturechanges",
   ]);
 
   if (hasArchitectureIntelligenceSignal) {
@@ -301,11 +302,16 @@ export const detectArchitectureChanges = (
         rawPayload,
         changeType: "ARCHITECTURE_INTELLIGENCE_UPDATED",
         detectedTechnology: "Repository Intelligence",
-        fileAffected: firstMatchingFile(filesChanged, [
-          "architecture-summary",
-          "engineering-event-classifier",
-          "detector",
-        ]),
+        fileAffected:
+          firstMatchingFile(filesChanged, [
+            "architecture-summary",
+            "engineering-event-classifier",
+            "github-push-classifier",
+            "detector",
+            "detectors",
+            "packages/detectors",
+            "src/index.ts",
+          ]) || filesChanged[0],
         importanceScore: 3,
       })
     );
@@ -336,7 +342,7 @@ export const detectArchitectureChanges = (
           ".jsx",
           "pages",
           "app/",
-        ]),
+        ]) || filesChanged[0],
         importanceScore: 2,
       })
     );
@@ -371,7 +377,7 @@ export const detectArchitectureChanges = (
           "store.",
           "context.",
           "provider.",
-        ]),
+        ]) || filesChanged[0],
         importanceScore: 2,
       })
     );
@@ -396,7 +402,7 @@ export const detectArchitectureChanges = (
           ".types.ts",
           "interfaces",
           "dto",
-        ]),
+        ]) || filesChanged[0],
         importanceScore: 2,
       })
     );
@@ -423,7 +429,7 @@ export const detectArchitectureChanges = (
           "package-lock.json",
           "pnpm-lock.yaml",
           "yarn.lock",
-        ]),
+        ]) || filesChanged[0],
         importanceScore: 2,
       })
     );
