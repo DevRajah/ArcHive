@@ -4,6 +4,7 @@ import { prisma } from "@archive/database";
 import { redisConnection, ProcessEngineeringEventJob } from "@archive/queue";
 import { EngineeringEventType, ProcessingStatus } from "@prisma/client";
 import { detectArchitectureChanges } from "@archive/detectors";
+import { emitRealtimeEvent } from "./realtime/socket-emitter";
 
 const timelineTemplateMap: Partial<
     Record<
@@ -151,106 +152,157 @@ const timelineTemplateMap: Partial<
 };
 
 const worker = new Worker<ProcessEngineeringEventJob>(
-    "engineering-event-processing",
-    async (job) => {
-        const { eventId, repositoryId } = job.data;
+  "engineering-event-processing",
+  async (job) => {
+    const { eventId, repositoryId } = job.data;
 
-        // I mark the event as PROCESSING so the dashboard can show that background work has started.
-        const event = await prisma.engineeringEvent.update({
-            where: { id: eventId },
-            data: { status: ProcessingStatus.PROCESSING },
-        });
+    // I mark the event as PROCESSING so the dashboard can show that background work has started.
+    const event = await prisma.engineeringEvent.update({
+      where: { id: eventId },
+      data: { status: ProcessingStatus.PROCESSING },
+      include: {
+        repository: {
+          select: {
+            id: true,
+            fullName: true,
+          },
+        },
+      },
+    });
 
-        const template =
-            timelineTemplateMap[event.eventType] ||
-            timelineTemplateMap.ENGINEERING_EVENT;
+    const template =
+      timelineTemplateMap[event.eventType] ||
+      timelineTemplateMap.ENGINEERING_EVENT;
 
-        const architectureChanges = detectArchitectureChanges({
-            eventType: event.eventType,
-            rawPayload: event.rawPayload as Record<string, unknown>,
-        });
+    const architectureChanges = detectArchitectureChanges({
+      eventType: event.eventType,
+      rawPayload: event.rawPayload as Record<string, unknown>,
+    });
 
-        // I create architecture memories in the worker because this is background intelligence,
-        // not something the webhook request should block on.
-        for (const change of architectureChanges) {
-            // I avoid creating duplicate architecture memories when the same job is retried
-            // or when similar historical events are reprocessed after a repo is re-imported.
-            const existingChange = await prisma.architectureChange.findFirst({
-                where: {
-                    repositoryId,
-                    changeType: change.changeType,
-                    summary: change.summary,
-                    fileAffected: change.fileAffected || null,
-                },
-            });
+    // I create architecture memories in the worker because this is background intelligence,
+    // not something the webhook request should block on.
+    for (const change of architectureChanges) {
+      // I avoid creating duplicate architecture memories when the same job is retried
+      // or when similar historical events are reprocessed after a repo is re-imported.
+      const existingChange = await prisma.architectureChange.findFirst({
+        where: {
+          repositoryId,
+          changeType: change.changeType,
+          summary: change.summary,
+          fileAffected: change.fileAffected || null,
+        },
+      });
 
-            if (existingChange) {
-                continue;
-            }
+      if (existingChange) {
+        continue;
+      }
 
-            await prisma.architectureChange.create({
-                data: {
-                    repositoryId,
-                    changeType: change.changeType,
-                    detectedTechnology: change.detectedTechnology,
-                    fileAffected: change.fileAffected || null,
-                    summary: change.summary,
-                },
-            });
-        }
+      const architectureChange = await prisma.architectureChange.create({
+        data: {
+          repositoryId,
+          changeType: change.changeType,
+          detectedTechnology: change.detectedTechnology,
+          fileAffected: change.fileAffected || null,
+          summary: change.summary,
+        },
+      });
 
-        const existingTimelineEntry = await prisma.timelineEntry.findFirst({
-            where: {
-                repositoryId,
-                relatedEventId: eventId,
-            },
-        });
-
-        // I prevent duplicate timeline entries because BullMQ retries can run the same job again.
-        if (!existingTimelineEntry) {
-            await prisma.timelineEntry.create({
-                data: {
-                    repositoryId,
-                    relatedEventId: eventId,
-                    title: template?.title || "Engineering activity recorded",
-                    summary:
-                        template?.summary ||
-                        "ArcHive recorded engineering activity for this repository.",
-                    importanceScore: template?.importanceScore || 1,
-                    generatedByAI: false,
-                },
-            });
-        }
-
-        await prisma.engineeringEvent.update({
-            where: { id: eventId },
-            data: { status: ProcessingStatus.COMPLETED },
-        });
-
-        return {
-            message: "Engineering event processed successfully",
-            eventId,
-        };
-    },
-    {
-        connection: redisConnection as any,
-        concurrency: 5,
+      // I notify the frontend that a new architecture memory has been detected.
+      emitRealtimeEvent("architecture-change:detected", {
+        repositoryId,
+        architectureChangeId: architectureChange.id,
+        changeType: architectureChange.changeType,
+        detectedTechnology: architectureChange.detectedTechnology,
+        fileAffected: architectureChange.fileAffected,
+        summary: architectureChange.summary,
+        createdAt: architectureChange.createdAt,
+      });
     }
+
+    const existingTimelineEntry = await prisma.timelineEntry.findFirst({
+      where: {
+        repositoryId,
+        relatedEventId: eventId,
+      },
+    });
+
+    // I prevent duplicate timeline entries because BullMQ retries can run the same job again.
+    if (!existingTimelineEntry) {
+      await prisma.timelineEntry.create({
+        data: {
+          repositoryId,
+          relatedEventId: eventId,
+          title: template?.title || "Engineering activity recorded",
+          summary:
+            template?.summary ||
+            "ArcHive recorded engineering activity for this repository.",
+          importanceScore: template?.importanceScore || 1,
+          generatedByAI: false,
+        },
+      });
+    }
+
+    const completedEvent = await prisma.engineeringEvent.update({
+      where: { id: eventId },
+      data: { status: ProcessingStatus.COMPLETED },
+      include: {
+        repository: {
+          select: {
+            fullName: true,
+          },
+        },
+      },
+    });
+
+    // I notify the frontend that the processed engineering event is ready.
+    emitRealtimeEvent("engineering-event:processed", {
+      repositoryId,
+      eventId: completedEvent.id,
+      eventType: completedEvent.eventType,
+      title: template?.title || "Engineering activity recorded",
+      repositoryFullName: completedEvent.repository.fullName,
+      createdAt: completedEvent.createdAt,
+    });
+
+    // I notify the frontend that repository-level data should refresh.
+    emitRealtimeEvent("repository:updated", {
+      repositoryId,
+      repositoryFullName: completedEvent.repository.fullName,
+    });
+
+    return {
+      message: "Engineering event processed successfully",
+      eventId,
+    };
+  },
+  {
+    connection: redisConnection as any,
+    concurrency: 5,
+  }
 );
 
 worker.on("completed", (job) => {
-    console.log(`Engineering event job completed: ${job.id}`);
+  console.log(`Engineering event job completed: ${job.id}`);
+
+  emitRealtimeEvent("queue-job:completed", {
+    jobId: job.id,
+    name: job.name,
+    status: "completed",
+    repositoryId: job.data.repositoryId,
+    eventId: job.data.eventId,
+    finishedOn: job.finishedOn,
+  });
 });
 
 worker.on("failed", async (job, error) => {
-    console.error(`Engineering event job failed: ${job?.id}`, error);
+  console.error(`Engineering event job failed: ${job?.id}`, error);
 
-    if (job?.data.eventId) {
-        await prisma.engineeringEvent.update({
-            where: { id: job.data.eventId },
-            data: { status: ProcessingStatus.FAILED },
-        });
-    }
+  if (job?.data.eventId) {
+    await prisma.engineeringEvent.update({
+      where: { id: job.data.eventId },
+      data: { status: ProcessingStatus.FAILED },
+    });
+  }
 });
 
 console.log("ArcHive worker is running and waiting for engineering events...");
