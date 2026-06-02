@@ -284,6 +284,33 @@ export const detectArchitectureChanges = (
     );
   }
 
+  const hasArchitectureIntelligenceSignal = includesAny(payloadText, [
+    "architecture-summary",
+    "engineering-event-classifier",
+    "detector",
+    "architecture preview",
+    "repository intelligence",
+    "architecture intelligence",
+    "detectarchitecturechanges",
+  ]);
+
+  if (hasArchitectureIntelligenceSignal) {
+    results.push(
+      buildChange({
+        eventType,
+        rawPayload,
+        changeType: "ARCHITECTURE_INTELLIGENCE_UPDATED",
+        detectedTechnology: "Repository Intelligence",
+        fileAffected: firstMatchingFile(filesChanged, [
+          "architecture-summary",
+          "engineering-event-classifier",
+          "detector",
+        ]),
+        importanceScore: 3,
+      })
+    );
+  }
+
   const hasFrontendSignal =
     normalizedEventType.includes("FRONTEND") ||
     includesAny(payloadText, [
