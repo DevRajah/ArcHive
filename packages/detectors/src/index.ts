@@ -1,3 +1,5 @@
+import { generateArchitectureSummary } from "./architecture-summary";
+
 export type ArchitectureDetectionInput = {
   eventType: string;
   rawPayload: Record<string, unknown>;
@@ -20,9 +22,7 @@ const getFilesChanged = (rawPayload: Record<string, unknown>): string[] => {
 
   const commits = rawPayload.commits;
 
-  if (!Array.isArray(commits)) {
-    return [];
-  }
+  if (!Array.isArray(commits)) return [];
 
   const files = new Set<string>();
 
@@ -36,13 +36,13 @@ const getFilesChanged = (rawPayload: Record<string, unknown>): string[] => {
     };
 
     const added = Array.isArray(typedCommit.added) ? typedCommit.added : [];
-    const modified = Array.isArray(typedCommit.modified) ? typedCommit.modified : [];
+    const modified = Array.isArray(typedCommit.modified)
+      ? typedCommit.modified
+      : [];
     const removed = Array.isArray(typedCommit.removed) ? typedCommit.removed : [];
 
     [...added, ...modified, ...removed].forEach((file) => {
-      if (typeof file === "string") {
-        files.add(file);
-      }
+      if (typeof file === "string") files.add(file);
     });
   }
 
@@ -60,9 +60,7 @@ const getCommitMessages = (rawPayload: Record<string, unknown>): string[] => {
 
   const commits = rawPayload.commits;
 
-  if (!Array.isArray(commits)) {
-    return [];
-  }
+  if (!Array.isArray(commits)) return [];
 
   return commits
     .map((commit) => {
@@ -85,12 +83,34 @@ const firstMatchingFile = (files: string[], keywords: string[]) => {
   return files.find((file) => includesAny(file, keywords));
 };
 
-const isUpdateEvent = (eventType: string, keywords: string[]) => {
-  return (
-    eventType.includes("UPDATED") ||
-    eventType.includes("CHANGED") ||
-    keywords.some((keyword) => eventType.includes(keyword))
-  );
+const buildChange = ({
+  eventType,
+  rawPayload,
+  changeType,
+  detectedTechnology,
+  fileAffected,
+  importanceScore,
+}: {
+  eventType: string;
+  rawPayload: Record<string, unknown>;
+  changeType: string;
+  detectedTechnology: string;
+  fileAffected?: string;
+  importanceScore: number;
+}): ArchitectureDetectionResult => {
+  return {
+    changeType,
+    detectedTechnology,
+    fileAffected,
+    summary: generateArchitectureSummary({
+      changeType,
+      detectedTechnology,
+      fileAffected,
+      eventType,
+      rawPayload,
+    }),
+    importanceScore,
+  };
 };
 
 export const detectArchitectureChanges = (
@@ -117,17 +137,23 @@ export const detectArchitectureChanges = (
       normalizedEventType.includes("QUEUE_INFRASTRUCTURE_UPDATED") ||
       normalizedEventType.includes("QUEUE_PROCESSING_UPDATED");
 
-    results.push({
-      changeType: wasUpdated
-        ? "QUEUE_INFRASTRUCTURE_UPDATED"
-        : "QUEUE_INFRASTRUCTURE_ADDED",
-      detectedTechnology: "BullMQ / Queue Worker",
-      fileAffected: firstMatchingFile(filesChanged, ["queue", "worker", "bullmq"]),
-      summary: wasUpdated
-        ? "Queue or background worker infrastructure was updated, affecting asynchronous processing architecture."
-        : "Queue-based asynchronous processing infrastructure was introduced into the repository.",
-      importanceScore: wasUpdated ? 3 : 5,
-    });
+    results.push(
+      buildChange({
+        eventType,
+        rawPayload,
+        changeType: wasUpdated
+          ? "QUEUE_INFRASTRUCTURE_UPDATED"
+          : "QUEUE_INFRASTRUCTURE_ADDED",
+        detectedTechnology: "BullMQ / Queue Worker",
+        fileAffected: firstMatchingFile(filesChanged, [
+          "queue",
+          "worker",
+          "bullmq",
+          "engineering-event-classifier",
+        ]),
+        importanceScore: wasUpdated ? 3 : 5,
+      })
+    );
   }
 
   const hasRedisSignal =
@@ -137,17 +163,18 @@ export const detectArchitectureChanges = (
   if (hasRedisSignal) {
     const wasUpdated = normalizedEventType.includes("UPDATED");
 
-    results.push({
-      changeType: wasUpdated
-        ? "REDIS_INFRASTRUCTURE_UPDATED"
-        : "REDIS_INFRASTRUCTURE_ADDED",
-      detectedTechnology: "Redis",
-      fileAffected: firstMatchingFile(filesChanged, ["redis", "ioredis", "cache"]),
-      summary: wasUpdated
-        ? "Redis-backed caching, queue storage, or realtime infrastructure was updated."
-        : "Redis infrastructure was introduced, likely supporting queues, caching, sessions, rate limiting, or realtime features.",
-      importanceScore: wasUpdated ? 3 : 4,
-    });
+    results.push(
+      buildChange({
+        eventType,
+        rawPayload,
+        changeType: wasUpdated
+          ? "REDIS_INFRASTRUCTURE_UPDATED"
+          : "REDIS_INFRASTRUCTURE_ADDED",
+        detectedTechnology: "Redis",
+        fileAffected: firstMatchingFile(filesChanged, ["redis", "ioredis", "cache"]),
+        importanceScore: wasUpdated ? 3 : 4,
+      })
+    );
   }
 
   const hasDockerSignal =
@@ -157,21 +184,22 @@ export const detectArchitectureChanges = (
   if (hasDockerSignal) {
     const wasUpdated = normalizedEventType.includes("UPDATED");
 
-    results.push({
-      changeType: wasUpdated
-        ? "DOCKER_INFRASTRUCTURE_UPDATED"
-        : "DOCKER_INFRASTRUCTURE_ADDED",
-      detectedTechnology: "Docker",
-      fileAffected: firstMatchingFile(filesChanged, [
-        "dockerfile",
-        "docker-compose",
-        "docker",
-      ]),
-      summary: wasUpdated
-        ? "Docker or container infrastructure was updated to improve environment consistency or deployment readiness."
-        : "Docker support was added to improve environment consistency, local development, and deployment readiness.",
-      importanceScore: wasUpdated ? 3 : 4,
-    });
+    results.push(
+      buildChange({
+        eventType,
+        rawPayload,
+        changeType: wasUpdated
+          ? "DOCKER_INFRASTRUCTURE_UPDATED"
+          : "DOCKER_INFRASTRUCTURE_ADDED",
+        detectedTechnology: "Docker",
+        fileAffected: firstMatchingFile(filesChanged, [
+          "dockerfile",
+          "docker-compose",
+          "docker",
+        ]),
+        importanceScore: wasUpdated ? 3 : 4,
+      })
+    );
   }
 
   const hasDatabaseSignal =
@@ -181,22 +209,23 @@ export const detectArchitectureChanges = (
   if (hasDatabaseSignal) {
     const wasUpdated = normalizedEventType.includes("UPDATED");
 
-    results.push({
-      changeType: wasUpdated
-        ? "DATABASE_SCHEMA_UPDATED"
-        : "DATABASE_SCHEMA_CHANGED",
-      detectedTechnology: "Database / Prisma",
-      fileAffected: firstMatchingFile(filesChanged, [
-        "schema.prisma",
-        "migration",
-        "database",
-        "prisma",
-      ]),
-      summary: wasUpdated
-        ? "Database schema or persistence-layer infrastructure was updated."
-        : "The database layer changed, which may affect persistence, relationships, schema design, or data access patterns.",
-      importanceScore: wasUpdated ? 3 : 4,
-    });
+    results.push(
+      buildChange({
+        eventType,
+        rawPayload,
+        changeType: wasUpdated
+          ? "DATABASE_SCHEMA_UPDATED"
+          : "DATABASE_SCHEMA_CHANGED",
+        detectedTechnology: "Database / Prisma",
+        fileAffected: firstMatchingFile(filesChanged, [
+          "schema.prisma",
+          "migration",
+          "database",
+          "prisma",
+        ]),
+        importanceScore: wasUpdated ? 3 : 4,
+      })
+    );
   }
 
   const hasApiSignal =
@@ -204,19 +233,21 @@ export const detectArchitectureChanges = (
     includesAny(payloadText, ["route", "controller", "service", "endpoint"]);
 
   if (hasApiSignal) {
-    results.push({
-      changeType: "BACKEND_API_CHANGED",
-      detectedTechnology: "API Layer",
-      fileAffected: firstMatchingFile(filesChanged, [
-        "route",
-        "controller",
-        "service",
-        "endpoint",
-      ]),
-      summary:
-        "Backend API routing, controller, endpoint, or service-layer architecture changed.",
-      importanceScore: 3,
-    });
+    results.push(
+      buildChange({
+        eventType,
+        rawPayload,
+        changeType: "BACKEND_API_CHANGED",
+        detectedTechnology: "API Layer",
+        fileAffected: firstMatchingFile(filesChanged, [
+          "route",
+          "controller",
+          "service",
+          "endpoint",
+        ]),
+        importanceScore: 3,
+      })
+    );
   }
 
   const hasAuthSignal =
@@ -233,22 +264,24 @@ export const detectArchitectureChanges = (
     ]);
 
   if (hasAuthSignal) {
-    results.push({
-      changeType: "AUTH_SYSTEM_CHANGED",
-      detectedTechnology: "Authentication / Authorization",
-      fileAffected: firstMatchingFile(filesChanged, [
-        "auth",
-        "oauth",
-        "login",
-        "register",
-        "jwt",
-        "security",
-        "signature",
-      ]),
-      summary:
-        "Authentication, authorization, OAuth, token, or security verification logic changed.",
-      importanceScore: 4,
-    });
+    results.push(
+      buildChange({
+        eventType,
+        rawPayload,
+        changeType: "AUTH_SYSTEM_CHANGED",
+        detectedTechnology: "Authentication / Authorization",
+        fileAffected: firstMatchingFile(filesChanged, [
+          "auth",
+          "oauth",
+          "login",
+          "register",
+          "jwt",
+          "security",
+          "signature",
+        ]),
+        importanceScore: 4,
+      })
+    );
   }
 
   const hasFrontendSignal =
@@ -263,59 +296,74 @@ export const detectArchitectureChanges = (
     ]);
 
   if (hasFrontendSignal) {
-    results.push({
-      changeType: "FRONTEND_UI_CHANGED",
-      detectedTechnology: "Frontend UI",
-      fileAffected: firstMatchingFile(filesChanged, [
-        "apps/web",
-        "components",
-        ".tsx",
-        ".jsx",
-        "pages",
-        "app/",
-      ]),
-      summary:
-        "Frontend UI, dashboard structure, page layout, or client-side component architecture changed.",
-      importanceScore: 2,
-    });
+    results.push(
+      buildChange({
+        eventType,
+        rawPayload,
+        changeType: "FRONTEND_UI_CHANGED",
+        detectedTechnology: "Frontend UI",
+        fileAffected: firstMatchingFile(filesChanged, [
+          "apps/web",
+          "components",
+          ".tsx",
+          ".jsx",
+          "pages",
+          "app/",
+        ]),
+        importanceScore: 2,
+      })
+    );
   }
 
-  const hasStateSignal =
-    includesAny(payloadText, ["hooks", "use", "state", "context", "store"]);
+  const hasStateSignal = includesAny(payloadText, [
+    "hooks",
+    "use",
+    "state",
+    "context",
+    "store",
+  ]);
 
   if (hasStateSignal) {
-    results.push({
-      changeType: "STATE_MANAGEMENT_CHANGED",
-      detectedTechnology: "Client State / Hooks",
-      fileAffected: firstMatchingFile(filesChanged, [
-        "hooks",
-        "use",
-        "context",
-        "store",
-      ]),
-      summary:
-        "Client-side state management, data fetching hooks, or reactive UI logic changed.",
-      importanceScore: 2,
-    });
+    results.push(
+      buildChange({
+        eventType,
+        rawPayload,
+        changeType: "STATE_MANAGEMENT_CHANGED",
+        detectedTechnology: "Client State / Hooks",
+        fileAffected: firstMatchingFile(filesChanged, [
+          "hooks",
+          "use",
+          "context",
+          "store",
+        ]),
+        importanceScore: 2,
+      })
+    );
   }
 
-  const hasTypeContractSignal =
-    includesAny(payloadText, ["types", ".types.ts", "interfaces", "dto"]);
+  const hasTypeContractSignal = includesAny(payloadText, [
+    "types",
+    ".types.ts",
+    "interfaces",
+    "dto",
+  ]);
 
   if (hasTypeContractSignal) {
-    results.push({
-      changeType: "TYPE_CONTRACT_CHANGED",
-      detectedTechnology: "TypeScript Contracts",
-      fileAffected: firstMatchingFile(filesChanged, [
-        "types",
-        ".types.ts",
-        "interfaces",
-        "dto",
-      ]),
-      summary:
-        "Shared TypeScript contracts, data shapes, DTOs, or response types changed.",
-      importanceScore: 2,
-    });
+    results.push(
+      buildChange({
+        eventType,
+        rawPayload,
+        changeType: "TYPE_CONTRACT_CHANGED",
+        detectedTechnology: "TypeScript Contracts",
+        fileAffected: firstMatchingFile(filesChanged, [
+          "types",
+          ".types.ts",
+          "interfaces",
+          "dto",
+        ]),
+        importanceScore: 2,
+      })
+    );
   }
 
   const hasDependencySignal =
@@ -328,19 +376,22 @@ export const detectArchitectureChanges = (
     ]);
 
   if (hasDependencySignal) {
-    results.push({
-      changeType: "DEPENDENCY_CHANGED",
-      detectedTechnology: "Package Dependencies",
-      fileAffected: firstMatchingFile(filesChanged, [
-        "package.json",
-        "package-lock.json",
-        "pnpm-lock.yaml",
-        "yarn.lock",
-      ]),
-      summary: "Project dependencies or package configuration changed.",
-      importanceScore: 2,
-    });
+    results.push(
+      buildChange({
+        eventType,
+        rawPayload,
+        changeType: "DEPENDENCY_CHANGED",
+        detectedTechnology: "Package Dependencies",
+        fileAffected: firstMatchingFile(filesChanged, [
+          "package.json",
+          "package-lock.json",
+          "pnpm-lock.yaml",
+          "yarn.lock",
+        ]),
+        importanceScore: 2,
+      })
+    );
   }
 
-  return results;
+  return results; 
 };
