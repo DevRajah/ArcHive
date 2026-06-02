@@ -31,10 +31,13 @@ export interface RepositoryOverview {
 
   recentArchitectureChanges?: Array<{
     id: string;
-    title: string;
+    title?: string;
     description?: string;
-    severity?: string;
     changeType?: string;
+    severity?: string;
+    detectedTechnology?: string | null;
+    fileAffected?: string | null;
+    summary?: string | null;
     createdAt: string;
   }>;
 }

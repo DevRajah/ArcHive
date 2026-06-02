@@ -81,11 +81,10 @@ export function RepositoryRecentEvents({
                         {event.title || formatEventType(event.eventType)}
                       </h3>
 
-                      {event.summary && (
-                        <p className="mt-1 text-sm text-muted-foreground">
-                          {event.summary}
-                        </p>
-                      )}
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        {event.summary ||
+                          "ArcHive recorded engineering activity for this repository."}
+                      </p>
                     </div>
 
                     <Badge variant="secondary">

@@ -100,11 +100,11 @@ export function RecentActivity({ events = [] }: RecentActivityProps) {
                       {event.source ? ` · ${event.source}` : ""}
                     </p>
 
-                    {event.summary && (
-                      <p className="mt-1">
-                        {event.summary}
-                      </p>
-                    )}
+                    <p className="mt-1">
+                      {event.summary ||
+                        "ArcHive recorded engineering activity for this repository."}
+                    </p>
+                    
                   </div>
                 </div>
               </div>
