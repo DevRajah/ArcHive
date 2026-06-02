@@ -58,6 +58,19 @@ export const classifyGitHubPushEvent = ({
     combined.includes("components") ||
     combined.includes("apps/web");
 
+  const hasArchitectureIntelligenceSignal =
+    combined.includes("architecture-summary") ||
+    combined.includes("engineering-event-classifier") ||
+    combined.includes("github-push-classifier") ||
+    combined.includes("detector") ||
+    combined.includes("detectarchitecturechanges") ||
+    combined.includes("repository intelligence") ||
+    combined.includes("architecture intelligence");
+
+  if (hasArchitectureIntelligenceSignal) {
+    return EngineeringEventType.API_ENDPOINT_CHANGED;
+  }
+
   // I check queue before API/frontend because queue files often live inside routes/components too.
   if (hasQueueSignal) {
     return history.hasQueueHistory
