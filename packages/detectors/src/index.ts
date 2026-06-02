@@ -315,13 +315,19 @@ export const detectArchitectureChanges = (
     );
   }
 
-  const hasStateSignal = includesAny(payloadText, [
-    "hooks",
-    "use",
-    "state",
-    "context",
-    "store",
-  ]);
+  const hasStateSignal =
+    includesAny(normalizedEventType, ["STATE_MANAGEMENT"]) ||
+    filesChanged.some((file) =>
+      includesAny(file, [
+        "/hooks/",
+        "\\hooks\\",
+        "use-dashboard",
+        "useDashboard",
+        "store.",
+        "context.",
+        "provider.",
+      ])
+    );
 
   if (hasStateSignal) {
     results.push(
@@ -331,10 +337,13 @@ export const detectArchitectureChanges = (
         changeType: "STATE_MANAGEMENT_CHANGED",
         detectedTechnology: "Client State / Hooks",
         fileAffected: firstMatchingFile(filesChanged, [
-          "hooks",
-          "use",
-          "context",
-          "store",
+          "/hooks/",
+          "\\hooks\\",
+          "use-dashboard",
+          "useDashboard",
+          "store.",
+          "context.",
+          "provider.",
         ]),
         importanceScore: 2,
       })
@@ -393,5 +402,5 @@ export const detectArchitectureChanges = (
     );
   }
 
-  return results; 
+  return results;
 };
