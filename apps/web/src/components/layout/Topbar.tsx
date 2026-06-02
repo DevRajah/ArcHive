@@ -2,9 +2,11 @@
 
 import { Bell, LogOut, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
+
 import { useAuth } from "@/hooks/useAuth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { MobileSidebar } from "./MobileSidebar";
 
 export function Topbar() {
   const router = useRouter();
@@ -19,17 +21,21 @@ export function Topbar() {
 
   return (
     <header className="border-b border-border bg-background/80 backdrop-blur-xl">
-      <div className="flex h-16 items-center justify-between px-6">
-        <div className="flex w-[320px] items-center gap-2 rounded-lg border border-border bg-card px-3 py-2">
-          <Search className="h-4 w-4 text-muted-foreground" />
+      <div className="flex h-16 items-center justify-between gap-4 px-4 md:px-6">
+        <div className="flex items-center gap-3">
+          <MobileSidebar />
 
-          <input
-            placeholder="Global search coming soon..."
-            className="w-full bg-transparent text-sm outline-none"
-          />
+          <div className="hidden w-[320px] items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 md:flex">
+            <Search className="h-4 w-4 text-muted-foreground" />
+
+            <input
+              placeholder="Search workspace..."
+              className="w-full bg-transparent text-sm outline-none"
+            />
+          </div>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3 md:gap-4">
           <button className="relative">
             <Bell className="h-5 w-5 text-muted-foreground" />
           </button>

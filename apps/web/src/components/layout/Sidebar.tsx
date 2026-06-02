@@ -2,25 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  LayoutDashboard,
-  FolderGit2,
-  GitBranch,
-  BrainCircuit,
-} from "lucide-react";
-
-const navigationItems = [
-  {
-    label: "Dashboard",
-    href: "/dashboard",
-    icon: LayoutDashboard,
-  },
-  {
-    label: "Repositories",
-    href: "/repositories",
-    icon: FolderGit2,
-  },
-];
+import { navigationItems } from "@/constants/navigation";
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -40,6 +22,7 @@ export function Sidebar() {
       <nav className="flex-1 space-y-2 p-4">
         {navigationItems.map((item) => {
           const Icon = item.icon;
+
           const isActive =
             pathname === item.href || pathname.startsWith(`${item.href}/`);
 
