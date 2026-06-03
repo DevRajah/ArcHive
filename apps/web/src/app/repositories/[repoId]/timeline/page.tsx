@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import {
   ArrowLeft,
@@ -13,21 +14,27 @@ import {
 } from "lucide-react";
 
 import { AppShell } from "@/components/layout/AppShell";
+import { ActivityFilters } from "@/components/filters/ActivityFilters";
+import { RepositoryLiveStatus } from "@/components/repositories/RepositoryLiveStatus";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useRepositoryTimeline } from "@/hooks/useTimeline";
 import { useRepositoryLiveStatus } from "@/hooks/useRepositoryLiveStatus";
-import { RepositoryLiveStatus } from "@/components/repositories/RepositoryLiveStatus";
+import { matchesSearch, formatFilterLabel } from "@/lib/filters";
 
 function formatEventType(eventType?: string) {
   if (!eventType || eventType === "UNKNOWN") return "Engineering Event";
 
-  return eventType
-    .toLowerCase()
-    .split("_")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
+  return formatFilterLabel(eventType);
+}
+
+function getTimelineEntryType(entry: {
+  eventType?: string;
+  type?: string;
+  category?: string;
+}) {
+  return entry.eventType || entry.type || entry.category || "ENGINEERING_EVENT";
 }
 
 function getEventIcon(eventType?: string) {
@@ -54,6 +61,9 @@ export default function TimelinePage() {
   const params = useParams<{ repoId: string }>();
   const repoId = params.repoId;
 
+  const [search, setSearch] = useState("");
+  const [selectedType, setSelectedType] = useState("ALL");
+
   const liveStatus = useRepositoryLiveStatus(repoId);
 
   const {
@@ -62,6 +72,38 @@ export default function TimelinePage() {
     isError,
     error,
   } = useRepositoryTimeline(repoId);
+
+  const timelineTypes = useMemo(() => {
+    if (!timelineEntries) return [];
+
+    return Array.from(
+      new Set(
+        timelineEntries
+          .map((entry) => getTimelineEntryType(entry))
+          .filter(Boolean)
+      )
+    );
+  }, [timelineEntries]);
+
+  const filteredEntries = useMemo(() => {
+    if (!timelineEntries) return [];
+
+    const query = search.trim();
+
+    return timelineEntries.filter((entry) => {
+      const matchesType =
+        selectedType === "ALL" || getTimelineEntryType(entry) === selectedType;
+
+      const matchesQuery =
+        !query ||
+        matchesSearch(entry.title, query) ||
+        matchesSearch(entry.summary, query) ||
+        matchesSearch(entry.eventType, query) ||
+        matchesSearch(entry.source, query);
+
+      return matchesType && matchesQuery;
+    });
+  }, [timelineEntries, search, selectedType]);
 
   return (
     <AppShell>
@@ -85,13 +127,13 @@ export default function TimelinePage() {
                 has evolved through commits, webhooks, architecture changes, and
                 background processing.
               </p>
-            </div>
 
-            <div className="mt-4">
-              <RepositoryLiveStatus
-                isConnected={liveStatus.isConnected}
-                lastUpdatedAt={liveStatus.lastUpdatedAt}
-              />
+              <div className="mt-4">
+                <RepositoryLiveStatus
+                  isConnected={liveStatus.isConnected}
+                  lastUpdatedAt={liveStatus.lastUpdatedAt}
+                />
+              </div>
             </div>
 
             <Badge variant="secondary">
@@ -99,6 +141,16 @@ export default function TimelinePage() {
             </Badge>
           </div>
         </div>
+
+        {!isLoading && !isError && timelineEntries && timelineEntries.length > 0 && (
+          <ActivityFilters
+            search={search}
+            onSearchChange={setSearch}
+            selectedType={selectedType}
+            onTypeChange={setSelectedType}
+            types={timelineTypes}
+          />
+        )}
 
         {isLoading && (
           <div className="space-y-4">
@@ -141,13 +193,30 @@ export default function TimelinePage() {
         {!isLoading &&
           !isError &&
           timelineEntries &&
-          timelineEntries.length > 0 && (
+          timelineEntries.length > 0 &&
+          filteredEntries.length === 0 && (
+            <div className="rounded-xl border border-border bg-card p-10 text-center">
+              <h2 className="text-xl font-semibold">
+                No matching engineering activity
+              </h2>
+
+              <p className="mt-2 text-sm text-muted-foreground">
+                Try adjusting your filters or search query.
+              </p>
+            </div>
+          )}
+
+        {!isLoading &&
+          !isError &&
+          timelineEntries &&
+          timelineEntries.length > 0 &&
+          filteredEntries.length > 0 && (
             <div className="rounded-xl border border-border bg-card p-6">
               <div className="relative space-y-8">
                 <div className="absolute left-5 top-2 h-[calc(100%-1rem)] w-px bg-border" />
 
-                {timelineEntries.map((entry) => {
-                  const Icon = getEventIcon(entry.eventType);
+                {filteredEntries.map((entry) => {
+                  const Icon = getEventIcon(getTimelineEntryType(entry));
 
                   return (
                     <div key={entry.id} className="relative flex gap-5">
@@ -159,7 +228,7 @@ export default function TimelinePage() {
                         <div className="flex flex-col justify-between gap-3 md:flex-row md:items-start">
                           <div>
                             <h2 className="font-semibold">
-                              {entry.title || formatEventType(entry.eventType)}
+                              {entry.title || formatEventType(getTimelineEntryType(entry))}
                             </h2>
 
                             <p className="mt-2 text-sm leading-6 text-muted-foreground">
@@ -169,7 +238,7 @@ export default function TimelinePage() {
                           </div>
 
                           <Badge variant="secondary">
-                            {formatEventType(entry.eventType)}
+                            {formatEventType(getTimelineEntryType(entry))}
                           </Badge>
                         </div>
 

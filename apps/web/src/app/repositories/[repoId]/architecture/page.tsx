@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import {
   ArrowLeft,
@@ -13,24 +14,22 @@ import {
 } from "lucide-react";
 
 import { AppShell } from "@/components/layout/AppShell";
+import { ActivityFilters } from "@/components/filters/ActivityFilters";
+import { RepositoryLiveStatus } from "@/components/repositories/RepositoryLiveStatus";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useRepositoryArchitecture } from "@/hooks/useArchitecture";
 import { useRepositoryLiveStatus } from "@/hooks/useRepositoryLiveStatus";
-import { RepositoryLiveStatus } from "@/components/repositories/RepositoryLiveStatus";
+import { formatFilterLabel, matchesSearch } from "@/lib/filters";
 
-function formatLabel(value?: string) {
+function formatLabel(value?: string | null) {
   if (!value || value === "UNKNOWN") return "Architecture Change";
 
-  return value
-    .toLowerCase()
-    .split("_")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
+  return formatFilterLabel(value);
 }
 
-function getArchitectureIcon(value?: string) {
+function getArchitectureIcon(value?: string | null) {
   if (!value) return Network;
 
   if (value.includes("AUTH") || value.includes("SECURITY")) {
@@ -72,6 +71,9 @@ export default function ArchitecturePage() {
   const params = useParams<{ repoId: string }>();
   const repoId = params.repoId;
 
+  const [search, setSearch] = useState("");
+  const [selectedType, setSelectedType] = useState("ALL");
+
   const {
     data: architectureChanges,
     isLoading,
@@ -81,6 +83,39 @@ export default function ArchitecturePage() {
 
   const liveStatus = useRepositoryLiveStatus(repoId);
   const totalChanges = architectureChanges?.length ?? 0;
+
+  const architectureTypes = useMemo(() => {
+    if (!architectureChanges) return [];
+
+    return Array.from(
+      new Set(
+        architectureChanges
+          .map((change) => change.changeType)
+          .filter((changeType): changeType is string => Boolean(changeType))
+      )
+    );
+  }, [architectureChanges]);
+
+  const filteredChanges = useMemo(() => {
+    if (!architectureChanges) return [];
+
+    const query = search.trim();
+
+    return architectureChanges.filter((change) => {
+      const matchesType =
+        selectedType === "ALL" || change.changeType === selectedType;
+
+      const matchesQuery =
+        !query ||
+        matchesSearch(change.changeType, query) ||
+        matchesSearch(change.summary, query) ||
+        matchesSearch(change.description, query) ||
+        matchesSearch(change.detectedTechnology, query) ||
+        matchesSearch(change.fileAffected, query);
+
+      return matchesType && matchesQuery;
+    });
+  }, [architectureChanges, search, selectedType]);
 
   return (
     <AppShell>
@@ -104,18 +139,31 @@ export default function ArchitecturePage() {
                 activity, webhook events, infrastructure updates, and codebase
                 evolution.
               </p>
-            </div>
 
-            <div className="mt-4">
-              <RepositoryLiveStatus
-                isConnected={liveStatus.isConnected}
-                lastUpdatedAt={liveStatus.lastUpdatedAt}
-              />
+              <div className="mt-4">
+                <RepositoryLiveStatus
+                  isConnected={liveStatus.isConnected}
+                  lastUpdatedAt={liveStatus.lastUpdatedAt}
+                />
+              </div>
             </div>
 
             <Badge variant="secondary">{totalChanges} changes</Badge>
           </div>
         </div>
+
+        {!isLoading &&
+          !isError &&
+          architectureChanges &&
+          architectureChanges.length > 0 && (
+            <ActivityFilters
+              search={search}
+              onSearchChange={setSearch}
+              selectedType={selectedType}
+              onTypeChange={setSelectedType}
+              types={architectureTypes}
+            />
+          )}
 
         {isLoading && (
           <div className="grid gap-6 md:grid-cols-2">
@@ -158,12 +206,35 @@ export default function ArchitecturePage() {
         {!isLoading &&
           !isError &&
           architectureChanges &&
-          architectureChanges.length > 0 && (
+          architectureChanges.length > 0 &&
+          filteredChanges.length === 0 && (
+            <div className="rounded-xl border border-border bg-card p-10 text-center">
+              <h2 className="text-xl font-semibold">
+                No matching architecture changes
+              </h2>
+
+              <p className="mt-2 text-sm text-muted-foreground">
+                Try adjusting your filters or search query.
+              </p>
+            </div>
+          )}
+
+        {!isLoading &&
+          !isError &&
+          architectureChanges &&
+          architectureChanges.length > 0 &&
+          filteredChanges.length > 0 && (
             <div className="grid gap-6 md:grid-cols-2">
-              {architectureChanges.map((change) => {
-                const Icon = getArchitectureIcon(
-                  change.changeType || change.title
-                );
+              {filteredChanges.map((change) => {
+                const title =
+                  change.changeType || change.title || "Architecture Change";
+
+                const description =
+                  change.summary ||
+                  change.description ||
+                  "ArcHive detected a repository architecture change.";
+
+                const Icon = getArchitectureIcon(title);
 
                 return (
                   <div
@@ -178,7 +249,7 @@ export default function ArchitecturePage() {
 
                         <div>
                           <h2 className="font-semibold">
-                            {formatLabel(change.title)}
+                            {formatLabel(title)}
                           </h2>
 
                           <p className="mt-1 text-xs text-muted-foreground">
@@ -188,16 +259,25 @@ export default function ArchitecturePage() {
                       </div>
 
                       <Badge variant="secondary">
-                        {formatLabel(
-                          change.severity || change.changeType || "Change"
-                        )}
+                        {formatLabel(change.severity || change.changeType)}
                       </Badge>
                     </div>
 
                     <p className="text-sm leading-6 text-muted-foreground">
-                      {change.description ||
-                        "ArcHive detected an architecture-level change in this repository."}
+                      {description}
                     </p>
+
+                    {change.detectedTechnology && (
+                      <p className="mt-3 text-xs text-muted-foreground">
+                        Technology: {change.detectedTechnology}
+                      </p>
+                    )}
+
+                    {change.fileAffected && (
+                      <p className="mt-1 break-all text-xs text-muted-foreground">
+                        File: {change.fileAffected}
+                      </p>
+                    )}
                   </div>
                 );
               })}
