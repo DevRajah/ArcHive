@@ -7,17 +7,18 @@ export interface RepositoryOverview {
     defaultBranch?: string;
   };
 
-  trackingStatus?: {
-  isTracked?: boolean;
-  webhookStatus?: "CONNECTED" | "MISSING" | "UNKNOWN";
-  lastEngineeringEventAt?: string | null;
-  lastQueueStatus?: string | null;
-};
-
   metrics: {
     totalEvents: number;
     totalTimelineEntries: number;
     totalArchitectureChanges: number;
+  };
+
+  trackingStatus?: {
+    isTracked: boolean;
+    webhookStatus: "CONNECTED" | "MISSING" | "UNKNOWN";
+    lastEngineeringEventAt?: string | null;
+    lastQueueStatus?: string | null;
+    realtimeStatus?: "CONNECTED" | "DISCONNECTED" | "UNKNOWN";
   };
 
   recentEvents?: Array<{
@@ -47,6 +48,4 @@ export interface RepositoryOverview {
     summary?: string | null;
     createdAt: string;
   }>;
-
-  
 }

@@ -1,15 +1,14 @@
 "use client";
 
-import { Radio, Webhook, Activity, CheckCircle2 } from "lucide-react";
+import { Activity, CheckCircle2, Radio, Webhook } from "lucide-react";
 
 interface RepositoryTrackingStatusProps {
-  isRealtimeConnected: boolean;
-  lastLiveUpdatedAt: string | null;
   trackingStatus?: {
     isTracked?: boolean;
     webhookStatus?: "CONNECTED" | "MISSING" | "UNKNOWN";
     lastEngineeringEventAt?: string | null;
     lastQueueStatus?: string | null;
+    realtimeStatus?: "CONNECTED" | "DISCONNECTED" | "UNKNOWN";
   };
 }
 
@@ -23,28 +22,50 @@ function formatDate(value?: string | null) {
   if (!value) return "No recent activity";
 
   const date = new Date(value);
+
   if (Number.isNaN(date.getTime())) return "No recent activity";
 
   return date.toLocaleString();
 }
 
-function formatQueueStatus(status?: string | null) {
-  if (!status) return "No recent queue status";
+function formatStatus(value?: string | null) {
+  if (!value) return "Unknown";
 
-  return status
+  return value
     .toLowerCase()
     .split("_")
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(" ");
 }
 
+function getWebhookHealth(status?: string) {
+  if (status === "CONNECTED") return "healthy";
+  if (status === "MISSING") return "danger";
+  return "warning";
+}
+
+function getRealtimeHealth(status?: string) {
+  if (status === "CONNECTED") return "healthy";
+  if (status === "DISCONNECTED") return "danger";
+  return "warning";
+}
+
+function getQueueHealth(status?: string | null) {
+  const normalized = status?.toLowerCase();
+
+  if (!normalized) return "warning";
+  if (normalized === "failed") return "danger";
+
+  return "healthy";
+}
+
 export function RepositoryTrackingStatus({
-  isRealtimeConnected,
-  lastLiveUpdatedAt,
   trackingStatus,
 }: RepositoryTrackingStatusProps) {
-  const isTracked = trackingStatus?.isTracked ?? true;
+  const isTracked = trackingStatus?.isTracked ?? false;
   const webhookStatus = trackingStatus?.webhookStatus || "UNKNOWN";
+  const realtimeStatus = trackingStatus?.realtimeStatus || "UNKNOWN";
+  const queueStatus = trackingStatus?.lastQueueStatus;
 
   const items = [
     {
@@ -55,36 +76,21 @@ export function RepositoryTrackingStatus({
     },
     {
       label: "Webhook Activity",
-      value:
-        webhookStatus === "CONNECTED"
-          ? "Connected"
-          : webhookStatus === "MISSING"
-            ? "Missing"
-            : "Unknown",
+      value: formatStatus(webhookStatus),
       icon: Webhook,
-      status:
-        webhookStatus === "CONNECTED"
-          ? "healthy"
-          : webhookStatus === "MISSING"
-            ? "danger"
-            : "warning",
+      status: getWebhookHealth(webhookStatus),
     },
     {
       label: "Realtime Connection",
-      value: isRealtimeConnected ? "Connected" : "Disconnected",
+      value: formatStatus(realtimeStatus),
       icon: Radio,
-      status: isRealtimeConnected ? "healthy" : "danger",
+      status: getRealtimeHealth(realtimeStatus),
     },
     {
       label: "Processing Pipeline",
-      value: formatQueueStatus(trackingStatus?.lastQueueStatus),
+      value: queueStatus ? formatStatus(queueStatus) : "No recent queue status",
       icon: CheckCircle2,
-      status:
-        trackingStatus?.lastQueueStatus?.toLowerCase() === "failed"
-          ? "danger"
-          : trackingStatus?.lastQueueStatus
-            ? "healthy"
-            : "warning",
+      status: getQueueHealth(queueStatus),
     },
   ] as const;
 
@@ -92,6 +98,7 @@ export function RepositoryTrackingStatus({
     <div className="rounded-xl border border-border bg-card p-6">
       <div>
         <h2 className="text-lg font-semibold">Repository Tracking Status</h2>
+
         <p className="mt-1 text-sm text-muted-foreground">
           Monitoring health for GitHub webhooks, realtime updates, and
           repository intelligence processing.
@@ -113,6 +120,7 @@ export function RepositoryTrackingStatus({
 
                   <div>
                     <p className="text-sm font-medium">{item.label}</p>
+
                     <p className="mt-1 text-sm text-muted-foreground">
                       {item.value}
                     </p>
@@ -134,11 +142,6 @@ export function RepositoryTrackingStatus({
         <p>
           Last Engineering Event:{" "}
           {formatDate(trackingStatus?.lastEngineeringEventAt)}
-        </p>
-
-        <p className="mt-2">
-          Realtime Page Update:{" "}
-          {lastLiveUpdatedAt ? "Updated just now" : "Waiting for activity"}
         </p>
       </div>
     </div>
