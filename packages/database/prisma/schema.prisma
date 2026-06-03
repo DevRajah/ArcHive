@@ -120,5 +120,11 @@ model ArchitectureChange {
   summary            String
   createdAt          DateTime @default(now())
 
-  repository Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  // groups changes into bigger engineering areas
+  architectureDomain String?
+
+  // explains how this change contributes to repo evolution
+  evolutionSummary   String?
+
+  repository Repository @relation(fields: [repositoryId], references: [id])
 }
