@@ -103,14 +103,19 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
       lastEngineeringEventAt:
         latestEngineeringEvent?.createdAt || null,
 
-      lastQueueStatus:
-        latestEngineeringEvent?.status?.toLowerCase() || "unknown",
+      lastQueueStatus: latestEngineeringEvent?.status
+        ? latestEngineeringEvent.status.toLowerCase()
+        : "unknown",
+      realtimeStatus: "CONNECTED",
     };
 
     return {
       success: true,
       message: "Repository details fetched successfully",
-      data: repository,
+      data: {
+        ...repository,
+        trackingStatus,
+      },
     };
   });
 
