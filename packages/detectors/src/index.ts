@@ -1,6 +1,7 @@
 import { generateArchitectureSummary } from "./architecture-summary";
 
 export * from "./technology-fingerprint";
+export * from "./architecture-domain";
 
 export type ArchitectureDetectionInput = {
   eventType: string;
