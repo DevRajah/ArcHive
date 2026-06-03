@@ -18,6 +18,7 @@ import { RepositoryArchitecturePreview } from "@/components/repositories/Reposit
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { useRepositoryLiveStatus } from "@/hooks/useRepositoryLiveStatus";
 import { RepositoryLiveStatus } from "@/components/repositories/RepositoryLiveStatus";
+import { RepositoryTrackingStatus } from "@/components/repositories/RepositoryTrackingStatus";
 
 export default function RepositoryDetailPage() {
   const params = useParams<{ repoId: string }>();
@@ -191,6 +192,11 @@ export default function RepositoryDetailPage() {
                 data.metrics?.totalArchitectureChanges ?? 0
               }
             />
+            <RepositoryTrackingStatus
+              isRealtimeConnected={liveStatus.isConnected}
+              lastLiveUpdatedAt={liveStatus.lastUpdatedAt}
+              trackingStatus={data.trackingStatus}
+            />
 
             <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
               <RepositoryRecentEvents events={data.recentEvents} />
@@ -205,6 +211,7 @@ export default function RepositoryDetailPage() {
               repositoryId={repoId}
               entries={data.recentTimelineEntries}
             />
+
 
             <ConfirmDialog
               open={isUntrackDialogOpen}

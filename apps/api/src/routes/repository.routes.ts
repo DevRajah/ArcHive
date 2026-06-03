@@ -90,6 +90,23 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
       });
     }
 
+    const latestEngineeringEvent = repository?.events?.[0];
+
+    const trackingStatus = {
+      isTracked: Boolean(repository?.userId),
+
+      // For now, if the repository is tracked,
+      // I assume webhook integration is connected.
+      // Later we can build true webhook verification.
+      webhookStatus: repository?.userId ? "CONNECTED" : "DISCONNECTED",
+
+      lastEngineeringEventAt:
+        latestEngineeringEvent?.createdAt || null,
+
+      lastQueueStatus:
+        latestEngineeringEvent?.status?.toLowerCase() || "unknown",
+    };
+
     return {
       success: true,
       message: "Repository details fetched successfully",
@@ -159,7 +176,7 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
       };
     }
   );
-  
+
   //reset repo for dev testing - not exposed in frontend
   app.delete("/reset-user-repositories/:userId", async (request, reply) => {
     const { userId } = request.params as { userId: string };
