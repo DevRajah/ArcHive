@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Bell, LogOut, Search } from "lucide-react";
+import { LogOut, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { NotificationDropdown } from "@/components/notifications/NotificationDropdown";
 
 import { useAuth } from "@/hooks/useAuth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -64,9 +65,7 @@ export function Topbar() {
           </div>
 
           <div className="flex items-center gap-3 md:gap-4">
-            <button className="relative">
-              <Bell className="h-5 w-5 text-muted-foreground" />
-            </button>
+            <NotificationDropdown />
 
             <div className="flex items-center gap-3">
               <Avatar>

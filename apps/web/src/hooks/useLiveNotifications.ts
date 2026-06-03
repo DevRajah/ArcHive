@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { socket } from "@/lib/socket";
 import { LiveNotification } from "@/types/live-event.types";
+import { useNotificationCenter } from "@/hooks/useNotificationCenter";
 
 function getStringValue(value: unknown) {
   return typeof value === "string" && value.trim().length > 0
@@ -25,33 +26,34 @@ function createNotification(
       crypto.randomUUID(),
 
     type,
-
-    // Important: frontend should not invent intelligence titles.
-    // Backend should send the real title from classifier/summarizer.
     title: getStringValue(payload.title) || "Engineering Activity",
-
-    // Prefer backend summary. Repository name is only secondary context.
     description: summary || repositoryFullName,
-
     repositoryId: getStringValue(payload.repositoryId),
     repositoryFullName,
-
     createdAt: getStringValue(payload.createdAt) || new Date().toISOString(),
   };
 }
 
 export function useLiveNotifications() {
-  const [notifications, setNotifications] = useState<LiveNotification[]>([]);
+  const [toastNotifications, setToastNotifications] = useState<
+    LiveNotification[]
+  >([]);
+
+  const addToNotificationCenter = useNotificationCenter(
+    (state) => state.addNotification
+  );
 
   const dismissNotification = useCallback((id: string) => {
-    setNotifications((current) =>
+    setToastNotifications((current) =>
       current.filter((notification) => notification.id !== id)
     );
   }, []);
 
   const addNotification = useCallback(
     (notification: LiveNotification) => {
-      setNotifications((current) => {
+      addToNotificationCenter(notification);
+
+      setToastNotifications((current) => {
         const withoutDuplicate = current.filter(
           (item) => item.id !== notification.id
         );
@@ -63,7 +65,7 @@ export function useLiveNotifications() {
         dismissNotification(notification.id);
       }, 5000);
     },
-    [dismissNotification]
+    [addToNotificationCenter, dismissNotification]
   );
 
   useEffect(() => {
@@ -101,7 +103,7 @@ export function useLiveNotifications() {
   }, [addNotification]);
 
   return {
-    notifications,
+    notifications: toastNotifications,
     dismissNotification,
   };
 }
