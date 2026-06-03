@@ -3,6 +3,8 @@
 import { Activity, CheckCircle2, Radio, Webhook } from "lucide-react";
 
 interface RepositoryTrackingStatusProps {
+  isRealtimeConnected: boolean;
+  lastLiveUpdatedAt: string | null;
   trackingStatus?: {
     isTracked?: boolean;
     webhookStatus?: "CONNECTED" | "MISSING" | "UNKNOWN";
@@ -44,7 +46,8 @@ function getWebhookHealth(status?: string) {
   return "warning";
 }
 
-function getRealtimeHealth(status?: string) {
+function getRealtimeHealth(isRealtimeConnected: boolean, status?: string) {
+  if (isRealtimeConnected) return "healthy";
   if (status === "CONNECTED") return "healthy";
   if (status === "DISCONNECTED") return "danger";
   return "warning";
@@ -60,11 +63,18 @@ function getQueueHealth(status?: string | null) {
 }
 
 export function RepositoryTrackingStatus({
+  isRealtimeConnected,
+  lastLiveUpdatedAt,
   trackingStatus,
 }: RepositoryTrackingStatusProps) {
-  const isTracked = trackingStatus?.isTracked ?? false;
+  const isTracked = trackingStatus?.isTracked ?? true;
+
   const webhookStatus = trackingStatus?.webhookStatus || "UNKNOWN";
-  const realtimeStatus = trackingStatus?.realtimeStatus || "UNKNOWN";
+
+  const realtimeStatus = isRealtimeConnected
+    ? "CONNECTED"
+    : trackingStatus?.realtimeStatus || "UNKNOWN";
+
   const queueStatus = trackingStatus?.lastQueueStatus;
 
   const items = [
@@ -84,7 +94,7 @@ export function RepositoryTrackingStatus({
       label: "Realtime Connection",
       value: formatStatus(realtimeStatus),
       icon: Radio,
-      status: getRealtimeHealth(realtimeStatus),
+      status: getRealtimeHealth(isRealtimeConnected, realtimeStatus),
     },
     {
       label: "Processing Pipeline",
@@ -142,6 +152,11 @@ export function RepositoryTrackingStatus({
         <p>
           Last Engineering Event:{" "}
           {formatDate(trackingStatus?.lastEngineeringEventAt)}
+        </p>
+
+        <p className="mt-2">
+          Realtime Page Update:{" "}
+          {lastLiveUpdatedAt ? "Updated just now" : "Waiting for activity"}
         </p>
       </div>
     </div>

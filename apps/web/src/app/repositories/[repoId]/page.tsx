@@ -192,7 +192,11 @@ export default function RepositoryDetailPage() {
                 data.metrics?.totalArchitectureChanges ?? 0
               }
             />
-            <RepositoryTrackingStatus trackingStatus={data.trackingStatus} />
+            <RepositoryTrackingStatus
+              isRealtimeConnected={liveStatus.isConnected}
+              lastLiveUpdatedAt={liveStatus.lastUpdatedAt}
+              trackingStatus={data.trackingStatus}
+            />
 
             <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
               <RepositoryRecentEvents events={data.recentEvents} />
