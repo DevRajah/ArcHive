@@ -16,6 +16,8 @@ import { RepositoryRecentEvents } from "@/components/repositories/RepositoryRece
 import { RepositoryTimelinePreview } from "@/components/repositories/RepositoryTimelinePreview";
 import { RepositoryArchitecturePreview } from "@/components/repositories/RepositoryArchitecturePreview";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
+import { useRepositoryLiveStatus } from "@/hooks/useRepositoryLiveStatus";
+import { RepositoryLiveStatus } from "@/components/repositories/RepositoryLiveStatus";
 
 export default function RepositoryDetailPage() {
   const params = useParams<{ repoId: string }>();
@@ -30,12 +32,13 @@ export default function RepositoryDetailPage() {
 
   const { data, isLoading, isError, error } = useRepositoryOverview(repoId);
   const untrackMutation = useUntrackRepository();
+  const liveStatus = useRepositoryLiveStatus(repoId);
 
   function handleUntrackRepository() {
     untrackMutation.mutate(repoId, {
       onSuccess: () => {
         setIsUntrackDialogOpen(false);
-        
+
         setFeedback({
           type: "success",
           message: "Repository untracked successfully.",
@@ -147,6 +150,13 @@ export default function RepositoryDetailPage() {
                   </div>
                 </div>
 
+                <div className="mt-4">
+                  <RepositoryLiveStatus
+                    isConnected={liveStatus.isConnected}
+                    lastUpdatedAt={liveStatus.lastUpdatedAt}
+                  />
+                </div>
+
                 <div className="flex flex-wrap gap-3">
                   <Button asChild variant="outline">
                     <Link href={`/repositories/${repoId}/timeline`}>
@@ -205,6 +215,8 @@ export default function RepositoryDetailPage() {
               isLoading={untrackMutation.isPending}
               onConfirm={handleUntrackRepository}
             />
+
+
           </>
 
 

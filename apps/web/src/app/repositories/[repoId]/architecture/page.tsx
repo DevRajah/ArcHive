@@ -17,6 +17,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useRepositoryArchitecture } from "@/hooks/useArchitecture";
+import { useRepositoryLiveStatus } from "@/hooks/useRepositoryLiveStatus";
+import { RepositoryLiveStatus } from "@/components/repositories/RepositoryLiveStatus";
 
 function formatLabel(value?: string) {
   if (!value || value === "UNKNOWN") return "Architecture Change";
@@ -77,6 +79,7 @@ export default function ArchitecturePage() {
     error,
   } = useRepositoryArchitecture(repoId);
 
+  const liveStatus = useRepositoryLiveStatus(repoId);
   const totalChanges = architectureChanges?.length ?? 0;
 
   return (
@@ -101,6 +104,13 @@ export default function ArchitecturePage() {
                 activity, webhook events, infrastructure updates, and codebase
                 evolution.
               </p>
+            </div>
+
+            <div className="mt-4">
+              <RepositoryLiveStatus
+                isConnected={liveStatus.isConnected}
+                lastUpdatedAt={liveStatus.lastUpdatedAt}
+              />
             </div>
 
             <Badge variant="secondary">{totalChanges} changes</Badge>

@@ -17,6 +17,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useRepositoryTimeline } from "@/hooks/useTimeline";
+import { useRepositoryLiveStatus } from "@/hooks/useRepositoryLiveStatus";
+import { RepositoryLiveStatus } from "@/components/repositories/RepositoryLiveStatus";
 
 function formatEventType(eventType?: string) {
   if (!eventType || eventType === "UNKNOWN") return "Engineering Event";
@@ -52,6 +54,8 @@ export default function TimelinePage() {
   const params = useParams<{ repoId: string }>();
   const repoId = params.repoId;
 
+  const liveStatus = useRepositoryLiveStatus(repoId);
+
   const {
     data: timelineEntries,
     isLoading,
@@ -81,6 +85,13 @@ export default function TimelinePage() {
                 has evolved through commits, webhooks, architecture changes, and
                 background processing.
               </p>
+            </div>
+
+            <div className="mt-4">
+              <RepositoryLiveStatus
+                isConnected={liveStatus.isConnected}
+                lastUpdatedAt={liveStatus.lastUpdatedAt}
+              />
             </div>
 
             <Badge variant="secondary">
