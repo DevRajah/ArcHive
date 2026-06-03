@@ -128,6 +128,38 @@ export const detectArchitectureChanges = (
 
   const results: ArchitectureDetectionResult[] = [];
 
+  const hasRealtimeSignal =
+    normalizedEventType.includes("REALTIME") ||
+    includesAny(payloadText, [
+      "socket.io",
+      "socket-emitter",
+      "websocket",
+      "realtime",
+      "emitrealtimeevent",
+      "io.on",
+      "socket.on",
+      "socket.emit",
+    ]);
+
+  if (hasRealtimeSignal) {
+    results.push(
+      buildChange({
+        eventType,
+        rawPayload,
+        changeType: "REALTIME_INFRASTRUCTURE_UPDATED",
+        detectedTechnology: "Socket.IO / Realtime Events",
+        fileAffected:
+          firstMatchingFile(filesChanged, [
+            "socket-emitter",
+            "server.ts",
+            "socket.io",
+            "realtime",
+          ]) || filesChanged[0],
+        importanceScore: 4,
+      })
+    );
+  }
+
   const hasQueueSignal =
     normalizedEventType.includes("QUEUE") ||
     includesAny(payloadText, ["queue", "worker", "bullmq"]);

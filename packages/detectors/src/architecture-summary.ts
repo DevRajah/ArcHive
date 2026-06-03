@@ -87,6 +87,19 @@ export const generateArchitectureSummary = ({
     const actionWord =
         action === "added" ? "added" : action === "removed" ? "removed" : "updated";
 
+
+    if (changeType.includes("REALTIME")) {
+        if (includesAny(contextText, ["socket-emitter"])) {
+            return `Worker realtime event emitter was ${actionWord} to notify the dashboard after background processing.`;
+        }
+
+        if (includesAny(contextText, ["server.ts", "socket.io"])) {
+            return `Socket.IO realtime server infrastructure was ${actionWord} for live dashboard updates.`;
+        }
+
+        return `Realtime event infrastructure was ${actionWord} for live repository intelligence updates.`;
+    }
+
     // Queue / worker summaries
     if (changeType.includes("QUEUE")) {
         if (includesAny(contextText, ["classifier", "engineering-event-classifier"])) {
