@@ -1,6 +1,7 @@
 import {
   LayoutDashboard,
   FolderGit2,
+  Settings,
 } from "lucide-react";
 
 export const navigationItems = [
@@ -14,4 +15,9 @@ export const navigationItems = [
     href: "/repositories",
     icon: FolderGit2,
   },
+  {
+    label: "Settings",
+    href: "/settings",
+    icon: Settings,
+  }
 ];
