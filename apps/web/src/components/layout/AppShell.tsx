@@ -1,4 +1,7 @@
+"use client";
+
 import { RequireSession } from "@/components/auth/RequireSession";
+import { useLiveDashboardUpdates } from "@/hooks/useLiveDashboardUpdates";
 import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
 
@@ -7,6 +10,8 @@ interface AppShellProps {
 }
 
 export function AppShell({ children }: AppShellProps) {
+  useLiveDashboardUpdates();
+
   return (
     <RequireSession>
       <div className="flex min-h-screen bg-background">

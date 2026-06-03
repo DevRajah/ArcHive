@@ -8,12 +8,11 @@ import { QueueHealthPanel } from "@/components/dashboard/QueueHealthPanel";
 import { RecentQueueJobs } from "@/components/dashboard/RecentQueueJobs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDashboardSummary } from "@/hooks/useDashboard";
-import { useLiveDashboardUpdates } from "@/hooks/useLiveDashboardUpdates";
 import { LiveActivityIndicator } from "@/components/dashboard/LiveActivityIndicator";
 
 export default function DashboardPage() {
   const { data: summary, isLoading, isError, error } = useDashboardSummary();
-  useLiveDashboardUpdates();
+  
   return (
     <AppShell>
       <div className="space-y-6">
