@@ -13,7 +13,7 @@ export function useLiveDashboardUpdates() {
       socket.connect();
     }
 
-    function refreshDashboard() {
+    function refreshDashboard(payload?: { repositoryId?: string }) {
       queryClient.invalidateQueries({
         queryKey: QUERY_KEYS.DASHBOARD_SUMMARY,
       });
@@ -29,6 +29,20 @@ export function useLiveDashboardUpdates() {
       queryClient.invalidateQueries({
         queryKey: QUERY_KEYS.REPOSITORIES,
       });
+
+      if (payload?.repositoryId) {
+        queryClient.invalidateQueries({
+          queryKey: QUERY_KEYS.REPOSITORY_OVERVIEW(payload.repositoryId),
+        });
+
+        queryClient.invalidateQueries({
+          queryKey: QUERY_KEYS.REPOSITORY_TIMELINE(payload.repositoryId),
+        });
+
+        queryClient.invalidateQueries({
+          queryKey: QUERY_KEYS.REPOSITORY_ARCHITECTURE(payload.repositoryId),
+        });
+      }
     }
 
     socket.on("engineering-event:processed", refreshDashboard);
