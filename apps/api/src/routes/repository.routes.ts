@@ -208,7 +208,7 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
         await Promise.all([
           prisma.engineeringEvent.findMany({
             where: { repositoryId },
-            orderBy: { occurredAt: "desc" },
+            orderBy: { createdAt: "desc" },
             take: 10,
           }),
           prisma.timelineEntry.findMany({
@@ -223,16 +223,54 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
           }),
         ]);
 
+      const latestEngineeringEvent = recentEvents[0];
+
+      const trackingStatus = {
+        isTracked: Boolean(repository.userId),
+
+        // For now, this tells the frontend whether this repo is actively connected
+        // through ArcHive's webhook import/tracking flow.
+        webhookStatus: repository.userId ? "CONNECTED" : "MISSING",
+
+        lastEngineeringEventAt: latestEngineeringEvent?.createdAt || null,
+
+        lastQueueStatus: latestEngineeringEvent?.status
+          ? latestEngineeringEvent.status.toLowerCase()
+          : "unknown",
+
+        // The API owns the Socket.IO server, so if this route is reachable,
+        // the realtime pipeline is considered available.
+        realtimeStatus: "CONNECTED",
+      };
+
       return {
         success: true,
         message: "Repository overview fetched successfully",
         data: {
-          repository,
+          repository: {
+            id: repository.id,
+            githubRepoId: repository.githubRepoId,
+            name: repository.name,
+            owner: repository.owner,
+            fullName: repository.fullName,
+            description: repository.description,
+            defaultBranch: repository.defaultBranch,
+            language: repository.language,
+            stars: repository.stars,
+            forks: repository.forks,
+            userId: repository.userId,
+            createdAt: repository.createdAt,
+            updatedAt: repository.updatedAt,
+          },
+
           metrics: {
             totalEvents: repository._count.events,
             totalTimelineEntries: repository._count.timelineEntries,
             totalArchitectureChanges: repository._count.architectureChanges,
           },
+
+          trackingStatus,
+
           recentEvents,
           recentTimelineEntries,
           recentArchitectureChanges,

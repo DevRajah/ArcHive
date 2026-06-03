@@ -15,10 +15,10 @@ export interface RepositoryOverview {
 
   trackingStatus?: {
     isTracked: boolean;
-    webhookStatus: "CONNECTED" | "MISSING" | "UNKNOWN";
+    webhookStatus: "CONNECTED" | "MISSING" | string;
     lastEngineeringEventAt?: string | null;
     lastQueueStatus?: string | null;
-    realtimeStatus?: "CONNECTED" | "DISCONNECTED" | "UNKNOWN";
+    realtimeStatus?: "CONNECTED" | "DISCONNECTED" | string;
   };
 
   recentEvents?: Array<{
