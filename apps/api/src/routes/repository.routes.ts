@@ -1,5 +1,7 @@
 import { FastifyInstance } from "fastify";
 import { prisma } from "@archive/database";
+import axios from "axios";
+import { engineeringEventQueue } from "@archive/queue";
 
 type CreateRepositoryBody = {
   name: string;
@@ -90,22 +92,79 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
       });
     }
 
-    const latestEngineeringEvent = repository?.events?.[0];
+    const latestEngineeringEvent = repository.events?.[0];
+
+    const getWebhookStatus = async () => {
+      if (!repository.userId) return "MISSING";
+
+      const publicWebhookUrl = process.env.PUBLIC_WEBHOOK_URL;
+
+      if (!publicWebhookUrl) return "MISSING";
+
+      const user = await prisma.user.findUnique({
+        where: { id: repository.userId },
+        select: { githubAccessToken: true },
+      });
+
+      if (!user?.githubAccessToken) return "MISSING";
+
+      try {
+        const webhookUrl = `${publicWebhookUrl}/api/github/webhook`;
+
+        const hooksResponse = await axios.get(
+          `https://api.github.com/repos/${repository.fullName}/hooks`,
+          {
+            headers: {
+              Authorization: `Bearer ${user.githubAccessToken}`,
+              Accept: "application/vnd.github+json",
+            },
+          }
+        );
+
+        const matchingHook = hooksResponse.data.find(
+          (hook: any) => hook.active === true && hook.config?.url === webhookUrl
+        );
+
+        return matchingHook ? "CONNECTED" : "MISSING";
+      } catch {
+        return "MISSING";
+      }
+    };
+
+    const getLastQueueStatus = async () => {
+      try {
+        const jobs = await engineeringEventQueue.getJobs(
+          ["completed", "failed", "active", "waiting", "delayed"],
+          0,
+          50,
+          true
+        );
+
+        const matchingJob = jobs.find(
+          (job) =>
+            job.data?.repositoryId === repository.id ||
+            job.data?.eventId === latestEngineeringEvent?.id
+        );
+
+        if (!matchingJob) {
+          return latestEngineeringEvent?.status?.toLowerCase() || "unknown";
+        }
+
+        if (matchingJob.failedReason) return "failed";
+        if (matchingJob.finishedOn) return "completed";
+        if (matchingJob.processedOn) return "processing";
+
+        return "waiting";
+      } catch {
+        return latestEngineeringEvent?.status?.toLowerCase() || "unknown";
+      }
+    };
 
     const trackingStatus = {
-      isTracked: Boolean(repository?.userId),
-
-      // For now, if the repository is tracked,
-      // I assume webhook integration is connected.
-      // Later we can build true webhook verification.
-      webhookStatus: repository?.userId ? "CONNECTED" : "DISCONNECTED",
-
-      lastEngineeringEventAt:
-        latestEngineeringEvent?.createdAt || null,
-
-      lastQueueStatus: latestEngineeringEvent?.status
-        ? latestEngineeringEvent.status.toLowerCase()
-        : "unknown",
+      isTracked: Boolean(repository.userId),
+      webhookStatus: await getWebhookStatus(),
+      lastEngineeringEventAt: latestEngineeringEvent?.createdAt || null,
+      lastQueueStatus: await getLastQueueStatus(),
       realtimeStatus: "CONNECTED",
     };
 
