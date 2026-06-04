@@ -19,6 +19,8 @@ import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { useRepositoryLiveStatus } from "@/hooks/useRepositoryLiveStatus";
 import { RepositoryLiveStatus } from "@/components/repositories/RepositoryLiveStatus";
 import { RepositoryTrackingStatus } from "@/components/repositories/RepositoryTrackingStatus";
+import { useRepositoryCapabilities } from "@/hooks/useRepositories";
+import { RepositoryCapabilityMatrix } from "@/components/repositories/RepositoryCapabilityMatrix";
 
 export default function RepositoryDetailPage() {
   const params = useParams<{ repoId: string }>();
@@ -34,7 +36,10 @@ export default function RepositoryDetailPage() {
   const { data, isLoading, isError, error } = useRepositoryOverview(repoId);
   const untrackMutation = useUntrackRepository();
   const liveStatus = useRepositoryLiveStatus(repoId);
-
+  const {
+    data: capabilities,
+    isLoading: isCapabilitiesLoading,
+  } = useRepositoryCapabilities(repoId);
   function handleUntrackRepository() {
     untrackMutation.mutate(repoId, {
       onSuccess: () => {
@@ -212,6 +217,10 @@ export default function RepositoryDetailPage() {
               entries={data.recentTimelineEntries}
             />
 
+            <RepositoryCapabilityMatrix
+              data={capabilities}
+              isLoading={isCapabilitiesLoading}
+            />
 
             <ConfirmDialog
               open={isUntrackDialogOpen}

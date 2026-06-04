@@ -25,4 +25,9 @@ export const QUERY_KEYS = {
     "architecture-evolution",
     repositoryId,
   ],
+
+  REPOSITORY_CAPABILITIES: (repositoryId: string) => [
+    "repository-capabilities",
+    repositoryId,
+  ],
 };

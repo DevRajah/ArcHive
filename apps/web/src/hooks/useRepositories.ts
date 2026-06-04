@@ -54,3 +54,11 @@ export function useImportSelectedRepositories() {
     },
   });
 }
+
+export function useRepositoryCapabilities(repositoryId: string) {
+  return useQuery({
+    queryKey: QUERY_KEYS.REPOSITORY_CAPABILITIES(repositoryId),
+    queryFn: () => repositoryService.getRepositoryCapabilities(repositoryId),
+    enabled: Boolean(repositoryId),
+  });
+}

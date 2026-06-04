@@ -3,6 +3,7 @@ import { getUserId } from "@/lib/auth";
 import { ApiResponse } from "@/types/api.types";
 import { GithubRepository, Repository } from "@/types/repository.types";
 import { RepositoryOverview } from "@/types/repository-overview.types";
+import { RepositoryCapabilitiesResponse } from "@/types/repository-capabilities.types";
 
 function requireUserId() {
   const userId = getUserId();
@@ -61,6 +62,16 @@ export const repositoryService = {
   async untrackRepository(repositoryId: string) {
     const response = await api.patch(
       `/github/users/${requireUserId()}/repositories/${repositoryId}/untrack`
+    );
+
+    return response.data.data;
+  },
+
+  async getRepositoryCapabilities(
+    repositoryId: string
+  ): Promise<RepositoryCapabilitiesResponse> {
+    const response = await api.get<ApiResponse<RepositoryCapabilitiesResponse>>(
+      `/repositories/${repositoryId}/capabilities`
     );
 
     return response.data.data;

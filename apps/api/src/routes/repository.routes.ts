@@ -476,109 +476,178 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
   );
   //capabilities analysis
   app.get<{ Params: { repositoryId: string } }>(
-  "/:repositoryId/capabilities",
-  async (request, reply) => {
-    const { repositoryId } = request.params;
+    "/:repositoryId/capabilities",
+    async (request, reply) => {
+      const { repositoryId } = request.params;
 
-    const repository = await prisma.repository.findUnique({
-      where: { id: repositoryId },
-      select: {
-        id: true,
-        name: true,
-        fullName: true,
-        userId: true,
-      },
-    });
-
-    if (!repository) {
-      return reply.status(404).send({
-        success: false,
-        message: "Repository not found",
-      });
-    }
-
-    const architectureChanges = await prisma.architectureChange.findMany({
-      where: { repositoryId },
-      select: {
-        architectureDomain: true,
-        detectedTechnology: true,
-        changeType: true,
-      },
-    });
-
-    const domains = new Set(
-      architectureChanges
-        .map((change) => change.architectureDomain)
-        .filter((domain): domain is string => Boolean(domain))
-    );
-
-    const technologies = new Set(
-      architectureChanges
-        .map((change) => change.detectedTechnology)
-        .filter((technology): technology is string => Boolean(technology))
-    );
-
-    const capabilities = {
-      frontendArchitecture: domains.has("FRONTEND_ARCHITECTURE"),
-      apiLayer: domains.has("API_LAYER"),
-      authentication: domains.has("AUTHENTICATION"),
-      realtimeSystems: domains.has("REALTIME_SYSTEMS"),
-      queueInfrastructure: domains.has("QUEUE_INFRASTRUCTURE"),
-      databaseLayer: domains.has("DATABASE_LAYER"),
-      cachingLayer:
-        domains.has("CACHING_LAYER") ||
-        Array.from(technologies).some((tech) =>
-          tech.toLowerCase().includes("redis")
-        ),
-      devopsInfrastructure: domains.has("DEVOPS_INFRASTRUCTURE"),
-      dependencyManagement: domains.has("DEPENDENCY_MANAGEMENT"),
-      typeContracts: domains.has("TYPE_CONTRACTS"),
-      stateManagement: domains.has("STATE_MANAGEMENT"),
-      architectureIntelligence: domains.has("ARCHITECTURE_INTELLIGENCE"),
-    };
-
-    const weightedScore =
-      (capabilities.frontendArchitecture ? 8 : 0) +
-      (capabilities.apiLayer ? 12 : 0) +
-      (capabilities.authentication ? 12 : 0) +
-      (capabilities.realtimeSystems ? 16 : 0) +
-      (capabilities.queueInfrastructure ? 16 : 0) +
-      (capabilities.databaseLayer ? 12 : 0) +
-      (capabilities.cachingLayer ? 8 : 0) +
-      (capabilities.devopsInfrastructure ? 10 : 0) +
-      (capabilities.stateManagement ? 6 : 0);
-
-    const architectureMaturityScore = Math.min(100, weightedScore);
-
-    const engineeringComplexityScore = Math.min(
-      100,
-      architectureChanges.length * 2 + domains.size * 8
-    );
-
-    const infrastructureDepth =
-      architectureMaturityScore >= 70
-        ? "HIGH"
-        : architectureMaturityScore >= 40
-          ? "MEDIUM"
-          : "EARLY";
-
-    return {
-      success: true,
-      message: "Repository capabilities fetched successfully",
-      data: {
-        repository,
-        capabilities,
-        scores: {
-          architectureMaturityScore,
-          engineeringComplexityScore,
-          infrastructureDepth,
+      const repository = await prisma.repository.findUnique({
+        where: { id: repositoryId },
+        select: {
+          id: true,
+          name: true,
+          fullName: true,
+          userId: true,
         },
-        detectedDomains: Array.from(domains),
-        detectedTechnologies: Array.from(technologies),
-      },
-    };
-  }
-);
+      });
+
+      if (!repository) {
+        return reply.status(404).send({
+          success: false,
+          message: "Repository not found",
+        });
+      }
+
+      const architectureChanges = await prisma.architectureChange.findMany({
+        where: { repositoryId },
+        select: {
+          architectureDomain: true,
+          detectedTechnology: true,
+          changeType: true,
+        },
+      });
+
+      const domains = new Set(
+        architectureChanges
+          .map((change) => change.architectureDomain)
+          .filter((domain): domain is string => Boolean(domain))
+      );
+
+      const technologies = new Set(
+        architectureChanges
+          .map((change) => change.detectedTechnology)
+          .filter((technology): technology is string => Boolean(technology))
+      );
+
+      const capabilities = {
+        frontendArchitecture: domains.has("FRONTEND_ARCHITECTURE"),
+        apiLayer: domains.has("API_LAYER"),
+        authentication: domains.has("AUTHENTICATION"),
+        realtimeSystems: domains.has("REALTIME_SYSTEMS"),
+        queueInfrastructure: domains.has("QUEUE_INFRASTRUCTURE"),
+        databaseLayer: domains.has("DATABASE_LAYER"),
+        cachingLayer:
+          domains.has("CACHING_LAYER") ||
+          Array.from(technologies).some((tech) =>
+            tech.toLowerCase().includes("redis")
+          ),
+        devopsInfrastructure: domains.has("DEVOPS_INFRASTRUCTURE"),
+        dependencyManagement: domains.has("DEPENDENCY_MANAGEMENT"),
+        typeContracts: domains.has("TYPE_CONTRACTS"),
+        stateManagement: domains.has("STATE_MANAGEMENT"),
+        architectureIntelligence: domains.has("ARCHITECTURE_INTELLIGENCE"),
+      };
+
+      const weightedScore =
+        (capabilities.frontendArchitecture ? 8 : 0) +
+        (capabilities.apiLayer ? 12 : 0) +
+        (capabilities.authentication ? 12 : 0) +
+        (capabilities.realtimeSystems ? 16 : 0) +
+        (capabilities.queueInfrastructure ? 16 : 0) +
+        (capabilities.databaseLayer ? 12 : 0) +
+        (capabilities.cachingLayer ? 8 : 0) +
+        (capabilities.devopsInfrastructure ? 10 : 0) +
+        (capabilities.stateManagement ? 6 : 0);
+
+      const architectureMaturityScore = Math.min(100, weightedScore);
+
+      const engineeringComplexityScore = Math.min(
+        100,
+        architectureChanges.length * 2 + domains.size * 8
+      );
+
+      const infrastructureDepth =
+        architectureMaturityScore >= 70
+          ? "HIGH"
+          : architectureMaturityScore >= 40
+            ? "MEDIUM"
+            : "EARLY";
+
+      return {
+        success: true,
+        message: "Repository capabilities fetched successfully",
+        data: {
+          repository,
+          capabilities,
+          scores: {
+            architectureMaturityScore,
+            engineeringComplexityScore,
+            infrastructureDepth,
+          },
+          detectedDomains: Array.from(domains),
+          detectedTechnologies: Array.from(technologies),
+        },
+      };
+    }
+  );
+  // Architecture radar data for visualization
+  app.get<{ Params: { repositoryId: string } }>(
+    "/:repositoryId/architecture-radar",
+    async (request, reply) => {
+      const { repositoryId } = request.params;
+
+      const repository = await prisma.repository.findUnique({
+        where: { id: repositoryId },
+        select: {
+          id: true,
+          name: true,
+          fullName: true,
+          language: true,
+          userId: true,
+        },
+      });
+
+      if (!repository) {
+        return reply.status(404).send({
+          success: false,
+          message: "Repository not found",
+        });
+      }
+
+      const architectureChanges = await prisma.architectureChange.findMany({
+        where: { repositoryId },
+        select: {
+          architectureDomain: true,
+          detectedTechnology: true,
+          changeType: true,
+        },
+      });
+
+      const domainCounts = architectureChanges.reduce<Record<string, number>>(
+        (acc, change) => {
+          const domain = change.architectureDomain || "GENERAL_ARCHITECTURE";
+          acc[domain] = (acc[domain] || 0) + 1;
+          return acc;
+        },
+        {}
+      );
+
+      const maxCount = Math.max(...Object.values(domainCounts), 1);
+
+      const radar = Object.entries(domainCounts).map(([domain, count]) => {
+        const score = Math.round((count / maxCount) * 100);
+
+        return {
+          domain,
+          label: domain
+            .toLowerCase()
+            .split("_")
+            .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(" "),
+          score,
+          changeCount: count,
+        };
+      });
+
+      return {
+        success: true,
+        message: "Repository architecture radar fetched successfully",
+        data: {
+          repository,
+          radar,
+        },
+      };
+    }
+  );
 
   //reset repo for dev testing - not exposed in frontend
   app.delete("/reset-user-repositories/:userId", async (request, reply) => {
