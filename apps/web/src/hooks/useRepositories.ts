@@ -62,3 +62,11 @@ export function useRepositoryCapabilities(repositoryId: string) {
     enabled: Boolean(repositoryId),
   });
 }
+
+export function useRepositoryArchitectureRadar(repositoryId: string) {
+  return useQuery({
+    queryKey: QUERY_KEYS.REPOSITORY_ARCHITECTURE_RADAR(repositoryId),
+    queryFn: () => repositoryService.getRepositoryArchitectureRadar(repositoryId),
+    enabled: Boolean(repositoryId),
+  });
+}

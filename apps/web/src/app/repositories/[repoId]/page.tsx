@@ -21,6 +21,8 @@ import { RepositoryLiveStatus } from "@/components/repositories/RepositoryLiveSt
 import { RepositoryTrackingStatus } from "@/components/repositories/RepositoryTrackingStatus";
 import { useRepositoryCapabilities } from "@/hooks/useRepositories";
 import { RepositoryCapabilityMatrix } from "@/components/repositories/RepositoryCapabilityMatrix";
+import { useRepositoryArchitectureRadar } from "@/hooks/useRepositories";
+import { RepositoryArchitectureRadar } from "@/components/repositories/RepositoryArchitectureRadar";
 
 export default function RepositoryDetailPage() {
   const params = useParams<{ repoId: string }>();
@@ -36,6 +38,10 @@ export default function RepositoryDetailPage() {
   const { data, isLoading, isError, error } = useRepositoryOverview(repoId);
   const untrackMutation = useUntrackRepository();
   const liveStatus = useRepositoryLiveStatus(repoId);
+  const {
+    data: architectureRadar,
+    isLoading: isArchitectureRadarLoading,
+  } = useRepositoryArchitectureRadar(repoId);
   const {
     data: capabilities,
     isLoading: isCapabilitiesLoading,
@@ -203,6 +209,17 @@ export default function RepositoryDetailPage() {
               trackingStatus={data.trackingStatus}
             />
 
+
+            <RepositoryCapabilityMatrix
+              data={capabilities}
+              isLoading={isCapabilitiesLoading}
+            />
+
+            <RepositoryArchitectureRadar
+              data={architectureRadar}
+              isLoading={isArchitectureRadarLoading}
+            />
+
             <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
               <RepositoryRecentEvents events={data.recentEvents} />
 
@@ -217,10 +234,6 @@ export default function RepositoryDetailPage() {
               entries={data.recentTimelineEntries}
             />
 
-            <RepositoryCapabilityMatrix
-              data={capabilities}
-              isLoading={isCapabilitiesLoading}
-            />
 
             <ConfirmDialog
               open={isUntrackDialogOpen}

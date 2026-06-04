@@ -50,6 +50,10 @@ export function useLiveDashboardUpdates() {
                 queryClient.invalidateQueries({
                     queryKey: QUERY_KEYS.REPOSITORY_CAPABILITIES(payload.repositoryId),
                 });
+
+                queryClient.invalidateQueries({
+                    queryKey: QUERY_KEYS.REPOSITORY_ARCHITECTURE_RADAR(payload.repositoryId),
+                });
             }
         }
 

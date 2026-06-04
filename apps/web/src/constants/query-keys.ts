@@ -30,4 +30,9 @@ export const QUERY_KEYS = {
     "repository-capabilities",
     repositoryId,
   ],
+
+  REPOSITORY_ARCHITECTURE_RADAR: (repositoryId: string) => [
+    "repository-architecture-radar",
+    repositoryId,
+  ],
 };
