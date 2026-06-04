@@ -192,6 +192,7 @@ const worker = new Worker<ProcessEngineeringEventJob>(
             domains: fingerprint.architectureDomains,
             technologies: fingerprint.technologies,
             signals: fingerprint.engineeringSignals,
+            repositoryTypes: fingerprint.repositoryTypes,
         });
 
         console.log("Architecture styles detected:", architectureStyles);
@@ -240,17 +241,8 @@ const worker = new Worker<ProcessEngineeringEventJob>(
                         changeType: change.changeType,
                         fallbackDomains: fingerprint.architectureDomains,
                     }),
-                    // evolutionSummary:
-                    //     fingerprint.technologies.length > 0
-                    //         ? `This change contributed to the repository's ${mapArchitectureDomain({
-                    //             changeType: change.changeType,
-                    //             fallbackDomains: fingerprint.architectureDomains,
-                    //         })
-                    //             .replaceAll("_", " ")
-                    //             .toLowerCase()} by touching ${fingerprint.technologies.join(
-                    //                 ", "
-                    //             )}-related architecture.`
-                    //         : `This change contributed to the repository's architecture evolution.`,
+                    repositoryTypes: fingerprint.repositoryTypes.join(","),
+
                 },
             });
 

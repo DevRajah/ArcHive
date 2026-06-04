@@ -320,6 +320,7 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
           architectureDomain: true,
           evolutionSummary: true,
           createdAt: true,
+          repositoryTypes: true,
         },
       });
 
@@ -357,6 +358,7 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
             )
           ),
           changes,
+          repositoryTypes: true,
         };
       });
 
@@ -464,6 +466,7 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
           architectureDomain: true,
           evolutionSummary: true,
           createdAt: true,
+          repositoryTypes: true
         },
       });
 
@@ -471,6 +474,7 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
         success: true,
         message: "Repository architecture changes fetched successfully",
         data: architectureChanges,
+        repositoryTypes: true
       };
     }
   );
@@ -487,6 +491,7 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
           name: true,
           fullName: true,
           userId: true,
+          repositoryTypes: true
         },
       });
 
@@ -497,6 +502,7 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
         });
       }
 
+
       const architectureChanges = await prisma.architectureChange.findMany({
         where: { repositoryId },
         select: {
@@ -505,6 +511,12 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
           changeType: true,
         },
       });
+
+      const repositoryTypes = new Set(
+        architectureChanges
+          .flatMap((change) => change.repositoryTypes?.split(",") || [])
+          .filter(Boolean)
+      );
 
       const domains = new Set(
         architectureChanges
@@ -575,6 +587,8 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
           },
           detectedDomains: Array.from(domains),
           detectedTechnologies: Array.from(technologies),
+          repositoryTypes: Array.from(repositoryTypes),
+          detectedRepositoryTypes: Array.from(repositoryTypes)
         },
       };
     }

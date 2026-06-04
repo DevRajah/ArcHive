@@ -119,6 +119,7 @@ model ArchitectureChange {
   fileAffected       String?
   summary            String
   createdAt          DateTime @default(now())
+  repositoryTypes String?
 
   // groups changes into bigger engineering areas
   architectureDomain String?
