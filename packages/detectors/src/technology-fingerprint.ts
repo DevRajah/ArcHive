@@ -147,25 +147,22 @@ export const detectTechnologyFingerprint = (
 
 
     // Go
-    if (
-        includesAny(combinedText, [
-            "go.mod",
-            "go.sum",
-            ".go",
-            "gin",
-            "fiber",
-            "grpc",
-        ])
-    ) {
+    const hasGoProjectSignal =
+        filesChanged.some((file) => {
+            const normalizedFile = file.toLowerCase();
+
+            return (
+                normalizedFile === "go.mod" ||
+                normalizedFile === "go.sum" ||
+                normalizedFile.endsWith(".go")
+            );
+        }) ||
+        includesAny(combinedText, ["golang", "go module"]);
+
+    if (hasGoProjectSignal) {
         add(technologies, ["Go"]);
         add(architectureDomains, ["GO_SYSTEMS"]);
         add(repositoryTypes, ["GO_SERVICE"]);
-    }
-
-    if (includesAny(combinedText, ["grpc", "protobuf", ".proto"])) {
-        add(technologies, ["gRPC / Protobuf"]);
-        add(architectureDomains, ["SERVICE_COMMUNICATION"]);
-        add(engineeringSignals, ["RPC_COMMUNICATION"]);
     }
 
     // Java / Spring

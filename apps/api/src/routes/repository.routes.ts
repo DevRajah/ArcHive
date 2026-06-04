@@ -491,7 +491,6 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
           name: true,
           fullName: true,
           userId: true,
-          repositoryTypes: true
         },
       });
 
@@ -509,6 +508,7 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
           architectureDomain: true,
           detectedTechnology: true,
           changeType: true,
+          repositoryTypes: true,
         },
       });
 
@@ -593,6 +593,86 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
       };
     }
   );
+  //identity analysis
+  app.get<{ Params: { repositoryId: string } }>(
+  "/:repositoryId/identity",
+  async (request, reply) => {
+    const { repositoryId } = request.params;
+
+    const repository = await prisma.repository.findUnique({
+      where: { id: repositoryId },
+      select: {
+        id: true,
+        name: true,
+        fullName: true,
+        language: true,
+        userId: true,
+      },
+    });
+
+    if (!repository) {
+      return reply.status(404).send({
+        success: false,
+        message: "Repository not found",
+      });
+    }
+
+    const architectureChanges = await prisma.architectureChange.findMany({
+      where: { repositoryId },
+      select: {
+        architectureDomain: true,
+        detectedTechnology: true,
+        repositoryTypes: true,
+      },
+    });
+
+    const detectedRepositoryTypes = Array.from(
+      new Set(
+        architectureChanges
+          .flatMap((change) => change.repositoryTypes?.split(",") || [])
+          .map((type) => type.trim())
+          .filter(Boolean)
+      )
+    );
+
+    const detectedTechnologies = Array.from(
+      new Set(
+        architectureChanges
+          .map((change) => change.detectedTechnology)
+          .filter((technology): technology is string => Boolean(technology))
+      )
+    );
+
+    const detectedDomains = Array.from(
+      new Set(
+        architectureChanges
+          .map((change) => change.architectureDomain)
+          .filter((domain): domain is string => Boolean(domain))
+      )
+    );
+
+    const primaryRepositoryType =
+      detectedRepositoryTypes[0] ||
+      (repository.language ? `${repository.language.toUpperCase()}_PROJECT` : "GENERAL_REPOSITORY");
+
+    const identitySummary = `ArcHive identifies ${repository.name} as a ${primaryRepositoryType
+      .replaceAll("_", " ")
+      .toLowerCase()} based on its architecture changes, detected technologies, and repository activity.`;
+
+    return {
+      success: true,
+      message: "Repository identity fetched successfully",
+      data: {
+        repository,
+        primaryRepositoryType,
+        detectedRepositoryTypes,
+        detectedTechnologies,
+        detectedDomains,
+        identitySummary,
+      },
+    };
+  }
+);
   // Architecture radar data for visualization
   app.get<{ Params: { repositoryId: string } }>(
     "/:repositoryId/architecture-radar",
