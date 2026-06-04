@@ -35,4 +35,9 @@ export const QUERY_KEYS = {
     "repository-architecture-radar",
     repositoryId,
   ],
+
+  REPOSITORY_NARRATIVE: (repositoryId: string) => [
+    "repository-narrative",
+    repositoryId,
+  ],
 };

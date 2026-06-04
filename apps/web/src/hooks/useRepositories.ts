@@ -70,3 +70,11 @@ export function useRepositoryArchitectureRadar(repositoryId: string) {
     enabled: Boolean(repositoryId),
   });
 }
+
+export function useRepositoryNarrative(repositoryId: string) {
+  return useQuery({
+    queryKey: QUERY_KEYS.REPOSITORY_NARRATIVE(repositoryId),
+    queryFn: () => repositoryService.getRepositoryNarrative(repositoryId),
+    enabled: Boolean(repositoryId),
+  });
+}

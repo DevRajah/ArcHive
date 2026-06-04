@@ -398,6 +398,153 @@ export const detectTechnologyFingerprint = (
         add(repositoryTypes, ["DOCUMENTATION_REPOSITORY"]);
     }
 
+    if (
+        includesAny(combinedText, [
+            "ledger",
+            "payment",
+            "reconciliation",
+            "transaction",
+            "settlement",
+            "invoice",
+            "audit",
+            "billing",
+            "webhook",
+            "financial",
+        ])
+    ) {
+        add(technologies, ["Financial Infrastructure"]);
+        add(architectureDomains, ["FINANCIAL_SYSTEMS"]);
+        add(engineeringSignals, ["FINANCIAL_PROCESSING"]);
+        add(repositoryTypes, ["FINTECH_PLATFORM"]);
+    }
+
+    if (
+        includesAny(combinedText, [
+            "monitoring",
+            "metrics",
+            "telemetry",
+            "analytics",
+            "traces",
+            "observability",
+            "dashboard",
+            "queue monitoring",
+            "health",
+        ])
+    ) {
+        add(technologies, ["Observability"]);
+        add(architectureDomains, ["OBSERVABILITY_SYSTEMS"]);
+        add(engineeringSignals, ["SYSTEM_MONITORING"]);
+        add(repositoryTypes, ["OBSERVABILITY_PLATFORM"]);
+    }
+
+    if (
+        includesAny(combinedText, [
+            "fraud",
+            "threat",
+            "security",
+            "auth",
+            "anomaly",
+            "intrusion",
+            "attack",
+            "detection",
+            "risk engine",
+        ])
+    ) {
+        add(technologies, ["Security Systems"]);
+        add(architectureDomains, ["SECURITY_SYSTEMS"]);
+        add(engineeringSignals, ["THREAT_DETECTION"]);
+        add(repositoryTypes, ["SECURITY_PLATFORM"]);
+    }
+
+    if (
+        includesAny(combinedText, [
+            "crdt",
+            "collaboration",
+            "shared editing",
+            "presence",
+            "live cursor",
+            "yjs",
+            "collaborative",
+        ])
+    ) {
+        add(technologies, ["Realtime Collaboration"]);
+        add(architectureDomains, ["COLLABORATION_SYSTEMS"]);
+        add(engineeringSignals, ["LIVE_COLLABORATION"]);
+        add(repositoryTypes, ["COLLABORATION_PLATFORM"]);
+    }
+
+    if (
+        includesAny(combinedText, [
+            "scaffold",
+            "generator",
+            "template",
+            "codegen",
+            "cli",
+            "commander",
+            "inquirer",
+            "boilerplate",
+            "create-app",
+        ])
+    ) {
+        add(technologies, ["Developer Tooling"]);
+        add(architectureDomains, ["DEVELOPER_INFRASTRUCTURE"]);
+        add(engineeringSignals, ["CODE_GENERATION"]);
+        add(repositoryTypes, ["DEVTOOL_PLATFORM"]);
+    }
+
+    if (
+        includesAny(combinedText, [
+            "route",
+            "transit",
+            "delay prediction",
+            "transport",
+            "journey",
+            "station",
+            "bus",
+            "train",
+            "mobility",
+        ])
+    ) {
+        add(technologies, ["Transport Systems"]);
+        add(architectureDomains, ["MOBILITY_SYSTEMS"]);
+        add(engineeringSignals, ["ROUTE_OPTIMIZATION"]);
+        add(repositoryTypes, ["SMART_TRANSPORT_PLATFORM"]);
+    }
+
+    if (
+        includesAny(combinedText, [
+            "energy",
+            "power",
+            "electricity",
+            "meter",
+            "household",
+            "consumption",
+            "iot",
+            "smart grid",
+        ])
+    ) {
+        add(technologies, ["Energy Monitoring"]);
+        add(architectureDomains, ["ENERGY_SYSTEMS"]);
+        add(engineeringSignals, ["REALTIME_MONITORING"]);
+        add(repositoryTypes, ["ENERGY_PLATFORM"]);
+    }
+
+    if (
+        includesAny(combinedText, [
+            "repository intelligence",
+            "architecture evolution",
+            "engineering intelligence",
+            "fingerprint",
+            "architecture radar",
+            "architecture narrative",
+        ])
+    ) {
+        add(technologies, ["Engineering Intelligence"]);
+        add(architectureDomains, ["ENGINEERING_INTELLIGENCE"]);
+        add(engineeringSignals, ["ARCHITECTURE_REASONING"]);
+        add(repositoryTypes, ["ENGINEERING_INTELLIGENCE_PLATFORM"]);
+    }
+
     return {
         technologies: Array.from(technologies),
         architectureDomains: Array.from(architectureDomains),

@@ -5,6 +5,7 @@ import { GithubRepository, Repository } from "@/types/repository.types";
 import { RepositoryOverview } from "@/types/repository-overview.types";
 import { RepositoryCapabilitiesResponse } from "@/types/repository-capabilities.types";
 import { RepositoryArchitectureRadarResponse } from "@/types/repository-radar.types";
+import { RepositoryNarrativeResponse } from "@/types/repository-narrative.types";
 
 
 function requireUserId() {
@@ -84,6 +85,16 @@ export const repositoryService = {
   ): Promise<RepositoryArchitectureRadarResponse> {
     const response = await api.get<ApiResponse<RepositoryArchitectureRadarResponse>>(
       `/repositories/${repositoryId}/architecture-radar`
+    );
+
+    return response.data.data;
+  },
+
+  async getRepositoryNarrative(
+    repositoryId: string
+  ): Promise<RepositoryNarrativeResponse> {
+    const response = await api.get<ApiResponse<RepositoryNarrativeResponse>>(
+      `/repositories/${repositoryId}/narrative`
     );
 
     return response.data.data;

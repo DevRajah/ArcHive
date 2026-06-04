@@ -4,6 +4,7 @@ export * from "./technology-fingerprint";
 export * from "./architecture-domain";
 export * from "./architecture-style";
 export * from "./evolution-summary";
+export * from "./repository-narrative";
 
 export type ArchitectureDetectionInput = {
   eventType: string;

@@ -1,32 +1,36 @@
 export interface RepositoryCapabilitiesResponse {
-  repository: {
-    id: string;
-    name: string;
-    fullName: string;
-  };
+    repository: {
+        id: string;
+        name: string;
+        fullName: string;
+    };
 
-  capabilities: {
-    frontendArchitecture?: boolean;
-    apiLayer?: boolean;
-    authentication?: boolean;
-    realtimeSystems?: boolean;
-    queueInfrastructure?: boolean;
-    databaseLayer?: boolean;
-    cachingLayer?: boolean;
-    devopsInfrastructure?: boolean;
-    dependencyManagement?: boolean;
-    typeContracts?: boolean;
-    stateManagement?: boolean;
-    architectureIntelligence?: boolean;
-  };
+    capabilities: {
+        frontendArchitecture?: boolean;
+        apiLayer?: boolean;
+        authentication?: boolean;
+        realtimeSystems?: boolean;
+        queueInfrastructure?: boolean;
+        databaseLayer?: boolean;
+        cachingLayer?: boolean;
+        devopsInfrastructure?: boolean;
+        dependencyManagement?: boolean;
+        typeContracts?: boolean;
+        stateManagement?: boolean;
+        architectureIntelligence?: boolean;
+    };
 
-  scores: {
-    architectureMaturityScore: number;
-    engineeringComplexityScore: number;
-    infrastructureDepth: string;
-  };
+    scores: {
+        architectureMaturityScore: number;
+        engineeringComplexityScore: number;
+        infrastructureDepth: string;
+    };
 
-  detectedDomains: string[];
-  detectedTechnologies: string[];
-  architectureStyles?: string[];
+    detectedDomains: string[];
+    detectedTechnologies: string[];
+
+    detectedRepositoryTypes?: string[];
+    repositoryTypes?: string[];
+
+    architectureStyles?: string[];
 }

@@ -44,7 +44,7 @@ export function useLiveDashboardUpdates() {
                 });
 
                 queryClient.invalidateQueries({
-                    queryKey: QUERY_KEYS.ARCHITECTURE_EVOLUTION(payload.repositoryId),
+                    queryKey: QUERY_KEYS.REPOSITORY_NARRATIVE(payload.repositoryId),
                 });
 
                 queryClient.invalidateQueries({
@@ -54,6 +54,12 @@ export function useLiveDashboardUpdates() {
                 queryClient.invalidateQueries({
                     queryKey: QUERY_KEYS.REPOSITORY_ARCHITECTURE_RADAR(payload.repositoryId),
                 });
+
+                queryClient.invalidateQueries({
+                    queryKey: QUERY_KEYS.ARCHITECTURE_EVOLUTION(payload.repositoryId),
+                });
+
+
             }
         }
 
