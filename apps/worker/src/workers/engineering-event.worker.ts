@@ -181,8 +181,33 @@ const worker = new Worker<ProcessEngineeringEventJob>(
 
         const { filesChanged, commitMessages } = getRawPayloadArrays(event.rawPayload);
 
-        const fingerprint = detectTechnologyFingerprint(filesChanged, commitMessages);
+        const repository = await prisma.repository.findUnique({
+            where: { id: repositoryId },
+            select: {
+                name: true,
+                fullName: true,
+                description: true,
+                language: true,
+            },
+        });
 
+        const repositoryContext = [
+            repository?.name,
+            repository?.fullName,
+            repository?.description,
+            repository?.language,
+        ]
+            .filter(Boolean)
+            .join(" ");
+
+        const fingerprint = detectTechnologyFingerprint(
+            [
+                ...filesChanged,
+                repositoryContext,
+            ],
+            commitMessages
+        );
+        
         console.log("Technology fingerprint detected:", {
             repositoryId,
             eventId,
@@ -236,13 +261,11 @@ const worker = new Worker<ProcessEngineeringEventJob>(
                     fileAffected: change.fileAffected || null,
                     summary: change.summary,
 
-                    // These are ready for the new evolution system.
-                    architectureDomain: mapArchitectureDomain({
-                        changeType: change.changeType,
-                        fallbackDomains: fingerprint.architectureDomains,
-                    }),
+                    architectureDomain: mappedDomain,
+
                     repositoryTypes: fingerprint.repositoryTypes.join(","),
 
+                    evolutionSummary,
                 },
             });
 

@@ -529,16 +529,27 @@ export const detectTechnologyFingerprint = (
         add(repositoryTypes, ["ENERGY_PLATFORM"]);
     }
 
-    if (
-        includesAny(combinedText, [
-            "repository intelligence",
-            "architecture evolution",
-            "engineering intelligence",
-            "fingerprint",
-            "architecture radar",
-            "architecture narrative",
-        ])
-    ) {
+    const hasEngineeringIntelligenceCoreSignal = includesAny(combinedText, [
+        "repository intelligence",
+        "engineering intelligence",
+        "architecture evolution",
+        "architecture radar",
+        "architecture narrative",
+        "repository fingerprint",
+        "codebase intelligence",
+    ]);
+
+    const hasGithubRepositoryAnalysisSignal = includesAny(combinedText, [
+        "github webhook",
+        "github oauth",
+        "repository import",
+        "pull request analysis",
+        "commit analysis",
+        "engineering timeline",
+        "architecture change",
+    ]);
+
+    if (hasEngineeringIntelligenceCoreSignal && hasGithubRepositoryAnalysisSignal) {
         add(technologies, ["Engineering Intelligence"]);
         add(architectureDomains, ["ENGINEERING_INTELLIGENCE"]);
         add(engineeringSignals, ["ARCHITECTURE_REASONING"]);

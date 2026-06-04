@@ -757,6 +757,7 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
         domains,
         capabilities,
         architectureStyles,
+        architectureChangeCount: architectureChanges.length,
       });
 
       return {
@@ -856,4 +857,33 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
       },
     };
   });
+  // Endpoint to trigger reprocessing of repository intelligence - for dev/testing purposes
+  app.post<{ Params: { repositoryId: string } }>(
+    "/:repositoryId/reprocess-intelligence",
+    async (request, reply) => {
+      const { repositoryId } = request.params;
+
+      const events = await prisma.engineeringEvent.findMany({
+        where: { repositoryId },
+        orderBy: { createdAt: "asc" },
+        select: { id: true },
+      });
+
+      for (const event of events) {
+        await engineeringEventQueue.add("process-engineering-event", {
+          eventId: event.id,
+          repositoryId,
+        });
+      }
+
+      return {
+        success: true,
+        message: "Repository intelligence reprocessing queued successfully",
+        data: {
+          repositoryId,
+          queuedEvents: events.length,
+        },
+      };
+    }
+  );
 };
