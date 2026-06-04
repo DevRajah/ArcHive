@@ -2,6 +2,7 @@ import { FastifyInstance } from "fastify";
 import { prisma } from "@archive/database";
 import axios from "axios";
 import { engineeringEventQueue } from "@archive/queue";
+import { detectArchitectureStyle } from "@archive/detectors";
 
 type CreateRepositoryBody = {
   name: string;
@@ -275,6 +276,201 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
           recentTimelineEntries,
           recentArchitectureChanges,
         },
+      };
+    }
+  );
+
+  app.get<{ Params: { repositoryId: string } }>(
+    "/:repositoryId/architecture-evolution",
+    async (request, reply) => {
+      const { repositoryId } = request.params;
+
+      const repository = await prisma.repository.findUnique({
+        where: { id: repositoryId },
+        select: {
+          id: true,
+          name: true,
+          owner: true,
+          fullName: true,
+          description: true,
+          defaultBranch: true,
+          language: true,
+          stars: true,
+          forks: true,
+          userId: true,
+        },
+      });
+
+      if (!repository) {
+        return reply.status(404).send({
+          success: false,
+          message: "Repository not found",
+        });
+      }
+
+      const architectureChanges = await prisma.architectureChange.findMany({
+        where: { repositoryId },
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          changeType: true,
+          detectedTechnology: true,
+          fileAffected: true,
+          summary: true,
+          architectureDomain: true,
+          evolutionSummary: true,
+          createdAt: true,
+        },
+      });
+
+      const groupedByDomain = architectureChanges.reduce<
+        Record<string, typeof architectureChanges>
+      >((groups, change) => {
+        const domain = change.architectureDomain || "GENERAL_ARCHITECTURE";
+
+        if (!groups[domain]) {
+          groups[domain] = [];
+        }
+
+        groups[domain].push(change);
+
+        return groups;
+      }, {});
+
+      const domains = Object.entries(groupedByDomain).map(([domain, changes]) => {
+        const latestChange = changes[0];
+
+        return {
+          domain,
+          label: domain
+            .toLowerCase()
+            .split("_")
+            .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(" "),
+          totalChanges: changes.length,
+          latestChangeAt: latestChange?.createdAt || null,
+          technologies: Array.from(
+            new Set(
+              changes
+                .map((change) => change.detectedTechnology)
+                .filter((technology): technology is string => Boolean(technology))
+            )
+          ),
+          changes,
+        };
+      });
+
+      const architectureStyles = detectArchitectureStyle({
+        domains: domains.map((domain) => domain.domain),
+        technologies: domains.flatMap(
+          (domain) => domain.technologies
+        ),
+        signals: [],
+      });
+
+      const detectedCapabilities = domains.map((domain) => domain.label);
+
+      const capabilitySet = new Set(domains.map((domain) => domain.domain));
+
+      const expectedCapabilities = [
+        { domain: "FRONTEND_ARCHITECTURE", label: "Frontend Architecture" },
+        { domain: "API_LAYER", label: "API Layer" },
+        { domain: "AUTHENTICATION", label: "Authentication" },
+        { domain: "REALTIME_SYSTEMS", label: "Realtime Systems" },
+        { domain: "QUEUE_INFRASTRUCTURE", label: "Queue Infrastructure" },
+        { domain: "DATABASE_LAYER", label: "Database Layer" },
+        { domain: "CACHING_LAYER", label: "Caching Layer" },
+        { domain: "DEVOPS_INFRASTRUCTURE", label: "DevOps Infrastructure" },
+        { domain: "DEPENDENCY_MANAGEMENT", label: "Dependency Management" },
+      ];
+
+      const missingCapabilities = expectedCapabilities
+        .filter((capability) => !capabilitySet.has(capability.domain))
+        .map((capability) => capability.label);
+
+      const mostActiveDomain = domains.sort(
+        (a, b) => b.totalChanges - a.totalChanges
+      )[0];
+
+      const architectureMaturityScore = Math.min(
+        100,
+        detectedCapabilities.length * 10 + architectureChanges.length * 2
+      );
+
+      const infrastructureDepth =
+        architectureMaturityScore >= 75
+          ? "HIGH"
+          : architectureMaturityScore >= 45
+            ? "MEDIUM"
+            : "EARLY";
+
+      return {
+        success: true,
+        message: "Repository architecture evolution fetched successfully",
+        data: {
+          repository,
+          summary: {
+            totalArchitectureChanges: architectureChanges.length,
+            totalDomains: domains.length,
+            mostActiveDomain: mostActiveDomain?.domain || null,
+          },
+          insights: {
+            architectureMaturityScore,
+            infrastructureDepth,
+            dominantDomain: mostActiveDomain?.domain || null,
+            detectedCapabilities,
+            missingCapabilities,
+            architectureStyles,
+          },
+          domains,
+        },
+      };
+    }
+  );
+
+  app.get<{ Params: { repositoryId: string } }>(
+    "/:repositoryId/architecture",
+    async (request, reply) => {
+      const { repositoryId } = request.params;
+
+      const repository = await prisma.repository.findUnique({
+        where: { id: repositoryId },
+        select: {
+          id: true,
+          userId: true,
+        },
+      });
+
+      if (!repository) {
+        return reply.status(404).send({
+          success: false,
+          message: "Repository not found",
+        });
+      }
+
+      const architectureChanges = await prisma.architectureChange.findMany({
+        where: {
+          repositoryId,
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+        select: {
+          id: true,
+          changeType: true,
+          detectedTechnology: true,
+          fileAffected: true,
+          summary: true,
+          architectureDomain: true,
+          evolutionSummary: true,
+          createdAt: true,
+        },
+      });
+
+      return {
+        success: true,
+        message: "Repository architecture changes fetched successfully",
+        data: architectureChanges,
       };
     }
   );

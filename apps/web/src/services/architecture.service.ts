@@ -1,11 +1,24 @@
 import { api } from "@/lib/api";
 import { ApiResponse } from "@/types/api.types";
 import { ArchitectureChange } from "@/types/architecture.types";
+import { ArchitectureEvolutionResponse } from "@/types/architecture-evolution.types";
 
 export const architectureService = {
-  async getArchitectureChanges(repositoryId: string) {
+  async getRepositoryArchitecture(
+    repositoryId: string
+  ): Promise<ArchitectureChange[]> {
     const response = await api.get<ApiResponse<ArchitectureChange[]>>(
-      `/repositories/${repositoryId}/architecture-changes`
+      `/repositories/${repositoryId}/architecture`
+    );
+
+    return response.data.data;
+  },
+
+  async getRepositoryArchitectureEvolution(
+    repositoryId: string
+  ): Promise<ArchitectureEvolutionResponse> {
+    const response = await api.get<ApiResponse<ArchitectureEvolutionResponse>>(
+      `/repositories/${repositoryId}/architecture-evolution`
     );
 
     return response.data.data;

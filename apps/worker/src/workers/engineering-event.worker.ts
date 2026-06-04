@@ -6,7 +6,9 @@ import { EngineeringEventType, ProcessingStatus } from "@prisma/client";
 import {
     detectArchitectureChanges,
     detectTechnologyFingerprint,
-    mapArchitectureDomain
+    mapArchitectureDomain,
+    detectArchitectureStyle,
+    generateEvolutionSummary
 } from "@archive/detectors";
 import { emitRealtimeEvent } from "../realtime/socket-emitter";
 
@@ -186,6 +188,13 @@ const worker = new Worker<ProcessEngineeringEventJob>(
             eventId,
             fingerprint,
         });
+        const architectureStyles = detectArchitectureStyle({
+            domains: fingerprint.architectureDomains,
+            technologies: fingerprint.technologies,
+            signals: fingerprint.engineeringSignals,
+        });
+
+        console.log("Architecture styles detected:", architectureStyles);
 
         const architectureChanges = detectArchitectureChanges({
             eventType: event.eventType,
@@ -206,6 +215,18 @@ const worker = new Worker<ProcessEngineeringEventJob>(
                 continue;
             }
 
+            const mappedDomain = mapArchitectureDomain({
+                changeType: change.changeType,
+                fallbackDomains: fingerprint.architectureDomains,
+            });
+
+            const evolutionSummary = generateEvolutionSummary({
+                changeType: change.changeType,
+                architectureDomain: mappedDomain,
+                detectedTechnology: change.detectedTechnology,
+                fileAffected: change.fileAffected,
+            });
+
             const architectureChange = await prisma.architectureChange.create({
                 data: {
                     repositoryId,
@@ -218,17 +239,18 @@ const worker = new Worker<ProcessEngineeringEventJob>(
                     architectureDomain: mapArchitectureDomain({
                         changeType: change.changeType,
                         fallbackDomains: fingerprint.architectureDomains,
-                    }), evolutionSummary:
-                        fingerprint.technologies.length > 0
-                            ? `This change contributed to the repository's ${mapArchitectureDomain({
-                                changeType: change.changeType,
-                                fallbackDomains: fingerprint.architectureDomains,
-                            })
-                                .replaceAll("_", " ")
-                                .toLowerCase()} by touching ${fingerprint.technologies.join(
-                                    ", "
-                                )}-related architecture.`
-                            : `This change contributed to the repository's architecture evolution.`,
+                    }),
+                    // evolutionSummary:
+                    //     fingerprint.technologies.length > 0
+                    //         ? `This change contributed to the repository's ${mapArchitectureDomain({
+                    //             changeType: change.changeType,
+                    //             fallbackDomains: fingerprint.architectureDomains,
+                    //         })
+                    //             .replaceAll("_", " ")
+                    //             .toLowerCase()} by touching ${fingerprint.technologies.join(
+                    //                 ", "
+                    //             )}-related architecture.`
+                    //         : `This change contributed to the repository's architecture evolution.`,
                 },
             });
 

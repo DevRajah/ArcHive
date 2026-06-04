@@ -5,7 +5,16 @@ import { architectureService } from "@/services/architecture.service";
 export function useRepositoryArchitecture(repositoryId: string) {
   return useQuery({
     queryKey: QUERY_KEYS.REPOSITORY_ARCHITECTURE(repositoryId),
-    queryFn: () => architectureService.getArchitectureChanges(repositoryId),
+    queryFn: () => architectureService.getRepositoryArchitecture(repositoryId),
+    enabled: Boolean(repositoryId),
+  });
+}
+
+export function useRepositoryArchitectureEvolution(repositoryId: string) {
+  return useQuery({
+    queryKey: QUERY_KEYS.ARCHITECTURE_EVOLUTION(repositoryId),
+    queryFn: () =>
+      architectureService.getRepositoryArchitectureEvolution(repositoryId),
     enabled: Boolean(repositoryId),
   });
 }

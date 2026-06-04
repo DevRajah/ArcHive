@@ -11,6 +11,7 @@ import {
   Boxes,
   ServerCog,
   GitBranch,
+  GitGraph
 } from "lucide-react";
 
 import { AppShell } from "@/components/layout/AppShell";
@@ -127,6 +128,8 @@ export default function ArchitecturePage() {
           </Link>
         </Button>
 
+
+
         <div className="rounded-xl border border-border bg-card p-6">
           <div className="flex flex-col justify-between gap-4 md:flex-row md:items-start">
             <div>
@@ -148,8 +151,18 @@ export default function ArchitecturePage() {
               </div>
             </div>
 
-            <Badge variant="secondary">{totalChanges} changes</Badge>
-          </div>
+
+
+            <div className="flex flex-wrap items-center gap-3">
+              <Button asChild>
+                <Link href={`/repositories/${repoId}/architecture/evolution`}>
+                  <GitGraph className="mr-2 h-4 w-4" />
+                  View Evolution
+                </Link>
+              </Button>
+
+              <Badge variant="secondary">{totalChanges} changes</Badge>
+            </div>          </div>
         </div>
 
         {!isLoading &&

@@ -11,5 +11,8 @@
     "dev:api": "npm run dev -w apps/api",
     "dev:worker": "npm run dev -w apps/worker",
     "dev:web": "npm run dev -w apps/web"
+  },
+  "devDependencies": {
+    "dotenv-cli": "^11.0.0"
   }
 }
