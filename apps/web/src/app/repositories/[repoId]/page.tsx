@@ -25,6 +25,9 @@ import { useRepositoryArchitectureRadar } from "@/hooks/useRepositories";
 import { RepositoryArchitectureRadar } from "@/components/repositories/RepositoryArchitectureRadar";
 import { useRepositoryNarrative } from "@/hooks/useRepositories";
 import { RepositoryNarrative } from "@/components/repositories/RepositoryNarrative";
+import { RepositoryIntelligenceSummary } from "@/components/repositories/RepositoryIntelligenceSummary";
+
+import { useRepositoryIntelligenceSummary } from "@/hooks/useRepositories";
 
 export default function RepositoryDetailPage() {
   const params = useParams<{ repoId: string }>();
@@ -52,6 +55,10 @@ export default function RepositoryDetailPage() {
     data: narrative,
     isLoading: isNarrativeLoading,
   } = useRepositoryNarrative(repoId);
+  const {
+    data: intelligenceSummary,
+    isLoading: isIntelligenceSummaryLoading,
+  } = useRepositoryIntelligenceSummary(repoId);
   function handleUntrackRepository() {
     untrackMutation.mutate(repoId, {
       onSuccess: () => {
@@ -213,6 +220,11 @@ export default function RepositoryDetailPage() {
               isRealtimeConnected={liveStatus.isConnected}
               lastLiveUpdatedAt={liveStatus.lastUpdatedAt}
               trackingStatus={data.trackingStatus}
+            />
+
+            <RepositoryIntelligenceSummary
+              data={intelligenceSummary}
+              isLoading={isIntelligenceSummaryLoading}
             />
 
             <RepositoryNarrative

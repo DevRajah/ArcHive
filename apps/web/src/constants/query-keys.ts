@@ -40,4 +40,9 @@ export const QUERY_KEYS = {
     "repository-narrative",
     repositoryId,
   ],
+
+  REPOSITORY_INTELLIGENCE_SUMMARY: (repositoryId: string) => [
+    "repository-intelligence-summary",
+    repositoryId,
+  ],
 };

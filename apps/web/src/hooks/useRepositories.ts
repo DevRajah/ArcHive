@@ -78,3 +78,19 @@ export function useRepositoryNarrative(repositoryId: string) {
     enabled: Boolean(repositoryId),
   });
 }
+
+export function useRepositoryIntelligenceSummary(
+  repositoryId: string
+) {
+  return useQuery({
+    queryKey:
+      QUERY_KEYS.REPOSITORY_INTELLIGENCE_SUMMARY(repositoryId),
+
+    queryFn: () =>
+      repositoryService.getRepositoryIntelligenceSummary(
+        repositoryId
+      ),
+
+    enabled: Boolean(repositoryId),
+  });
+}

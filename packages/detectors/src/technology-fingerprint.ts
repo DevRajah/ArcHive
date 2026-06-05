@@ -429,6 +429,18 @@ export const detectTechnologyFingerprint = (
             "dashboard",
             "queue monitoring",
             "health",
+            "service mesh",
+            "distributed systems",
+            "service orchestration",
+            "service composition",
+            "realtime services",
+            "runtime",
+            "workers",
+            "platform tooling",
+            "infra tooling",
+            "developer infrastructure",
+            "cloud platform",
+            "system orchestration",
         ])
     ) {
         add(technologies, ["Observability"]);
@@ -490,6 +502,25 @@ export const detectTechnologyFingerprint = (
         add(architectureDomains, ["DEVELOPER_INFRASTRUCTURE"]);
         add(engineeringSignals, ["CODE_GENERATION"]);
         add(repositoryTypes, ["DEVTOOL_PLATFORM"]);
+    }
+
+    if (
+        includesAny(combinedText, [
+            "sdk",
+            "platform",
+            "developer platform",
+            "tooling",
+            "runtime",
+            "service orchestration",
+            "service composition",
+            "infra tooling",
+            "worker platform",
+        ])
+    ) {
+        add(technologies, ["Developer Infrastructure"]);
+        add(architectureDomains, ["DEVELOPER_INFRASTRUCTURE"]);
+        add(engineeringSignals, ["PLATFORM_ENGINEERING"]);
+        add(repositoryTypes, ["DEVELOPER_PLATFORM"]);
     }
 
     if (

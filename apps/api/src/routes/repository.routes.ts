@@ -5,7 +5,7 @@ import { engineeringEventQueue } from "@archive/queue";
 import {
   detectArchitectureStyle,
   generateRepositoryNarrative,
-  detectTechnologyFingerprint 
+  detectTechnologyFingerprint
 } from "@archive/detectors";
 
 type CreateRepositoryBody = {
@@ -888,6 +888,192 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
         data: {
           repository,
           radar,
+        },
+      };
+    }
+  );
+  // Intelligence summary synthesis - combines multiple signals for a high-level overview
+  app.get<{ Params: { repositoryId: string } }>(
+    "/:repositoryId/intelligence-summary",
+    async (request, reply) => {
+      const { repositoryId } = request.params;
+
+      const repository = await prisma.repository.findUnique({
+        where: { id: repositoryId },
+        select: {
+          id: true,
+          name: true,
+          fullName: true,
+          language: true,
+          userId: true,
+        },
+      });
+
+      if (!repository) {
+        return reply.status(404).send({
+          success: false,
+          message: "Repository not found",
+        });
+      }
+
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+      const [
+        recentEvents,
+        recentArchitectureChanges,
+        allArchitectureChanges,
+      ] = await Promise.all([
+        prisma.engineeringEvent.findMany({
+          where: {
+            repositoryId,
+            createdAt: {
+              gte: sevenDaysAgo,
+            },
+          },
+          orderBy: {
+            createdAt: "desc",
+          },
+          take: 10,
+        }),
+
+        prisma.architectureChange.findMany({
+          where: {
+            repositoryId,
+            createdAt: {
+              gte: sevenDaysAgo,
+            },
+          },
+          orderBy: {
+            createdAt: "desc",
+          },
+          take: 10,
+        }),
+
+        prisma.architectureChange.findMany({
+          where: {
+            repositoryId,
+          },
+          orderBy: {
+            createdAt: "desc",
+          },
+          select: {
+            architectureDomain: true,
+            detectedTechnology: true,
+            repositoryTypes: true,
+            changeType: true,
+            summary: true,
+          },
+        }),
+      ]);
+
+      const hasRecentActivity =
+        recentEvents.length > 0 || recentArchitectureChanges.length > 0;
+
+      const mode = hasRecentActivity ? "ACTIVE" : "PASSIVE";
+
+      const domains = Array.from(
+        new Set(
+          allArchitectureChanges
+            .map((change) => change.architectureDomain)
+            .filter((domain): domain is string => Boolean(domain))
+        )
+      );
+
+      const technologies = Array.from(
+        new Set(
+          allArchitectureChanges
+            .map((change) => change.detectedTechnology)
+            .filter((technology): technology is string => Boolean(technology))
+        )
+      );
+
+      const repositoryTypes = Array.from(
+        new Set(
+          allArchitectureChanges
+            .flatMap((change) => change.repositoryTypes?.split(",") || [])
+            .map((type) => type.trim())
+            .filter(Boolean)
+        )
+      );
+
+      const domainCounts = allArchitectureChanges.reduce<Record<string, number>>(
+        (acc, change) => {
+          const domain = change.architectureDomain || "GENERAL_ARCHITECTURE";
+          acc[domain] = (acc[domain] || 0) + 1;
+          return acc;
+        },
+        {}
+      );
+
+      const strongestDomains = Object.entries(domainCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 4)
+        .map(([domain]) =>
+          domain
+            .toLowerCase()
+            .split("_")
+            .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(" ")
+        );
+
+      const keyFocusAreas =
+        strongestDomains.length > 0
+          ? strongestDomains
+          : technologies.slice(0, 4);
+
+      const detectedPatterns = [
+        ...repositoryTypes.map((type) =>
+          type
+            .toLowerCase()
+            .split("_")
+            .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(" ")
+        ),
+        ...domains.slice(0, 4).map((domain) =>
+          domain
+            .toLowerCase()
+            .split("_")
+            .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(" ")
+        ),
+      ].slice(0, 6);
+
+      const strongestTechnology = technologies[0] || repository.language || "software architecture";
+
+      const headline =
+        mode === "ACTIVE"
+          ? `${repository.name} showed active engineering intelligence signals this week.`
+          : `${repository.name} has no significant engineering activity recorded this week.`;
+
+      const overview =
+        mode === "ACTIVE"
+          ? `${repository.name} recorded ${recentEvents.length} recent engineering event(s) and ${recentArchitectureChanges.length} recent architecture change(s). The strongest current focus areas are ${keyFocusAreas.length > 0
+            ? keyFocusAreas.join(", ")
+            : strongestTechnology
+          }.`
+          : `No significant engineering activity was detected this week, but ${repository.name} currently shows known repository intelligence signals${keyFocusAreas.length > 0
+            ? ` around ${keyFocusAreas.join(", ")}`
+            : ""
+          }.`;
+
+      return {
+        success: true,
+        message: "Repository intelligence summary fetched successfully",
+        data: {
+          repository: {
+            id: repository.id,
+            name: repository.name,
+            fullName: repository.fullName,
+          },
+          summary: {
+            mode,
+            headline,
+            overview,
+            keyFocusAreas,
+            detectedPatterns,
+            generatedAt: new Date().toISOString(),
+          },
         },
       };
     }
