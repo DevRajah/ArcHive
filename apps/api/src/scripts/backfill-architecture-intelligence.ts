@@ -2,6 +2,7 @@ import "dotenv/config";
 import { prisma } from "@archive/database";
 import { mapArchitectureDomain } from "@archive/detectors";
 
+// Command to run this script: npx dotenv -e packages/database/.env -- tsx apps/api/src/scripts/backfill-architecture-intelligence.ts
 const generateEvolutionSummary = (architectureDomain: string) => {
   return `This historical change contributed to the repository's ${architectureDomain
     .replaceAll("_", " ")

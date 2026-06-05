@@ -5,6 +5,7 @@ import { engineeringEventQueue } from "@archive/queue";
 import {
   detectArchitectureStyle,
   generateRepositoryNarrative,
+  detectTechnologyFingerprint 
 } from "@archive/detectors";
 
 type CreateRepositoryBody = {
@@ -13,6 +14,57 @@ type CreateRepositoryBody = {
   fullName: string;
   description?: string;
   defaultBranch?: string;
+};
+
+const createInitialRepositoryIdentity = async (repository: {
+  id: string;
+  name: string;
+  fullName: string;
+  description?: string | null;
+  language?: string | null;
+}) => {
+  const existingIdentity = await prisma.architectureChange.findFirst({
+    where: {
+      repositoryId: repository.id,
+      changeType: "REPOSITORY_IDENTITY_DETECTED",
+    },
+  });
+
+  if (existingIdentity) return null;
+
+  const context = [
+    repository.name,
+    repository.fullName,
+    repository.description,
+    repository.language,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  const fingerprint = detectTechnologyFingerprint([context], []);
+
+  if (fingerprint.repositoryTypes.length === 0) return null;
+
+  return prisma.architectureChange.create({
+    data: {
+      repositoryId: repository.id,
+      changeType: "REPOSITORY_IDENTITY_DETECTED",
+      detectedTechnology:
+        fingerprint.technologies[0] ||
+        repository.language ||
+        "Repository Metadata",
+      fileAffected: null,
+      summary: `ArcHive identified this repository from its metadata as ${fingerprint.repositoryTypes
+        .join(", ")
+        .replaceAll("_", " ")
+        .toLowerCase()}.`,
+      architectureDomain:
+        fingerprint.architectureDomains[0] || "REPOSITORY_IDENTITY",
+      evolutionSummary:
+        "This metadata-based intelligence record helps ArcHive classify repositories before webhook history is available.",
+      repositoryTypes: fingerprint.repositoryTypes.join(","),
+    },
+  });
 };
 
 export const repositoryRoutes = async (app: FastifyInstance) => {
@@ -46,6 +98,7 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
         defaultBranch: defaultBranch || "main",
       },
     });
+    await createInitialRepositoryIdentity(repository);
 
     return reply.status(201).send({
       success: true,

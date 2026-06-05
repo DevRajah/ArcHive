@@ -1,6 +1,7 @@
 import "dotenv/config";
 import { prisma } from "@archive/database";
 
+// Command to run this script: npx dotenv -e packages/database/.env -- tsx apps/api/src/scripts/cleanup-wrong-repository-types.ts
 const WRONG_TYPE = "GO_SERVICE";
 
 const cleanRepositoryTypes = (repositoryTypes: string | null) => {
