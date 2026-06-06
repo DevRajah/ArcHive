@@ -58,6 +58,8 @@ export default function RepositoryDetailPage() {
   const {
     data: intelligenceSummary,
     isLoading: isIntelligenceSummaryLoading,
+    isRefetching: isIntelligenceSummaryRefetching,
+    refetch: refetchIntelligenceSummary,
   } = useRepositoryIntelligenceSummary(repoId);
   function handleUntrackRepository() {
     untrackMutation.mutate(repoId, {
@@ -225,6 +227,8 @@ export default function RepositoryDetailPage() {
             <RepositoryIntelligenceSummary
               data={intelligenceSummary}
               isLoading={isIntelligenceSummaryLoading}
+              isRefetching={isIntelligenceSummaryRefetching}
+              onRefresh={() => refetchIntelligenceSummary()}
             />
 
             <RepositoryNarrative
