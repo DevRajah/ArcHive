@@ -3,6 +3,7 @@ export type TechnologyFingerprintResult = {
     architectureDomains: string[];
     engineeringSignals: string[];
     repositoryTypes: string[];
+    reasoningSignals: string[];
 };
 
 const includesAny = (value: string, keywords: string[]) => {
@@ -13,6 +14,14 @@ const includesAny = (value: string, keywords: string[]) => {
 
 const add = (set: Set<string>, values: string[]) => {
     values.forEach((value) => set.add(value));
+};
+
+const reasoningSignals: string[] = [];
+
+const addReasoningSignal = (signal: string) => {
+    if (!reasoningSignals.includes(signal)) {
+        reasoningSignals.push(signal);
+    }
 };
 
 export const detectTechnologyFingerprint = (
@@ -80,24 +89,38 @@ export const detectTechnologyFingerprint = (
         add(technologies, ["Python"]);
         add(architectureDomains, ["PYTHON_SYSTEMS"]);
         add(repositoryTypes, ["PYTHON_PROJECT"]);
+
+            addReasoningSignal(
+            "Detected Python-specific frameworks and patterns"
+        );
     }
 
     if (includesAny(combinedText, ["fastapi"])) {
         add(technologies, ["FastAPI"]);
         add(architectureDomains, ["API_LAYER"]);
         add(repositoryTypes, ["PYTHON_API_SERVICE"]);
+
+        addReasoningSignal(
+            "Detected FastAPI framework and API service patterns"
+        );
     }
 
     if (includesAny(combinedText, ["django"])) {
         add(technologies, ["Django"]);
         add(architectureDomains, ["WEB_APPLICATION"]);
         add(repositoryTypes, ["PYTHON_WEB_APPLICATION"]);
+        addReasoningSignal(
+            "Detected Django framework and web application patterns"
+        );
     }
 
     if (includesAny(combinedText, ["flask"])) {
         add(technologies, ["Flask"]);
         add(architectureDomains, ["API_LAYER"]);
         add(repositoryTypes, ["PYTHON_API_SERVICE"]);
+        addReasoningSignal(
+            "Detected Flask framework and API service patterns"
+        );
     }
 
     // AI / ML
@@ -122,6 +145,9 @@ export const detectTechnologyFingerprint = (
         add(architectureDomains, ["AI_INFRASTRUCTURE"]);
         add(engineeringSignals, ["MACHINE_LEARNING"]);
         add(repositoryTypes, ["AI_ML_PROJECT"]);
+        addReasoningSignal(
+            "Detected AI and machine learning frameworks and patterns"
+        );
     }
 
     // Data engineering
@@ -143,6 +169,10 @@ export const detectTechnologyFingerprint = (
         add(architectureDomains, ["DATA_PIPELINES"]);
         add(engineeringSignals, ["DATA_WORKFLOW"]);
         add(repositoryTypes, ["DATA_ENGINEERING_PROJECT"]);
+
+        addReasoningSignal(
+            "Detected data engineering and ETL pipeline patterns"
+        );
     }
 
 
@@ -163,6 +193,10 @@ export const detectTechnologyFingerprint = (
         add(technologies, ["Go"]);
         add(architectureDomains, ["GO_SYSTEMS"]);
         add(repositoryTypes, ["GO_SERVICE"]);
+
+        addReasoningSignal(
+            "Detected Go-specific files and patterns"
+        );
     }
 
     // Java / Spring
@@ -179,6 +213,10 @@ export const detectTechnologyFingerprint = (
         add(technologies, ["Java / Spring"]);
         add(architectureDomains, ["JAVA_SYSTEMS"]);
         add(repositoryTypes, ["JAVA_SERVICE"]);
+
+        addReasoningSignal(
+            "Detected Java and Spring framework patterns"
+        );
     }
 
     // Rust
@@ -195,6 +233,9 @@ export const detectTechnologyFingerprint = (
         add(technologies, ["Rust"]);
         add(architectureDomains, ["RUST_SYSTEMS"]);
         add(repositoryTypes, ["RUST_SERVICE"]);
+        addReasoningSignal(
+            "Detected Rust-specific files and patterns"
+        );
     }
 
     // PHP / Laravel
@@ -209,6 +250,9 @@ export const detectTechnologyFingerprint = (
         add(technologies, ["PHP"]);
         add(architectureDomains, ["WEB_APPLICATION"]);
         add(repositoryTypes, ["PHP_WEB_APPLICATION"]);
+        addReasoningSignal(
+            "Detected PHP-specific frameworks and patterns"
+        );
     }
 
     // Mobile
@@ -224,6 +268,9 @@ export const detectTechnologyFingerprint = (
         add(technologies, ["Flutter"]);
         add(architectureDomains, ["MOBILE_ARCHITECTURE"]);
         add(repositoryTypes, ["MOBILE_APPLICATION"]);
+        addReasoningSignal(
+            "Detected Flutter-specific files and patterns"
+        );
     }
 
     if (
@@ -236,6 +283,9 @@ export const detectTechnologyFingerprint = (
         add(technologies, ["React Native"]);
         add(architectureDomains, ["MOBILE_ARCHITECTURE"]);
         add(repositoryTypes, ["MOBILE_APPLICATION"]);
+        addReasoningSignal(
+            "Detected React Native-specific files and patterns"
+        );
     }
 
     // DevOps / Infrastructure
@@ -249,6 +299,10 @@ export const detectTechnologyFingerprint = (
         add(technologies, ["Docker"]);
         add(architectureDomains, ["DEVOPS_INFRASTRUCTURE"]);
         add(engineeringSignals, ["CONTAINERIZATION"]);
+
+        addReasoningSignal(
+            "Detected Dockerfiles and containerization patterns"
+        );
     }
 
     if (
@@ -262,6 +316,9 @@ export const detectTechnologyFingerprint = (
         add(technologies, ["Terraform"]);
         add(architectureDomains, ["INFRASTRUCTURE_AS_CODE"]);
         add(repositoryTypes, ["INFRASTRUCTURE_REPOSITORY"]);
+        addReasoningSignal(
+            "Detected Terraform configuration files"
+        );
     }
 
     if (
@@ -277,6 +334,9 @@ export const detectTechnologyFingerprint = (
         add(technologies, ["Kubernetes / Helm"]);
         add(architectureDomains, ["CONTAINER_ORCHESTRATION"]);
         add(repositoryTypes, ["INFRASTRUCTURE_REPOSITORY"]);
+        addReasoningSignal(
+            "Detected Kubernetes and Helm configuration files"
+        );
     }
 
     if (
@@ -291,6 +351,10 @@ export const detectTechnologyFingerprint = (
         add(technologies, ["CI/CD"]);
         add(architectureDomains, ["CI_CD"]);
         add(engineeringSignals, ["AUTOMATED_DELIVERY"]);
+
+        addReasoningSignal(
+            "Detected CI/CD pipeline configuration files and patterns"
+        );
     }
 
     // Realtime
@@ -307,6 +371,9 @@ export const detectTechnologyFingerprint = (
         add(technologies, ["Socket.IO / Realtime Events"]);
         add(architectureDomains, ["REALTIME_SYSTEMS"]);
         add(engineeringSignals, ["REALTIME_INFRASTRUCTURE"]);
+        addReasoningSignal(
+            "Detected realtime websocket infrastructure"
+        );
     }
 
     // Queue / background jobs
@@ -325,6 +392,10 @@ export const detectTechnologyFingerprint = (
         add(technologies, ["Background Jobs / Queue"]);
         add(architectureDomains, ["QUEUE_INFRASTRUCTURE"]);
         add(engineeringSignals, ["BACKGROUND_PROCESSING"]);
+
+        addReasoningSignal(
+            "Detected background job and queue processing patterns"
+        );
     }
 
     // Cache / messaging
@@ -345,6 +416,10 @@ export const detectTechnologyFingerprint = (
         add(technologies, ["Messaging / Event Streaming"]);
         add(architectureDomains, ["EVENT_STREAMING"]);
         add(engineeringSignals, ["EVENT_DRIVEN"]);
+
+        addReasoningSignal(
+            "Detected messaging and event streaming patterns"
+        );
     }
 
     // Database
@@ -364,6 +439,10 @@ export const detectTechnologyFingerprint = (
     ) {
         add(technologies, ["Database"]);
         add(architectureDomains, ["DATABASE_LAYER"]);
+
+        addReasoningSignal(
+            "Detected database schema and migration patterns"
+        );
     }
 
     // Design systems / product design repos
@@ -381,6 +460,10 @@ export const detectTechnologyFingerprint = (
         add(technologies, ["Design System"]);
         add(architectureDomains, ["DESIGN_SYSTEM"]);
         add(repositoryTypes, ["DESIGN_SYSTEM_REPOSITORY"]);
+
+        addReasoningSignal(
+            "Detected design system and product design patterns"
+        );
     }
 
     // Documentation-heavy repos
@@ -396,6 +479,10 @@ export const detectTechnologyFingerprint = (
         add(technologies, ["Documentation"]);
         add(architectureDomains, ["DOCUMENTATION_SYSTEM"]);
         add(repositoryTypes, ["DOCUMENTATION_REPOSITORY"]);
+
+        addReasoningSignal(
+            "Detected documentation-focused repository patterns"
+        );
     }
 
     if (
@@ -416,6 +503,10 @@ export const detectTechnologyFingerprint = (
         add(architectureDomains, ["FINANCIAL_SYSTEMS"]);
         add(engineeringSignals, ["FINANCIAL_PROCESSING"]);
         add(repositoryTypes, ["FINTECH_PLATFORM"]);
+
+        addReasoningSignal(
+            "Detected financial terminology including ledger/payment/reconciliation"
+        );
     }
 
     if (
@@ -447,6 +538,10 @@ export const detectTechnologyFingerprint = (
         add(architectureDomains, ["OBSERVABILITY_SYSTEMS"]);
         add(engineeringSignals, ["SYSTEM_MONITORING"]);
         add(repositoryTypes, ["OBSERVABILITY_PLATFORM"]);
+
+        addReasoningSignal(
+            "Detected monitoring, telemetry, and observability patterns"
+        );
     }
 
     if (
@@ -466,6 +561,10 @@ export const detectTechnologyFingerprint = (
         add(architectureDomains, ["SECURITY_SYSTEMS"]);
         add(engineeringSignals, ["THREAT_DETECTION"]);
         add(repositoryTypes, ["SECURITY_PLATFORM"]);
+
+        addReasoningSignal(
+            "Detected security and threat detection patterns"
+        );
     }
 
     if (
@@ -483,6 +582,9 @@ export const detectTechnologyFingerprint = (
         add(architectureDomains, ["COLLABORATION_SYSTEMS"]);
         add(engineeringSignals, ["LIVE_COLLABORATION"]);
         add(repositoryTypes, ["COLLABORATION_PLATFORM"]);
+        addReasoningSignal(
+            "Detected realtime collaboration patterns"
+        );
     }
 
     if (
@@ -502,6 +604,10 @@ export const detectTechnologyFingerprint = (
         add(architectureDomains, ["DEVELOPER_INFRASTRUCTURE"]);
         add(engineeringSignals, ["CODE_GENERATION"]);
         add(repositoryTypes, ["DEVTOOL_PLATFORM"]);
+
+        addReasoningSignal(
+            "Detected CLI and scaffolding tooling patterns"
+        );
     }
 
     if (
@@ -521,6 +627,10 @@ export const detectTechnologyFingerprint = (
         add(architectureDomains, ["DEVELOPER_INFRASTRUCTURE"]);
         add(engineeringSignals, ["PLATFORM_ENGINEERING"]);
         add(repositoryTypes, ["DEVELOPER_PLATFORM"]);
+
+        addReasoningSignal(
+            "Detected developer platform and infrastructure patterns"
+        );
     }
 
     if (
@@ -558,6 +668,9 @@ export const detectTechnologyFingerprint = (
         add(architectureDomains, ["ENERGY_SYSTEMS"]);
         add(engineeringSignals, ["REALTIME_MONITORING"]);
         add(repositoryTypes, ["ENERGY_PLATFORM"]);
+        addReasoningSignal(
+            "Detected energy monitoring patterns"
+        );
     }
 
     const hasEngineeringIntelligenceCoreSignal = includesAny(combinedText, [
@@ -585,12 +698,19 @@ export const detectTechnologyFingerprint = (
         add(architectureDomains, ["ENGINEERING_INTELLIGENCE"]);
         add(engineeringSignals, ["ARCHITECTURE_REASONING"]);
         add(repositoryTypes, ["ENGINEERING_INTELLIGENCE_PLATFORM"]);
-    }
+
+        addReasoningSignal(
+            "Detected core engineering intelligence concepts and GitHub repository analysis patterns"
+        );
+    } 
+
+
 
     return {
         technologies: Array.from(technologies),
         architectureDomains: Array.from(architectureDomains),
         engineeringSignals: Array.from(engineeringSignals),
         repositoryTypes: Array.from(repositoryTypes),
+        reasoningSignals
     };
 };

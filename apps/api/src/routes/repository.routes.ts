@@ -5,7 +5,8 @@ import { engineeringEventQueue } from "@archive/queue";
 import {
   detectArchitectureStyle,
   generateRepositoryNarrative,
-  detectTechnologyFingerprint
+  detectTechnologyFingerprint,
+  calculateIntelligenceConfidence,
 } from "@archive/detectors";
 
 type CreateRepositoryBody = {
@@ -916,6 +917,7 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
         });
       }
 
+
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
@@ -997,6 +999,14 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
         )
       );
 
+      
+      const confidence = calculateIntelligenceConfidence({
+        repositoryTypes,
+        domains,
+        technologies,
+        reasoningSignals: [],
+      });
+
       const domainCounts = allArchitectureChanges.reduce<Record<string, number>>(
         (acc, change) => {
           const domain = change.architectureDomain || "GENERAL_ARCHITECTURE";
@@ -1074,6 +1084,7 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
             detectedPatterns,
             generatedAt: new Date().toISOString(),
           },
+          confidence,
         },
       };
     }

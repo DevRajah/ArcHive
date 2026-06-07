@@ -92,5 +92,6 @@ export function useRepositoryIntelligenceSummary(
       ),
 
     enabled: Boolean(repositoryId),
+     retry: false,
   });
 }
