@@ -14,6 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useRepositoryArchitectureEvolution } from "@/hooks/useArchitecture";
 import { useRepositoryLiveStatus } from "@/hooks/useRepositoryLiveStatus";
 import { formatFilterLabel } from "@/lib/filters";
+import { ArchitectureIntelligenceGraph } from "@/components/architecture/ArchitectureIntelligenceGraph";
 
 export default function ArchitectureEvolutionPage() {
   const params = useParams<{ repoId: string }>();
@@ -99,23 +100,25 @@ export default function ArchitectureEvolutionPage() {
             <ArchitectureEvolutionSummary summary={data.summary} />
 
             {data.insights?.architectureStyles &&
-  data.insights.architectureStyles.length > 0 && (
-    <div className="rounded-xl border border-border bg-card p-6">
-      <h2 className="text-lg font-semibold">Architecture Styles</h2>
+              data.insights.architectureStyles.length > 0 && (
+                <div className="rounded-xl border border-border bg-card p-6">
+                  <h2 className="text-lg font-semibold">Architecture Styles</h2>
 
-      <p className="mt-1 text-sm text-muted-foreground">
-        High-level engineering patterns detected across this repository.
-      </p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    High-level engineering patterns detected across this repository.
+                  </p>
 
-      <div className="mt-4 flex flex-wrap gap-2">
-        {data.insights.architectureStyles.map((style) => (
-          <Badge key={style} variant="secondary">
-            {formatFilterLabel(style)}
-          </Badge>
-        ))}
-      </div>
-    </div>
-  )}
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {data.insights.architectureStyles.map((style) => (
+                      <Badge key={style} variant="secondary">
+                        {formatFilterLabel(style)}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+            <ArchitectureIntelligenceGraph data={data} />
 
             {data.domains.length === 0 ? (
               <div className="rounded-xl border border-border bg-card p-10 text-center">
