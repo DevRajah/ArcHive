@@ -96,5 +96,14 @@ export const buildTechnologyRelationships = ({
     }
   }
 
-  return relationships;
+  const uniqueRelationships = Array.from(
+  new Map(
+    relationships.map((relationship) => [
+      `${relationship.source}-${relationship.target}-${relationship.relationship}`,
+      relationship,
+    ])
+  ).values()
+);
+
+return uniqueRelationships;
 };
