@@ -77,6 +77,8 @@ model Repository {
   timelineEntries      TimelineEntry[]
   architectureChanges  ArchitectureChange[]
 
+  engineeringRecommendations EngineeringRecommendation[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -129,4 +131,21 @@ model ArchitectureChange {
   evolutionSummary   String?
 
   repository Repository @relation(fields: [repositoryId], references: [id])
+}
+
+model EngineeringRecommendation {
+  id                String   @id @default(uuid())
+  repositoryId      String
+  recommendationKey String
+  title             String
+  description       String
+  status            String   @default("ACTIVE") // ACTIVE | RESOLVED | DISMISSED
+  resolvedAt        DateTime?
+  evidence          String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  repository Repository @relation(fields: [repositoryId], references: [id])
+
+  @@unique([repositoryId, recommendationKey])
 }

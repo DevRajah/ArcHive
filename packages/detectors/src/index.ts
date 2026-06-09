@@ -14,6 +14,9 @@ export * from "./repository-similarity";
 export * from "./ecosystem-cluster";
 export * from "./engineering-trajectory";
 export * from "./engineering-reasoning";
+export * from "./technology-relationships";
+export * from "./domain-relationships";
+
 
 export type ArchitectureDetectionInput = {
   eventType: string;

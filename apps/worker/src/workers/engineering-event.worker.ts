@@ -9,8 +9,46 @@ import {
     mapArchitectureDomain,
     detectArchitectureStyle,
     generateEvolutionSummary
+
 } from "@archive/detectors";
 import { emitRealtimeEvent } from "../realtime/socket-emitter";
+
+
+const resolveRecommendationsFromDomains = async ({
+    repositoryId,
+    detectedDomains,
+    fileAffected,
+}: {
+    repositoryId: string;
+    detectedDomains: string[];
+    fileAffected?: string | null;
+}) => {
+    const resolutionMap: Record<string, string> = {
+        CACHING_LAYER: "ADD_REALTIME_CACHING",
+        OBSERVABILITY_SYSTEMS: "ADD_QUEUE_OBSERVABILITY",
+        AUTHENTICATION: "DOCUMENT_API_AUTH_BOUNDARIES",
+        SECURITY_SYSTEMS: "ADD_FINTECH_SECURITY_CONTROLS",
+    };
+
+    for (const domain of detectedDomains) {
+        const recommendationKey = resolutionMap[domain];
+
+        if (!recommendationKey) continue;
+
+        await prisma.engineeringRecommendation.updateMany({
+            where: {
+                repositoryId,
+                recommendationKey,
+                status: "ACTIVE",
+            },
+            data: {
+                status: "RESOLVED",
+                resolvedAt: new Date(),
+                evidence: fileAffected || `Resolved by detected ${domain}`,
+            },
+        });
+    }
+};
 
 const timelineTemplateMap: Partial<
     Record<
@@ -207,7 +245,7 @@ const worker = new Worker<ProcessEngineeringEventJob>(
             ],
             commitMessages
         );
-        
+
         console.log("Technology fingerprint detected:", {
             repositoryId,
             eventId,
@@ -269,6 +307,12 @@ const worker = new Worker<ProcessEngineeringEventJob>(
 
                     evolutionSummary,
                 },
+            });
+
+            await resolveRecommendationsFromDomains({
+                repositoryId,
+                detectedDomains: [mappedDomain],
+                fileAffected: change.fileAffected || null,
             });
 
             emitRealtimeEvent("architecture-change:detected", {

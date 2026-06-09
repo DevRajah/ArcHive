@@ -90,7 +90,7 @@ export const detectTechnologyFingerprint = (
         add(architectureDomains, ["PYTHON_SYSTEMS"]);
         add(repositoryTypes, ["PYTHON_PROJECT"]);
 
-            addReasoningSignal(
+        addReasoningSignal(
             "Detected Python-specific frameworks and patterns"
         );
     }
@@ -632,24 +632,35 @@ export const detectTechnologyFingerprint = (
             "Detected developer platform and infrastructure patterns"
         );
     }
-
-    if (
+    const hasStrongTransportSignal =
         includesAny(combinedText, [
-            "route",
             "transit",
             "delay prediction",
-            "transport",
-            "journey",
+            "public transport",
             "station",
             "bus",
             "train",
             "mobility",
-        ])
-    ) {
+        ]) ||
+        (
+            includesAny(combinedText, ["route", "journey"]) &&
+            includesAny(combinedText, [
+                "transport",
+                "transit",
+                "bus",
+                "train",
+            ])
+        );
+
+    if (hasStrongTransportSignal) {
         add(technologies, ["Transport Systems"]);
         add(architectureDomains, ["MOBILITY_SYSTEMS"]);
         add(engineeringSignals, ["ROUTE_OPTIMIZATION"]);
         add(repositoryTypes, ["SMART_TRANSPORT_PLATFORM"]);
+
+        addReasoningSignal(
+            "Detected transport or mobility terminology including transit/routes/stations"
+        );
     }
 
     if (
@@ -702,7 +713,7 @@ export const detectTechnologyFingerprint = (
         addReasoningSignal(
             "Detected core engineering intelligence concepts and GitHub repository analysis patterns"
         );
-    } 
+    }
 
 
 

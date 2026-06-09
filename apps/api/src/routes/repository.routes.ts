@@ -14,8 +14,12 @@ import {
   inferEcosystemCluster,
   inferEngineeringTrajectory,
   generateEngineeringReasoning,
+  buildTechnologyRelationships,
+  buildDomainRelationships,
 
 } from "@archive/detectors";
+
+import { syncEngineeringRecommendations } from "../utils/sync-engineering-recommendations";
 
 type CreateRepositoryBody = {
   name: string;
@@ -834,6 +838,8 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
       });
 
 
+
+
       const capabilities = {
         frontendArchitecture: domains.includes("FRONTEND_ARCHITECTURE"),
         apiLayer: domains.includes("API_LAYER"),
@@ -873,6 +879,16 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
         architectureChangeCount: architectureChanges.length,
       });
 
+      const knowledgeGraph =
+        buildTechnologyRelationships({
+          technologies,
+          domains,
+          repositoryTypes,
+        });
+
+      const domainRelationships =
+        buildDomainRelationships(domains);
+
 
       return {
         success: true,
@@ -887,6 +903,9 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
           narrative,
 
           architectureStyles,
+
+          knowledgeGraph,
+          domainRelationships,
 
           capabilities,
           ecosystemCluster,
@@ -907,6 +926,134 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
             detectedTechnology: change.detectedTechnology,
             createdAt: change.createdAt,
           })),
+        },
+      };
+    }
+  );
+  // recommendations analysis
+  app.get<{ Params: { repositoryId: string } }>(
+    "/:repositoryId/recommendations",
+    async (request, reply) => {
+      const { repositoryId } = request.params;
+
+      const repository = await prisma.repository.findUnique({
+        where: { id: repositoryId },
+        select: { id: true, name: true, fullName: true },
+      });
+
+      if (!repository) {
+        return reply.status(404).send({
+          success: false,
+          message: "Repository not found",
+        });
+      }
+
+      const recommendations = await prisma.engineeringRecommendation.findMany({
+        where: { repositoryId },
+        orderBy: [{ status: "asc" }, { createdAt: "desc" }],
+      });
+
+      return {
+        success: true,
+        message: "Repository engineering recommendations fetched successfully",
+        data: {
+          repository,
+          recommendations,
+        },
+      };
+    }
+  );
+
+  // technology relationships analysis
+  app.get<{ Params: { repositoryId: string } }>(
+    "/:repositoryId/knowledge-graph",
+    async (request, reply) => {
+      const { repositoryId } = request.params;
+
+      const repository = await prisma.repository.findUnique({
+        where: { id: repositoryId },
+        select: {
+          id: true,
+          name: true,
+          fullName: true,
+        },
+      });
+
+      if (!repository) {
+        return reply.status(404).send({
+          success: false,
+          message: "Repository not found",
+        });
+      }
+
+      const architectureChanges =
+        await prisma.architectureChange.findMany({
+          where: { repositoryId },
+          select: {
+            architectureDomain: true,
+            detectedTechnology: true,
+            repositoryTypes: true,
+          },
+        });
+
+      const domains = Array.from(
+        new Set(
+          architectureChanges
+            .map((change) => change.architectureDomain)
+            .filter(
+              (domain): domain is string =>
+                Boolean(domain)
+            )
+        )
+      );
+
+      const technologies = Array.from(
+        new Set(
+          architectureChanges
+            .map((change) => change.detectedTechnology)
+            .filter(
+              (
+                technology
+              ): technology is string =>
+                Boolean(technology)
+            )
+        )
+      );
+
+      const repositoryTypes = Array.from(
+        new Set(
+          architectureChanges
+            .flatMap(
+              (change) =>
+                change.repositoryTypes?.split(",") ||
+                []
+            )
+            .map((type) => type.trim())
+            .filter(Boolean)
+        )
+      );
+
+      const graph =
+        buildTechnologyRelationships({
+          technologies,
+          domains,
+          repositoryTypes,
+        });
+
+      return {
+        success: true,
+        message:
+          "Repository knowledge graph fetched successfully",
+        data: {
+          repository,
+
+          graph,
+
+          nodes: {
+            technologies,
+            domains,
+            repositoryTypes,
+          },
         },
       };
     }
@@ -1201,12 +1348,18 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
         architectureStyles,
       });
 
+      const trackedRecommendations = await syncEngineeringRecommendations({
+        repositoryId,
+        recommendations: reasoning.recommendations,
+      });
+
       return {
         success: true,
         message: "Repository engineering reasoning fetched successfully",
         data: {
           repository,
           reasoning,
+          trackedRecommendations,
           evidence: {
             domains,
             technologies,
