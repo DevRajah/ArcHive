@@ -6,28 +6,32 @@ import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, GitBranch, Network, Trash2 } from "lucide-react";
 
 import { AppShell } from "@/components/layout/AppShell";
-import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useRepositoryOverview } from "@/hooks/useRepositoryOverview";
-import { useUntrackRepository } from "@/hooks/useRepositories";
+
+import { RepositoryArchitecturePreview } from "@/components/repositories/RepositoryArchitecturePreview";
+import { RepositoryArchitectureRadar } from "@/components/repositories/RepositoryArchitectureRadar";
+import { RepositoryCapabilityMatrix } from "@/components/repositories/RepositoryCapabilityMatrix";
+import { RepositoryDetailNav } from "@/components/repositories/RepositoryDetailNav";
+import { RepositoryIntelligenceSummary } from "@/components/repositories/RepositoryIntelligenceSummary";
+import { RepositoryLiveStatus } from "@/components/repositories/RepositoryLiveStatus";
 import { RepositoryMetricCards } from "@/components/repositories/RepositoryMetricCards";
+import { RepositoryNarrative } from "@/components/repositories/RepositoryNarrative";
 import { RepositoryRecentEvents } from "@/components/repositories/RepositoryRecentEvents";
 import { RepositoryTimelinePreview } from "@/components/repositories/RepositoryTimelinePreview";
-import { RepositoryArchitecturePreview } from "@/components/repositories/RepositoryArchitecturePreview";
-import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
-import { useRepositoryLiveStatus } from "@/hooks/useRepositoryLiveStatus";
-import { RepositoryLiveStatus } from "@/components/repositories/RepositoryLiveStatus";
 import { RepositoryTrackingStatus } from "@/components/repositories/RepositoryTrackingStatus";
-import { useRepositoryCapabilities } from "@/hooks/useRepositories";
-import { RepositoryCapabilityMatrix } from "@/components/repositories/RepositoryCapabilityMatrix";
-import { useRepositoryArchitectureRadar } from "@/hooks/useRepositories";
-import { RepositoryArchitectureRadar } from "@/components/repositories/RepositoryArchitectureRadar";
-import { useRepositoryNarrative } from "@/hooks/useRepositories";
-import { RepositoryNarrative } from "@/components/repositories/RepositoryNarrative";
-import { RepositoryIntelligenceSummary } from "@/components/repositories/RepositoryIntelligenceSummary";
 
-import { useRepositoryIntelligenceSummary } from "@/hooks/useRepositories";
+import { useRepositoryOverview } from "@/hooks/useRepositoryOverview";
+import { useRepositoryLiveStatus } from "@/hooks/useRepositoryLiveStatus";
+import {
+  useRepositoryArchitectureRadar,
+  useRepositoryCapabilities,
+  useRepositoryIntelligenceSummary,
+  useRepositoryNarrative,
+  useUntrackRepository,
+} from "@/hooks/useRepositories";
 
 export default function RepositoryDetailPage() {
   const params = useParams<{ repoId: string }>();
@@ -38,29 +42,36 @@ export default function RepositoryDetailPage() {
     type: "success" | "error";
     message: string;
   } | null>(null);
+
   const [isUntrackDialogOpen, setIsUntrackDialogOpen] = useState(false);
 
   const { data, isLoading, isError, error } = useRepositoryOverview(repoId);
-  const untrackMutation = useUntrackRepository();
+
   const liveStatus = useRepositoryLiveStatus(repoId);
+  const untrackMutation = useUntrackRepository();
+
   const {
     data: architectureRadar,
     isLoading: isArchitectureRadarLoading,
   } = useRepositoryArchitectureRadar(repoId);
+
   const {
     data: capabilities,
     isLoading: isCapabilitiesLoading,
   } = useRepositoryCapabilities(repoId);
+
   const {
     data: narrative,
     isLoading: isNarrativeLoading,
   } = useRepositoryNarrative(repoId);
+
   const {
     data: intelligenceSummary,
     isLoading: isIntelligenceSummaryLoading,
     isRefetching: isIntelligenceSummaryRefetching,
     refetch: refetchIntelligenceSummary,
   } = useRepositoryIntelligenceSummary(repoId);
+
   function handleUntrackRepository() {
     untrackMutation.mutate(repoId, {
       onSuccess: () => {
@@ -153,10 +164,10 @@ export default function RepositoryDetailPage() {
         {!isLoading && !isError && data && (
           <>
             <div className="rounded-xl border border-border bg-card p-6">
-              <div className="flex flex-col justify-between gap-6 md:flex-row md:items-start">
-                <div>
+              <div className="flex flex-col justify-between gap-6 xl:flex-row xl:items-start">
+                <div className="min-w-0 flex-1">
                   <div className="mb-3 flex flex-wrap items-center gap-3">
-                    <h1 className="text-3xl font-bold tracking-tight">
+                    <h1 className="break-words text-3xl font-bold tracking-tight">
                       {data.repository?.fullName ||
                         data.repository?.name ||
                         repoId}
@@ -175,13 +186,13 @@ export default function RepositoryDetailPage() {
                       Default branch: {data.repository?.defaultBranch || "main"}
                     </span>
                   </div>
-                </div>
 
-                <div className="mt-4">
-                  <RepositoryLiveStatus
-                    isConnected={liveStatus.isConnected}
-                    lastUpdatedAt={liveStatus.lastUpdatedAt}
-                  />
+                  <div className="mt-4">
+                    <RepositoryLiveStatus
+                      isConnected={liveStatus.isConnected}
+                      lastUpdatedAt={liveStatus.lastUpdatedAt}
+                    />
+                  </div>
                 </div>
 
                 <div className="flex flex-wrap gap-3">
@@ -211,6 +222,8 @@ export default function RepositoryDetailPage() {
               </div>
             </div>
 
+            <RepositoryDetailNav />
+
             <RepositoryMetricCards
               totalEvents={data.metrics?.totalEvents ?? 0}
               totalTimelineEntries={data.metrics?.totalTimelineEntries ?? 0}
@@ -218,49 +231,61 @@ export default function RepositoryDetailPage() {
                 data.metrics?.totalArchitectureChanges ?? 0
               }
             />
+
             <RepositoryTrackingStatus
               isRealtimeConnected={liveStatus.isConnected}
               lastLiveUpdatedAt={liveStatus.lastUpdatedAt}
               trackingStatus={data.trackingStatus}
             />
 
-            <RepositoryIntelligenceSummary
-              data={intelligenceSummary}
-              isLoading={isIntelligenceSummaryLoading}
-              isRefetching={isIntelligenceSummaryRefetching}
-              onRefresh={() => refetchIntelligenceSummary()}
-            />
+            <div id="intelligence-summary">
+              <RepositoryIntelligenceSummary
+                data={intelligenceSummary}
+                isLoading={isIntelligenceSummaryLoading}
+                isRefetching={isIntelligenceSummaryRefetching}
+                onRefresh={() => refetchIntelligenceSummary()}
+              />
+            </div>
 
             <RepositoryNarrative
               data={narrative}
               isLoading={isNarrativeLoading}
             />
 
-
-            <RepositoryCapabilityMatrix
-              data={capabilities}
-              isLoading={isCapabilitiesLoading}
-            />
-
-            <RepositoryArchitectureRadar
-              data={architectureRadar}
-              isLoading={isArchitectureRadarLoading}
-            />
-
-            <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-              <RepositoryRecentEvents events={data.recentEvents} />
-
-              <RepositoryArchitecturePreview
-                repositoryId={repoId}
-                changes={data.recentArchitectureChanges}
+            <div id="capabilities">
+              <RepositoryCapabilityMatrix
+                data={capabilities}
+                isLoading={isCapabilitiesLoading}
               />
             </div>
 
-            <RepositoryTimelinePreview
-              repositoryId={repoId}
-              entries={data.recentTimelineEntries}
-            />
+            <div id="architecture-radar">
+              <RepositoryArchitectureRadar
+                data={architectureRadar}
+                isLoading={isArchitectureRadarLoading}
+              />
+            </div>
 
+            <div
+              id="recent-activity"
+              className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]"
+            >
+              <RepositoryRecentEvents events={data.recentEvents} />
+
+              <div id="architecture-preview">
+                <RepositoryArchitecturePreview
+                  repositoryId={repoId}
+                  changes={data.recentArchitectureChanges}
+                />
+              </div>
+            </div>
+
+            <div id="timeline-preview">
+              <RepositoryTimelinePreview
+                repositoryId={repoId}
+                entries={data.recentTimelineEntries}
+              />
+            </div>
 
             <ConfirmDialog
               open={isUntrackDialogOpen}
@@ -271,11 +296,7 @@ export default function RepositoryDetailPage() {
               isLoading={untrackMutation.isPending}
               onConfirm={handleUntrackRepository}
             />
-
-
           </>
-
-
         )}
       </div>
     </AppShell>

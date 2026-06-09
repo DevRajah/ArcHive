@@ -1,24 +1,30 @@
 "use client";
 
 import Link from "next/link";
+import { useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 
 import { AppShell } from "@/components/layout/AppShell";
+import { ArchitectureDomainOverview } from "@/components/architecture/ArchitectureDomainOverview";
+import { ArchitectureEvolutionFilters } from "@/components/architecture/ArchitectureEvolutionFilters";
 import { ArchitectureEvolutionLanes } from "@/components/architecture/ArchitectureEvolutionLanes";
 import { ArchitectureEvolutionSummary } from "@/components/architecture/ArchitectureEvolutionSummary";
+import { ArchitectureIntelligenceGraph } from "@/components/architecture/ArchitectureIntelligenceGraph";
 import { RepositoryLiveStatus } from "@/components/repositories/RepositoryLiveStatus";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useRepositoryArchitectureEvolution } from "@/hooks/useArchitecture";
 import { useRepositoryLiveStatus } from "@/hooks/useRepositoryLiveStatus";
-import { formatFilterLabel } from "@/lib/filters";
-import { ArchitectureIntelligenceGraph } from "@/components/architecture/ArchitectureIntelligenceGraph";
+import { formatFilterLabel, matchesSearch } from "@/lib/filters";
 
 export default function ArchitectureEvolutionPage() {
   const params = useParams<{ repoId: string }>();
   const repoId = params.repoId;
+
+  const [search, setSearch] = useState("");
+  const [selectedDomain, setSelectedDomain] = useState("ALL");
 
   const liveStatus = useRepositoryLiveStatus(repoId);
 
@@ -28,6 +34,59 @@ export default function ArchitectureEvolutionPage() {
     isError,
     error,
   } = useRepositoryArchitectureEvolution(repoId);
+
+  const domainOptions = useMemo(() => {
+    if (!data?.domains) return [];
+
+    return data.domains.map((domain) => domain.domain);
+  }, [data?.domains]);
+
+  const filteredDomains = useMemo(() => {
+    if (!data?.domains) return [];
+
+    const query = search.trim();
+
+    return data.domains
+      .filter((domain) => {
+        const matchesDomain =
+          selectedDomain === "ALL" || domain.domain === selectedDomain;
+
+        const matchesQuery =
+          !query ||
+          matchesSearch(domain.label, query) ||
+          matchesSearch(domain.domain, query) ||
+          domain.technologies.some((technology) =>
+            matchesSearch(technology, query)
+          ) ||
+          domain.changes.some((change) => {
+            return (
+              matchesSearch(change.changeType, query) ||
+              matchesSearch(change.summary, query) ||
+              matchesSearch(change.evolutionSummary, query) ||
+              matchesSearch(change.detectedTechnology, query) ||
+              matchesSearch(change.fileAffected, query)
+            );
+          });
+
+        return matchesDomain && matchesQuery;
+      })
+      .map((domain) => {
+        if (!query) return domain;
+
+        return {
+          ...domain,
+          changes: domain.changes.filter((change) => {
+            return (
+              matchesSearch(change.changeType, query) ||
+              matchesSearch(change.summary, query) ||
+              matchesSearch(change.evolutionSummary, query) ||
+              matchesSearch(change.detectedTechnology, query) ||
+              matchesSearch(change.fileAffected, query)
+            );
+          }),
+        };
+      });
+  }, [data?.domains, search, selectedDomain]);
 
   return (
     <AppShell>
@@ -102,10 +161,13 @@ export default function ArchitectureEvolutionPage() {
             {data.insights?.architectureStyles &&
               data.insights.architectureStyles.length > 0 && (
                 <div className="rounded-xl border border-border bg-card p-6">
-                  <h2 className="text-lg font-semibold">Architecture Styles</h2>
+                  <h2 className="text-lg font-semibold">
+                    Architecture Styles
+                  </h2>
 
                   <p className="mt-1 text-sm text-muted-foreground">
-                    High-level engineering patterns detected across this repository.
+                    High-level engineering patterns detected across this
+                    repository.
                   </p>
 
                   <div className="mt-4 flex flex-wrap gap-2">
@@ -118,7 +180,24 @@ export default function ArchitectureEvolutionPage() {
                 </div>
               )}
 
-            <ArchitectureIntelligenceGraph data={data} />
+            {data.domains.length > 0 && (
+              <ArchitectureEvolutionFilters
+                search={search}
+                onSearchChange={setSearch}
+                selectedDomain={selectedDomain}
+                onDomainChange={setSelectedDomain}
+                domains={domainOptions}
+              />
+            )}
+
+            <ArchitectureDomainOverview domains={filteredDomains} />
+
+            <ArchitectureIntelligenceGraph
+              data={{
+                ...data,
+                domains: filteredDomains,
+              }}
+            />
 
             {data.domains.length === 0 ? (
               <div className="rounded-xl border border-border bg-card p-10 text-center">
@@ -131,8 +210,18 @@ export default function ArchitectureEvolutionPage() {
                   domains for this repository yet.
                 </p>
               </div>
+            ) : filteredDomains.length === 0 ? (
+              <div className="rounded-xl border border-border bg-card p-10 text-center">
+                <h2 className="text-xl font-semibold">
+                  No matching evolution signals
+                </h2>
+
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Try adjusting your search or selected architecture domain.
+                </p>
+              </div>
             ) : (
-              <ArchitectureEvolutionLanes domains={data.domains} />
+              <ArchitectureEvolutionLanes domains={filteredDomains} />
             )}
           </>
         )}
