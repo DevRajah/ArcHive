@@ -22,7 +22,8 @@ import { RepositoryNarrative } from "@/components/repositories/RepositoryNarrati
 import { RepositoryRecentEvents } from "@/components/repositories/RepositoryRecentEvents";
 import { RepositoryTimelinePreview } from "@/components/repositories/RepositoryTimelinePreview";
 import { RepositoryTrackingStatus } from "@/components/repositories/RepositoryTrackingStatus";
-
+import { RepositoryPurposeCard } from "@/components/repositories/RepositoryPurposeCard";
+import { useRepositoryPurpose } from "@/hooks/useRepositories";
 import { useRepositoryOverview } from "@/hooks/useRepositoryOverview";
 import { useRepositoryLiveStatus } from "@/hooks/useRepositoryLiveStatus";
 import {
@@ -54,6 +55,10 @@ export default function RepositoryDetailPage() {
     data: architectureRadar,
     isLoading: isArchitectureRadarLoading,
   } = useRepositoryArchitectureRadar(repoId);
+  const {
+    data: purpose,
+    isLoading: isPurposeLoading,
+  } = useRepositoryPurpose(repoId);
 
   const {
     data: capabilities,
@@ -236,6 +241,11 @@ export default function RepositoryDetailPage() {
               isRealtimeConnected={liveStatus.isConnected}
               lastLiveUpdatedAt={liveStatus.lastUpdatedAt}
               trackingStatus={data.trackingStatus}
+            />
+
+            <RepositoryPurposeCard
+              data={purpose}
+              isLoading={isPurposeLoading}
             />
 
             <div id="intelligence-summary">

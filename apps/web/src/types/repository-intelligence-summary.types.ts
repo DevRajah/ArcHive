@@ -7,14 +7,17 @@ export interface RepositoryIntelligenceSummaryResponse {
 
   summary: {
     mode: "ACTIVE" | "PASSIVE" | string;
-
     headline?: string | null;
-
     overview?: string | null;
-
     keyFocusAreas?: string[];
-
     detectedPatterns?: string[];
+
+    confidence?: {
+      confidenceScore: number;
+      confidenceLevel: string;
+    };
+
+    reasoningSignals?: string[];
 
     generatedAt?: string | null;
   };

@@ -128,6 +128,8 @@ export function RepositoryCapabilityMatrix({
     const repositoryTypes =
         data.detectedRepositoryTypes || data.repositoryTypes || [];
 
+    const purpose = data.repositoryPurpose;
+    const reasoningSignals = data.reasoningSignals || [];
     const enabledCount = capabilityLabels.filter(
         (item) => data.capabilities?.[item.key]
     ).length;
@@ -158,6 +160,8 @@ export function RepositoryCapabilityMatrix({
                         const Icon = getCapabilityIcon(item.key);
 
                         return (
+
+
                             <div
                                 key={item.key}
                                 className="rounded-xl border border-border bg-background p-4"
@@ -194,6 +198,33 @@ export function RepositoryCapabilityMatrix({
                     })}
                 </div>
             </div>
+
+            {purpose && (
+                <div className="mt-6 rounded-xl border border-border bg-background p-4">
+                    <p className="text-sm font-medium">Detected Repository Purpose</p>
+
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                        <Badge>{purpose.label}</Badge>
+                        <Badge variant="secondary">{formatFilterLabel(purpose.purposeType)}</Badge>
+                    </div>
+
+                    <p className="mt-3 text-sm leading-6 text-muted-foreground">
+                        {purpose.description}
+                    </p>
+                </div>
+            )}
+
+            {reasoningSignals.length > 0 && (
+                <div className="mt-4 rounded-xl border border-border bg-background p-4">
+                    <p className="text-sm font-medium">Capability Reasoning Signals</p>
+
+                    <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
+                        {reasoningSignals.map((signal) => (
+                            <li key={signal}>• {signal}</li>
+                        ))}
+                    </ul>
+                </div>
+            )}
 
             <div className="grid gap-6 md:grid-cols-3">
                 <div className="rounded-xl border border-border bg-card p-6">

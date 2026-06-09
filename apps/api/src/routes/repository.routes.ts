@@ -8,6 +8,8 @@ import {
   detectTechnologyFingerprint,
   calculateIntelligenceConfidence,
   inferRepositoryPurpose,
+  generateRepositorySemanticProfile,
+  inferEvolutionDirection,
 } from "@archive/detectors";
 
 type CreateRepositoryBody = {
@@ -668,203 +670,286 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
   );
   // purpose analysis
   app.get<{ Params: { repositoryId: string } }>(
-  "/:repositoryId/purpose",
-  async (request, reply) => {
-    const { repositoryId } = request.params;
+    "/:repositoryId/purpose",
+    async (request, reply) => {
+      const { repositoryId } = request.params;
 
-    const repository = await prisma.repository.findUnique({
-      where: { id: repositoryId },
-      select: {
-        id: true,
-        name: true,
-        fullName: true,
-        description: true,
-        language: true,
-      },
-    });
-
-    if (!repository) {
-      return reply.status(404).send({
-        success: false,
-        message: "Repository not found",
+      const repository = await prisma.repository.findUnique({
+        where: { id: repositoryId },
+        select: {
+          id: true,
+          name: true,
+          fullName: true,
+          description: true,
+          language: true,
+        },
       });
-    }
 
-    const architectureChanges = await prisma.architectureChange.findMany({
-      where: { repositoryId },
-      select: {
-        repositoryTypes: true,
-        reasoningSignals: true,
-      },
-    });
+      if (!repository) {
+        return reply.status(404).send({
+          success: false,
+          message: "Repository not found",
+        });
+      }
 
-    const repositoryTypes = Array.from(
-      new Set(
-        architectureChanges
-          .flatMap((change) => change.repositoryTypes?.split(",") || [])
-          .map((type) => type.trim())
-          .filter(Boolean)
-      )
-    );
-
-    const reasoningSignals = Array.from(
-      new Set(
-        architectureChanges
-          .flatMap((change) => change.reasoningSignals?.split(" | ") || [])
-          .map((signal) => signal.trim())
-          .filter(Boolean)
-      )
-    );
-
-    const repositoryPurpose = inferRepositoryPurpose(repositoryTypes);
-
-    return {
-      success: true,
-      message: "Repository purpose fetched successfully",
-      data: {
-        repository,
-        repositoryPurpose,
-        repositoryTypes,
-        reasoningSignals,
-      },
-    };
-  }
-);
-// semantic profile analysis
-app.get<{ Params: { repositoryId: string } }>(
-  "/:repositoryId/semantic-profile",
-  async (request, reply) => {
-    const { repositoryId } = request.params;
-
-    const repository = await prisma.repository.findUnique({
-      where: { id: repositoryId },
-      select: {
-        id: true,
-        name: true,
-        fullName: true,
-        description: true,
-        language: true,
-        userId: true,
-      },
-    });
-
-    if (!repository) {
-      return reply.status(404).send({
-        success: false,
-        message: "Repository not found",
+      const architectureChanges = await prisma.architectureChange.findMany({
+        where: { repositoryId },
+        select: {
+          repositoryTypes: true,
+          reasoningSignals: true,
+        },
       });
-    }
 
-    const architectureChanges = await prisma.architectureChange.findMany({
-      where: { repositoryId },
-      orderBy: { createdAt: "desc" },
-      select: {
-        architectureDomain: true,
-        detectedTechnology: true,
-        repositoryTypes: true,
-        reasoningSignals: true,
-        evolutionSummary: true,
-        summary: true,
-        createdAt: true,
-      },
-    });
+      const repositoryTypes = Array.from(
+        new Set(
+          architectureChanges
+            .flatMap((change) => change.repositoryTypes?.split(",") || [])
+            .map((type) => type.trim())
+            .filter(Boolean)
+        )
+      );
 
-    const domains = Array.from(
-      new Set(
-        architectureChanges
-          .map((change) => change.architectureDomain)
-          .filter((domain): domain is string => Boolean(domain))
-      )
-    );
+      const reasoningSignals = Array.from(
+        new Set(
+          architectureChanges
+            .flatMap((change) => change.reasoningSignals?.split(" | ") || [])
+            .map((signal) => signal.trim())
+            .filter(Boolean)
+        )
+      );
 
-    const technologies = Array.from(
-      new Set(
-        architectureChanges
-          .map((change) => change.detectedTechnology)
-          .filter((technology): technology is string => Boolean(technology))
-      )
-    );
+      const repositoryPurpose = inferRepositoryPurpose(repositoryTypes);
 
-    const repositoryTypes = Array.from(
-      new Set(
-        architectureChanges
-          .flatMap((change) => change.repositoryTypes?.split(",") || [])
-          .map((type) => type.trim())
-          .filter(Boolean)
-      )
-    );
-
-    const reasoningSignals = Array.from(
-      new Set(
-        architectureChanges
-          .flatMap((change) => change.reasoningSignals?.split(" | ") || [])
-          .map((signal) => signal.trim())
-          .filter(Boolean)
-      )
-    );
-
-    const repositoryPurpose = inferRepositoryPurpose(repositoryTypes);
-
-    const architectureStyles = detectArchitectureStyle({
-      domains,
-      technologies,
-      signals: [],
-      repositoryTypes,
-    });
-
-    const capabilities = {
-      frontendArchitecture: domains.includes("FRONTEND_ARCHITECTURE"),
-      apiLayer: domains.includes("API_LAYER"),
-      authentication: domains.includes("AUTHENTICATION"),
-      realtimeSystems: domains.includes("REALTIME_SYSTEMS"),
-      queueInfrastructure: domains.includes("QUEUE_INFRASTRUCTURE"),
-      databaseLayer: domains.includes("DATABASE_LAYER"),
-      architectureIntelligence: domains.includes("ARCHITECTURE_INTELLIGENCE"),
-    };
-
-    const confidence = calculateIntelligenceConfidence({
-      repositoryTypes,
-      domains,
-      technologies,
-      reasoningSignals,
-    });
-
-    const narrative = generateRepositoryNarrative({
-      repositoryName: repository.name,
-      repositoryTypes,
-      technologies,
-      domains,
-      capabilities,
-      architectureStyles,
-      architectureChangeCount: architectureChanges.length,
-    });
-
-    return {
-      success: true,
-      message: "Repository semantic profile fetched successfully",
-      data: {
-        repository,
-        repositoryPurpose,
-        narrative,
-        confidence,
-        intelligence: {
+      return {
+        success: true,
+        message: "Repository purpose fetched successfully",
+        data: {
+          repository,
+          repositoryPurpose,
           repositoryTypes,
-          domains,
-          technologies,
-          architectureStyles,
           reasoningSignals,
         },
-        evidence: architectureChanges.slice(0, 8).map((change) => ({
-          summary: change.summary,
-          evolutionSummary: change.evolutionSummary,
-          architectureDomain: change.architectureDomain,
-          detectedTechnology: change.detectedTechnology,
-          createdAt: change.createdAt,
-        })),
-      },
-    };
-  }
-);
+      };
+    }
+  );
+  // semantic profile analysis
+  app.get<{ Params: { repositoryId: string } }>(
+    "/:repositoryId/semantic-profile",
+    async (request, reply) => {
+      const { repositoryId } = request.params;
+
+      const repository = await prisma.repository.findUnique({
+        where: { id: repositoryId },
+        select: {
+          id: true,
+          name: true,
+          fullName: true,
+          description: true,
+          language: true,
+          userId: true,
+        },
+      });
+
+      if (!repository) {
+        return reply.status(404).send({
+          success: false,
+          message: "Repository not found",
+        });
+      }
+
+      const architectureChanges = await prisma.architectureChange.findMany({
+        where: { repositoryId },
+        orderBy: { createdAt: "desc" },
+        select: {
+          architectureDomain: true,
+          detectedTechnology: true,
+          repositoryTypes: true,
+          reasoningSignals: true,
+          summary: true,
+          evolutionSummary: true,
+          createdAt: true,
+        },
+      });
+
+      const domains = Array.from(
+        new Set(
+          architectureChanges
+            .map((change) => change.architectureDomain)
+            .filter((domain): domain is string => Boolean(domain))
+        )
+      );
+
+      const technologies = Array.from(
+        new Set(
+          architectureChanges
+            .map((change) => change.detectedTechnology)
+            .filter((technology): technology is string => Boolean(technology))
+        )
+      );
+
+      const repositoryTypes = Array.from(
+        new Set(
+          architectureChanges
+            .flatMap((change) => change.repositoryTypes?.split(",") || [])
+            .map((type) => type.trim())
+            .filter(Boolean)
+        )
+      );
+
+      const reasoningSignals = Array.from(
+        new Set(
+          architectureChanges
+            .flatMap((change) => change.reasoningSignals?.split(" | ") || [])
+            .map((signal) => signal.trim())
+            .filter(Boolean)
+        )
+      );
+
+      const semanticProfile = generateRepositorySemanticProfile({
+        repositoryName: repository.name,
+        fullName: repository.fullName,
+        description: repository.description,
+        language: repository.language,
+        repositoryTypes,
+        domains,
+        technologies,
+        reasoningSignals,
+      });
+
+      const evolutionDirection = inferEvolutionDirection({
+        domains,
+        repositoryTypes,
+      });
+
+      const architectureStyles = detectArchitectureStyle({
+        domains,
+        technologies,
+        signals: [],
+        repositoryTypes,
+      });
+
+      const capabilities = {
+        frontendArchitecture: domains.includes("FRONTEND_ARCHITECTURE"),
+        apiLayer: domains.includes("API_LAYER"),
+        authentication: domains.includes("AUTHENTICATION"),
+        realtimeSystems: domains.includes("REALTIME_SYSTEMS"),
+        queueInfrastructure: domains.includes("QUEUE_INFRASTRUCTURE"),
+        databaseLayer: domains.includes("DATABASE_LAYER"),
+        architectureIntelligence: domains.includes(
+          "ARCHITECTURE_INTELLIGENCE"
+        ),
+      };
+
+      const narrative = generateRepositoryNarrative({
+        repositoryName: repository.name,
+        repositoryTypes,
+        technologies,
+        domains,
+        capabilities,
+        architectureStyles,
+        architectureChangeCount: architectureChanges.length,
+      });
+
+      return {
+        success: true,
+        message: "Repository semantic profile fetched successfully",
+        data: {
+          repository,
+
+          semanticProfile,
+
+          evolutionDirection,
+
+          narrative,
+
+          architectureStyles,
+
+          capabilities,
+
+          intelligence: {
+            repositoryTypes,
+            domains,
+            technologies,
+            reasoningSignals,
+          },
+
+          evidence: architectureChanges.slice(0, 8).map((change) => ({
+            summary: change.summary,
+            evolutionSummary: change.evolutionSummary,
+            architectureDomain: change.architectureDomain,
+            detectedTechnology: change.detectedTechnology,
+            createdAt: change.createdAt,
+          })),
+        },
+      };
+    }
+  );
+  // evolution direction analysis
+  app.get<{ Params: { repositoryId: string } }>(
+    "/:repositoryId/evolution-direction",
+    async (request, reply) => {
+      const { repositoryId } = request.params;
+
+      const repository = await prisma.repository.findUnique({
+        where: { id: repositoryId },
+        select: {
+          id: true,
+          name: true,
+          fullName: true,
+        },
+      });
+
+      if (!repository) {
+        return reply.status(404).send({
+          success: false,
+          message: "Repository not found",
+        });
+      }
+
+      const architectureChanges = await prisma.architectureChange.findMany({
+        where: { repositoryId },
+        select: {
+          architectureDomain: true,
+          repositoryTypes: true,
+        },
+      });
+
+      const domains = Array.from(
+        new Set(
+          architectureChanges
+            .map((change) => change.architectureDomain)
+            .filter((domain): domain is string => Boolean(domain))
+        )
+      );
+
+      const repositoryTypes = Array.from(
+        new Set(
+          architectureChanges
+            .flatMap((change) => change.repositoryTypes?.split(",") || [])
+            .map((type) => type.trim())
+            .filter(Boolean)
+        )
+      );
+
+      const evolutionDirection = inferEvolutionDirection({
+        domains,
+        repositoryTypes,
+      });
+
+      return {
+        success: true,
+        message: "Repository evolution direction fetched successfully",
+        data: {
+          repository,
+          evolutionDirection,
+          domains,
+          repositoryTypes,
+        },
+      };
+    }
+  );
+
+
   //identity analysis
   app.get<{ Params: { repositoryId: string } }>(
     "/:repositoryId/identity",

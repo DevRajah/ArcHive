@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatFilterLabel } from "@/lib/filters";
 import { RepositoryIntelligenceSummaryResponse } from "@/types/repository-intelligence-summary.types";
-
+import { RepositoryConfidencePanel } from "@/components/repositories/RepositoryConfidencePanel";
 interface RepositoryIntelligenceSummaryProps {
   data?: RepositoryIntelligenceSummaryResponse;
   isLoading?: boolean;
@@ -94,9 +94,8 @@ export function RepositoryIntelligenceSummary({
               disabled={isRefetching}
             >
               <RefreshCcw
-                className={`mr-2 h-4 w-4 ${
-                  isRefetching ? "animate-spin" : ""
-                }`}
+                className={`mr-2 h-4 w-4 ${isRefetching ? "animate-spin" : ""
+                  }`}
               />
               {isRefetching ? "Refreshing..." : "Refresh"}
             </Button>
@@ -127,6 +126,11 @@ export function RepositoryIntelligenceSummary({
           </div>
         </div>
       </div>
+
+      <RepositoryConfidencePanel
+        confidence={summary.confidence}
+        reasoningSignals={summary.reasoningSignals}
+      />
 
       <div className="mt-6 grid gap-6 xl:grid-cols-2">
         <div className="rounded-xl border border-border bg-background p-5">

@@ -4,6 +4,7 @@ import { Brain, Sparkles } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { RepositoryNarrativeResponse } from "@/types/repository-narrative.types";
+import { RepositoryConfidencePanel } from "@/components/repositories/RepositoryConfidencePanel";
 import { formatFilterLabel } from "@/lib/filters";
 
 interface RepositoryNarrativeProps {
@@ -87,6 +88,11 @@ export function RepositoryNarrative({
               </p>
             </div>
           )}
+
+          <RepositoryConfidencePanel
+            confidence={data.confidence}
+            reasoningSignals={data.reasoningSignals}
+          />
 
           <div className="mt-6 grid gap-4 md:grid-cols-3">
             <div className="rounded-xl border border-border bg-background p-4">

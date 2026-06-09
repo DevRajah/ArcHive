@@ -92,6 +92,15 @@ export function useRepositoryIntelligenceSummary(
       ),
 
     enabled: Boolean(repositoryId),
-     retry: false,
+    retry: false,
+  });
+}
+
+export function useRepositoryPurpose(repositoryId: string) {
+  return useQuery({
+    queryKey: QUERY_KEYS.REPOSITORY_PURPOSE(repositoryId),
+    queryFn: () => repositoryService.getRepositoryPurpose(repositoryId),
+    enabled: Boolean(repositoryId),
+    retry: false,
   });
 }

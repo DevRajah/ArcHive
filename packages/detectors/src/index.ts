@@ -7,7 +7,9 @@ export * from "./evolution-summary";
 export * from "./repository-narrative";
 export * from "./intelligence-confidence";
 export * from "./repository-purpose";
-
+export * from "./repository-semantic-engine";
+export * from "./evolution-direction";
+export * from "./engineering-insights";
 export type ArchitectureDetectionInput = {
   eventType: string;
   rawPayload: Record<string, unknown>;

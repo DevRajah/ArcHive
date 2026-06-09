@@ -26,9 +26,15 @@ export interface RepositoryCapabilitiesResponse {
         infrastructureDepth: string;
     };
 
+    repositoryPurpose?: {
+        purposeType: string;
+        label: string;
+        description: string;
+    } | null;
+
     detectedDomains: string[];
     detectedTechnologies: string[];
-
+    reasoningSignals?: string[];
     detectedRepositoryTypes?: string[];
     repositoryTypes?: string[];
 

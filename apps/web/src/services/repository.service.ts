@@ -7,7 +7,7 @@ import { RepositoryCapabilitiesResponse } from "@/types/repository-capabilities.
 import { RepositoryArchitectureRadarResponse } from "@/types/repository-radar.types";
 import { RepositoryNarrativeResponse } from "@/types/repository-narrative.types";
 import { RepositoryIntelligenceSummaryResponse } from "@/types/repository-intelligence-summary.types";
-
+import { RepositoryPurposeResponse } from "@/types/repository-purpose.types";
 
 function requireUserId() {
   const userId = getUserId();
@@ -101,9 +101,21 @@ export const repositoryService = {
     return response.data.data;
   },
 
-  async getRepositoryIntelligenceSummary(repositoryId: string) {
-    const response = await api.get(
+  async getRepositoryIntelligenceSummary(
+    repositoryId: string
+  ): Promise<RepositoryIntelligenceSummaryResponse> {
+    const response = await api.get<ApiResponse<RepositoryIntelligenceSummaryResponse>>(
       `/repositories/${repositoryId}/intelligence-summary`
+    );
+
+    return response.data.data;
+  },
+
+  async getRepositoryPurpose(
+    repositoryId: string
+  ): Promise<RepositoryPurposeResponse> {
+    const response = await api.get<ApiResponse<RepositoryPurposeResponse>>(
+      `/repositories/${repositoryId}/purpose`
     );
 
     return response.data.data;

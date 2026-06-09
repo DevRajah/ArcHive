@@ -14,4 +14,17 @@ export interface RepositoryNarrativeResponse {
     dominantPatterns?: string[];
     detectedSpecializations?: string[];
   };
+
+  confidence?: {
+    confidenceScore: number;
+    confidenceLevel: string;
+  };
+
+  reasoningSignals?: string[];
+
+  repositoryPurpose?: {
+    purposeType: string;
+    label: string;
+    description: string;
+  } | null;
 }

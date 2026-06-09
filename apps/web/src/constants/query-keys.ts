@@ -45,4 +45,9 @@ export const QUERY_KEYS = {
     "repository-intelligence-summary",
     repositoryId,
   ],
+
+  REPOSITORY_PURPOSE: (repositoryId: string) => [
+    "repository-purpose",
+    repositoryId,
+  ],
 };

@@ -44,6 +44,10 @@ export function useLiveDashboardUpdates() {
                 });
 
                 queryClient.invalidateQueries({
+                    queryKey: QUERY_KEYS.REPOSITORY_PURPOSE(payload.repositoryId),
+                });
+
+                queryClient.invalidateQueries({
                     queryKey: QUERY_KEYS.REPOSITORY_NARRATIVE(payload.repositoryId),
                 });
 
