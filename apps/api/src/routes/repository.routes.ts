@@ -7,6 +7,7 @@ import {
   generateRepositoryNarrative,
   detectTechnologyFingerprint,
   calculateIntelligenceConfidence,
+  inferRepositoryPurpose,
 } from "@archive/detectors";
 
 type CreateRepositoryBody = {
@@ -577,6 +578,8 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
           .filter(Boolean)
       );
 
+      const repositoryPurpose = inferRepositoryPurpose(Array.from(repositoryTypes));
+
       const domains = new Set(
         architectureChanges
           .map((change) => change.architectureDomain)
@@ -653,6 +656,7 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
             engineeringComplexityScore,
             infrastructureDepth,
           },
+          repositoryPurpose,
           reasoningSignals,
           detectedDomains: Array.from(domains),
           detectedTechnologies: Array.from(technologies),
@@ -662,6 +666,70 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
       };
     }
   );
+  // purpose analysis
+  app.get<{ Params: { repositoryId: string } }>(
+  "/:repositoryId/purpose",
+  async (request, reply) => {
+    const { repositoryId } = request.params;
+
+    const repository = await prisma.repository.findUnique({
+      where: { id: repositoryId },
+      select: {
+        id: true,
+        name: true,
+        fullName: true,
+        description: true,
+        language: true,
+      },
+    });
+
+    if (!repository) {
+      return reply.status(404).send({
+        success: false,
+        message: "Repository not found",
+      });
+    }
+
+    const architectureChanges = await prisma.architectureChange.findMany({
+      where: { repositoryId },
+      select: {
+        repositoryTypes: true,
+        reasoningSignals: true,
+      },
+    });
+
+    const repositoryTypes = Array.from(
+      new Set(
+        architectureChanges
+          .flatMap((change) => change.repositoryTypes?.split(",") || [])
+          .map((type) => type.trim())
+          .filter(Boolean)
+      )
+    );
+
+    const reasoningSignals = Array.from(
+      new Set(
+        architectureChanges
+          .flatMap((change) => change.reasoningSignals?.split(" | ") || [])
+          .map((signal) => signal.trim())
+          .filter(Boolean)
+      )
+    );
+
+    const repositoryPurpose = inferRepositoryPurpose(repositoryTypes);
+
+    return {
+      success: true,
+      message: "Repository purpose fetched successfully",
+      data: {
+        repository,
+        repositoryPurpose,
+        repositoryTypes,
+        reasoningSignals,
+      },
+    };
+  }
+);
   //identity analysis
   app.get<{ Params: { repositoryId: string } }>(
     "/:repositoryId/identity",
@@ -800,6 +868,8 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
         )
       );
 
+      const repositoryPurpose = inferRepositoryPurpose(repositoryTypes);
+
       const reasoningSignals = Array.from(
         new Set(
           architectureChanges
@@ -851,6 +921,7 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
           narrative,
           confidence,
           reasoningSignals,
+          repositoryPurpose,
         },
       };
     }

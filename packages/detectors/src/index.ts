@@ -6,6 +6,7 @@ export * from "./architecture-style";
 export * from "./evolution-summary";
 export * from "./repository-narrative";
 export * from "./intelligence-confidence";
+export * from "./repository-purpose";
 
 export type ArchitectureDetectionInput = {
   eventType: string;
