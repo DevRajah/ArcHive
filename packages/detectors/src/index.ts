@@ -16,6 +16,7 @@ export * from "./engineering-trajectory";
 export * from "./engineering-reasoning";
 export * from "./technology-relationships";
 export * from "./domain-relationships";
+export * from "./intelligence-audit";
 
 
 export type ArchitectureDetectionInput = {

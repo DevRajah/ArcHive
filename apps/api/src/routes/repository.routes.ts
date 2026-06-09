@@ -16,6 +16,7 @@ import {
   generateEngineeringReasoning,
   buildTechnologyRelationships,
   buildDomainRelationships,
+  auditRepositoryIntelligence
 
 } from "@archive/detectors";
 
@@ -1371,6 +1372,95 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
       };
     }
   );
+  // intelligence audit analysis
+  app.get<{ Params: { repositoryId: string } }>(
+  "/:repositoryId/intelligence-audit",
+  async (request, reply) => {
+    const { repositoryId } = request.params;
+
+    const repository = await prisma.repository.findUnique({
+      where: { id: repositoryId },
+      select: {
+        id: true,
+        name: true,
+        fullName: true,
+      },
+    });
+
+    if (!repository) {
+      return reply.status(404).send({
+        success: false,
+        message: "Repository not found",
+      });
+    }
+
+    const architectureChanges = await prisma.architectureChange.findMany({
+      where: { repositoryId },
+      select: {
+        architectureDomain: true,
+        detectedTechnology: true,
+        repositoryTypes: true,
+        reasoningSignals: true,
+      },
+    });
+
+    const domains = Array.from(
+      new Set(
+        architectureChanges
+          .map((change) => change.architectureDomain)
+          .filter((domain): domain is string => Boolean(domain))
+      )
+    );
+
+    const technologies = Array.from(
+      new Set(
+        architectureChanges
+          .map((change) => change.detectedTechnology)
+          .filter((technology): technology is string => Boolean(technology))
+      )
+    );
+
+    const repositoryTypes = Array.from(
+      new Set(
+        architectureChanges
+          .flatMap((change) => change.repositoryTypes?.split(",") || [])
+          .map((type) => type.trim())
+          .filter(Boolean)
+      )
+    );
+
+    const reasoningSignals = Array.from(
+      new Set(
+        architectureChanges
+          .flatMap((change) => change.reasoningSignals?.split(" | ") || [])
+          .map((signal) => signal.trim())
+          .filter(Boolean)
+      )
+    );
+
+    const audit = auditRepositoryIntelligence({
+      repositoryTypes,
+      domains,
+      technologies,
+      reasoningSignals,
+    });
+
+    return {
+      success: true,
+      message: "Repository intelligence audit fetched successfully",
+      data: {
+        repository,
+        audit,
+        signals: {
+          repositoryTypes,
+          domains,
+          technologies,
+          reasoningSignals,
+        },
+      },
+    };
+  }
+);
 
 
   //identity analysis

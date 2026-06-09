@@ -508,39 +508,44 @@ export const detectTechnologyFingerprint = (
             "Detected financial terminology including ledger/payment/reconciliation"
         );
     }
-
-    if (
+    const hasStrongObservabilitySignal =
         includesAny(combinedText, [
-            "monitoring",
-            "metrics",
-            "telemetry",
-            "analytics",
-            "traces",
             "observability",
-            "dashboard",
+            "telemetry",
+            "traces",
+            "opentelemetry",
+            "prometheus",
+            "grafana",
+            "metrics pipeline",
+            "system monitoring",
             "queue monitoring",
-            "health",
-            "service mesh",
-            "distributed systems",
-            "service orchestration",
-            "service composition",
-            "realtime services",
-            "runtime",
-            "workers",
-            "platform tooling",
-            "infra tooling",
-            "developer infrastructure",
-            "cloud platform",
-            "system orchestration",
-        ])
-    ) {
+            "worker health",
+            "runtime metrics",
+        ]) ||
+        (
+            includesAny(combinedText, [
+                "monitoring",
+                "metrics",
+                "health",
+            ]) &&
+            includesAny(combinedText, [
+                "queue",
+                "worker",
+                "service",
+                "infrastructure",
+                "system",
+                "runtime",
+            ])
+        );
+
+    if (hasStrongObservabilitySignal) {
         add(technologies, ["Observability"]);
         add(architectureDomains, ["OBSERVABILITY_SYSTEMS"]);
         add(engineeringSignals, ["SYSTEM_MONITORING"]);
         add(repositoryTypes, ["OBSERVABILITY_PLATFORM"]);
 
         addReasoningSignal(
-            "Detected monitoring, telemetry, and observability patterns"
+            "Detected observability terminology including monitoring/metrics/telemetry"
         );
     }
 
