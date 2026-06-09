@@ -64,6 +64,7 @@ const createInitialRepositoryIdentity = async (repository: {
       evolutionSummary:
         "This metadata-based intelligence record helps ArcHive classify repositories before webhook history is available.",
       repositoryTypes: fingerprint.repositoryTypes.join(","),
+      reasoningSignals: fingerprint.reasoningSignals.join(" | "),
     },
   });
 };
@@ -566,6 +567,7 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
           detectedTechnology: true,
           changeType: true,
           repositoryTypes: true,
+          reasoningSignals: true,
         },
       });
 
@@ -585,6 +587,15 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
         architectureChanges
           .map((change) => change.detectedTechnology)
           .filter((technology): technology is string => Boolean(technology))
+      );
+
+      const reasoningSignals = Array.from(
+        new Set(
+          architectureChanges
+            .flatMap((change) => change.reasoningSignals?.split(" | ") || [])
+            .map((signal) => signal.trim())
+            .filter(Boolean)
+        )
       );
 
       const capabilities = {
@@ -642,6 +653,7 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
             engineeringComplexityScore,
             infrastructureDepth,
           },
+          reasoningSignals,
           detectedDomains: Array.from(domains),
           detectedTechnologies: Array.from(technologies),
           repositoryTypes: Array.from(repositoryTypes),
@@ -760,6 +772,7 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
           architectureDomain: true,
           detectedTechnology: true,
           repositoryTypes: true,
+          reasoningSignals: true,
         },
       });
 
@@ -783,6 +796,15 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
         new Set(
           architectureChanges
             .flatMap((change) => change.repositoryTypes?.split(",") || [])
+            .filter(Boolean)
+        )
+      );
+
+      const reasoningSignals = Array.from(
+        new Set(
+          architectureChanges
+            .flatMap((change) => change.reasoningSignals?.split(" | ") || [])
+            .map((signal) => signal.trim())
             .filter(Boolean)
         )
       );
@@ -814,12 +836,21 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
         architectureChangeCount: architectureChanges.length,
       });
 
+      const confidence = calculateIntelligenceConfidence({
+        repositoryTypes,
+        domains,
+        technologies,
+        reasoningSignals,
+      });
+
       return {
         success: true,
         message: "Repository narrative generated successfully",
         data: {
           repository,
           narrative,
+          confidence,
+          reasoningSignals,
         },
       };
     }
@@ -999,7 +1030,7 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
         )
       );
 
-      
+
       const confidence = calculateIntelligenceConfidence({
         repositoryTypes,
         domains,

@@ -265,6 +265,8 @@ const worker = new Worker<ProcessEngineeringEventJob>(
 
                     repositoryTypes: fingerprint.repositoryTypes.join(","),
 
+                    reasoningSignals: fingerprint.reasoningSignals.join(" | "),
+
                     evolutionSummary,
                 },
             });

@@ -54,6 +54,7 @@ const run = async () => {
         evolutionSummary:
           "This metadata-based intelligence record helps ArcHive classify repositories even when limited webhook history exists.",
         repositoryTypes: fingerprint.repositoryTypes.join(","),
+        reasoningSignals: fingerprint.reasoningSignals.join(" | "),
       },
     });
 
