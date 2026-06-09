@@ -10,6 +10,11 @@ import {
   inferRepositoryPurpose,
   generateRepositorySemanticProfile,
   inferEvolutionDirection,
+  calculateRepositorySimilarity,
+  inferEcosystemCluster,
+  inferEngineeringTrajectory,
+  generateEngineeringReasoning,
+
 } from "@archive/detectors";
 
 type CreateRepositoryBody = {
@@ -828,6 +833,7 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
         repositoryTypes,
       });
 
+
       const capabilities = {
         frontendArchitecture: domains.includes("FRONTEND_ARCHITECTURE"),
         apiLayer: domains.includes("API_LAYER"),
@@ -840,6 +846,23 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
         ),
       };
 
+      const engineeringReasoning = generateEngineeringReasoning({
+        capabilities,
+        domains,
+        technologies,
+        repositoryTypes,
+        architectureStyles,
+      });
+
+      const ecosystemCluster =
+        inferEcosystemCluster(repositoryTypes);
+
+      const engineeringTrajectory =
+        inferEngineeringTrajectory({
+          domains,
+          repositoryTypes,
+        });
+
       const narrative = generateRepositoryNarrative({
         repositoryName: repository.name,
         repositoryTypes,
@@ -849,6 +872,7 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
         architectureStyles,
         architectureChangeCount: architectureChanges.length,
       });
+
 
       return {
         success: true,
@@ -865,6 +889,9 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
           architectureStyles,
 
           capabilities,
+          ecosystemCluster,
+          engineeringTrajectory,
+          engineeringReasoning,
 
           intelligence: {
             repositoryTypes,
@@ -944,6 +971,249 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
           evolutionDirection,
           domains,
           repositoryTypes,
+        },
+      };
+    }
+  );
+
+  // related repositories analysis
+  app.get<{ Params: { repositoryId: string } }>(
+    "/:repositoryId/related",
+    async (request, reply) => {
+      const { repositoryId } = request.params;
+
+      const repository = await prisma.repository.findUnique({
+        where: { id: repositoryId },
+        select: {
+          id: true,
+          name: true,
+          fullName: true,
+        },
+      });
+
+      if (!repository) {
+        return reply.status(404).send({
+          success: false,
+          message: "Repository not found",
+        });
+      }
+
+      const allRepositories = await prisma.repository.findMany({
+        select: {
+          id: true,
+          name: true,
+          fullName: true,
+          architectureChanges: {
+            select: {
+              architectureDomain: true,
+              detectedTechnology: true,
+              repositoryTypes: true,
+            },
+          },
+        },
+      });
+
+      const sourceRepository = allRepositories.find(
+        (repo) => repo.id === repositoryId
+      );
+
+      if (!sourceRepository) {
+        return reply.status(404).send({
+          success: false,
+          message: "Source repository not found",
+        });
+      }
+
+      const extractRepositoryIntelligence = (
+        changes: {
+          architectureDomain: string | null;
+          detectedTechnology: string | null;
+          repositoryTypes: string | null;
+        }[]
+      ) => {
+        const domains = Array.from(
+          new Set(
+            changes
+              .map((change) => change.architectureDomain)
+              .filter((domain): domain is string => Boolean(domain))
+          )
+        );
+
+        const technologies = Array.from(
+          new Set(
+            changes
+              .map((change) => change.detectedTechnology)
+              .filter(
+                (technology): technology is string => Boolean(technology)
+              )
+          )
+        );
+
+        const repositoryTypes = Array.from(
+          new Set(
+            changes
+              .flatMap((change) => change.repositoryTypes?.split(",") || [])
+              .map((type) => type.trim())
+              .filter(Boolean)
+          )
+        );
+
+        return {
+          domains,
+          technologies,
+          repositoryTypes,
+        };
+      };
+
+      const sourceIntelligence = extractRepositoryIntelligence(
+        sourceRepository.architectureChanges
+      );
+
+      const relatedRepositories = allRepositories
+        .filter((repo) => repo.id !== repositoryId)
+        .map((repo) => {
+          const targetIntelligence = extractRepositoryIntelligence(
+            repo.architectureChanges
+          );
+
+          const similarity = calculateRepositorySimilarity({
+            sourceRepositoryTypes:
+              sourceIntelligence.repositoryTypes,
+            sourceDomains: sourceIntelligence.domains,
+            sourceTechnologies:
+              sourceIntelligence.technologies,
+
+            targetRepositoryTypes:
+              targetIntelligence.repositoryTypes,
+            targetDomains: targetIntelligence.domains,
+            targetTechnologies:
+              targetIntelligence.technologies,
+          });
+
+          return {
+            repository: {
+              id: repo.id,
+              name: repo.name,
+              fullName: repo.fullName,
+            },
+
+            similarity,
+          };
+        })
+        .sort(
+          (a, b) =>
+            b.similarity.similarityScore -
+            a.similarity.similarityScore
+        )
+        .slice(0, 8);
+
+      return {
+        success: true,
+        message: "Related repositories fetched successfully",
+        data: {
+          repository,
+          relatedRepositories,
+        },
+      };
+    }
+  );
+  // engineering reasoning analysis
+  app.get<{ Params: { repositoryId: string } }>(
+    "/:repositoryId/engineering-reasoning",
+    async (request, reply) => {
+      const { repositoryId } = request.params;
+
+      const repository = await prisma.repository.findUnique({
+        where: { id: repositoryId },
+        select: {
+          id: true,
+          name: true,
+          fullName: true,
+          language: true,
+          userId: true,
+        },
+      });
+
+      if (!repository) {
+        return reply.status(404).send({
+          success: false,
+          message: "Repository not found",
+        });
+      }
+
+      const architectureChanges = await prisma.architectureChange.findMany({
+        where: { repositoryId },
+        select: {
+          architectureDomain: true,
+          detectedTechnology: true,
+          repositoryTypes: true,
+        },
+      });
+
+      const domains = Array.from(
+        new Set(
+          architectureChanges
+            .map((change) => change.architectureDomain)
+            .filter((domain): domain is string => Boolean(domain))
+        )
+      );
+
+      const technologies = Array.from(
+        new Set(
+          architectureChanges
+            .map((change) => change.detectedTechnology)
+            .filter((technology): technology is string => Boolean(technology))
+        )
+      );
+
+      const repositoryTypes = Array.from(
+        new Set(
+          architectureChanges
+            .flatMap((change) => change.repositoryTypes?.split(",") || [])
+            .map((type) => type.trim())
+            .filter(Boolean)
+        )
+      );
+
+      const architectureStyles = detectArchitectureStyle({
+        domains,
+        technologies,
+        signals: [],
+        repositoryTypes,
+      });
+
+      const capabilities = {
+        frontendArchitecture: domains.includes("FRONTEND_ARCHITECTURE"),
+        apiLayer: domains.includes("API_LAYER"),
+        authentication: domains.includes("AUTHENTICATION"),
+        realtimeSystems: domains.includes("REALTIME_SYSTEMS"),
+        queueInfrastructure: domains.includes("QUEUE_INFRASTRUCTURE"),
+        databaseLayer: domains.includes("DATABASE_LAYER"),
+        cachingLayer: domains.includes("CACHING_LAYER"),
+        architectureIntelligence: domains.includes("ARCHITECTURE_INTELLIGENCE"),
+      };
+
+      const reasoning = generateEngineeringReasoning({
+        capabilities,
+        domains,
+        technologies,
+        repositoryTypes,
+        architectureStyles,
+      });
+
+      return {
+        success: true,
+        message: "Repository engineering reasoning fetched successfully",
+        data: {
+          repository,
+          reasoning,
+          evidence: {
+            domains,
+            technologies,
+            repositoryTypes,
+            architectureStyles,
+            capabilities,
+          },
         },
       };
     }
@@ -1030,6 +1300,7 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
       };
     }
   );
+
   //repository narrative synthesis
   app.get<{ Params: { repositoryId: string } }>(
     "/:repositoryId/narrative",
@@ -1146,6 +1417,7 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
       };
     }
   );
+
   // Architecture radar data for visualization
   app.get<{ Params: { repositoryId: string } }>(
     "/:repositoryId/architecture-radar",

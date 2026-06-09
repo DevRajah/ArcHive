@@ -10,6 +10,11 @@ export * from "./repository-purpose";
 export * from "./repository-semantic-engine";
 export * from "./evolution-direction";
 export * from "./engineering-insights";
+export * from "./repository-similarity";
+export * from "./ecosystem-cluster";
+export * from "./engineering-trajectory";
+export * from "./engineering-reasoning";
+
 export type ArchitectureDetectionInput = {
   eventType: string;
   rawPayload: Record<string, unknown>;
