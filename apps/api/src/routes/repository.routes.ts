@@ -16,7 +16,8 @@ import {
   generateEngineeringReasoning,
   buildTechnologyRelationships,
   buildDomainRelationships,
-  auditRepositoryIntelligence
+  auditRepositoryIntelligence,
+  buildIntelligenceTimeline,
 
 } from "@archive/detectors";
 
@@ -1372,6 +1373,8 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
       };
     }
   );
+
+
   // intelligence audit analysis
   app.get<{ Params: { repositoryId: string } }>(
     "/:repositoryId/intelligence-audit",
@@ -1500,6 +1503,8 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
           createdAt: true,
         },
       });
+
+      const intelligenceTimeline = buildIntelligenceTimeline(architectureChanges);
 
       // const recommendations = await prisma.engineeringRecommendation.findMany({
       //   where: { repositoryId },
@@ -1646,6 +1651,7 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
           audit,
           evolutionDirection,
           engineeringReasoning,
+          intelligenceTimeline,
 
           recommendations: {
             active: activeRecommendations,
@@ -1671,6 +1677,55 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
             detectedTechnology: change.detectedTechnology,
             createdAt: change.createdAt,
           })),
+        },
+      };
+    }
+  );
+
+
+  // intelligence timeline analysis
+  app.get<{ Params: { repositoryId: string } }>(
+    "/:repositoryId/intelligence-timeline",
+    async (request, reply) => {
+      const { repositoryId } = request.params;
+
+      const repository = await prisma.repository.findUnique({
+        where: { id: repositoryId },
+        select: {
+          id: true,
+          name: true,
+          fullName: true,
+        },
+      });
+
+      if (!repository) {
+        return reply.status(404).send({
+          success: false,
+          message: "Repository not found",
+        });
+      }
+
+      const architectureChanges = await prisma.architectureChange.findMany({
+        where: { repositoryId },
+        orderBy: { createdAt: "asc" },
+        select: {
+          architectureDomain: true,
+          detectedTechnology: true,
+          summary: true,
+          evolutionSummary: true,
+          createdAt: true,
+        },
+      });
+
+      const phases = buildIntelligenceTimeline(architectureChanges);
+
+      return {
+        success: true,
+        message: "Repository intelligence timeline fetched successfully",
+        data: {
+          repository,
+          timelineType: "INTELLIGENCE_PHASES",
+          phases,
         },
       };
     }
