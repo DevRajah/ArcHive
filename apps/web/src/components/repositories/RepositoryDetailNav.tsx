@@ -9,11 +9,6 @@ const sections = [
     icon: Brain,
   },
   {
-    label: "Capabilities",
-    href: "#capabilities",
-    icon: ShieldCheck,
-  },
-  {
     label: "Radar",
     href: "#architecture-radar",
     icon: Radar,
@@ -22,11 +17,6 @@ const sections = [
     label: "Activity",
     href: "#recent-activity",
     icon: Activity,
-  },
-  {
-    label: "Architecture",
-    href: "#architecture-preview",
-    icon: Network,
   },
   {
     label: "Timeline",

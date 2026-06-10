@@ -1464,212 +1464,217 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
 
   // comprehensive intelligence report
   app.get<{ Params: { repositoryId: string } }>(
-  "/:repositoryId/intelligence-report",
-  async (request, reply) => {
-    const { repositoryId } = request.params;
+    "/:repositoryId/intelligence-report",
+    async (request, reply) => {
+      const { repositoryId } = request.params;
 
-    const repository = await prisma.repository.findUnique({
-      where: { id: repositoryId },
-      select: {
-        id: true,
-        name: true,
-        fullName: true,
-        description: true,
-        language: true,
-        userId: true,
-      },
-    });
-
-    if (!repository) {
-      return reply.status(404).send({
-        success: false,
-        message: "Repository not found",
+      const repository = await prisma.repository.findUnique({
+        where: { id: repositoryId },
+        select: {
+          id: true,
+          name: true,
+          fullName: true,
+          description: true,
+          language: true,
+          userId: true,
+        },
       });
-    }
 
-    const architectureChanges = await prisma.architectureChange.findMany({
-      where: { repositoryId },
-      orderBy: { createdAt: "desc" },
-      select: {
-        architectureDomain: true,
-        detectedTechnology: true,
-        repositoryTypes: true,
-        reasoningSignals: true,
-        summary: true,
-        evolutionSummary: true,
-        createdAt: true,
-      },
-    });
+      if (!repository) {
+        return reply.status(404).send({
+          success: false,
+          message: "Repository not found",
+        });
+      }
 
-    const recommendations = await prisma.engineeringRecommendation.findMany({
-      where: { repositoryId },
-      orderBy: [{ status: "asc" }, { createdAt: "desc" }],
-    });
+      const architectureChanges = await prisma.architectureChange.findMany({
+        where: { repositoryId },
+        orderBy: { createdAt: "desc" },
+        select: {
+          architectureDomain: true,
+          detectedTechnology: true,
+          repositoryTypes: true,
+          reasoningSignals: true,
+          summary: true,
+          evolutionSummary: true,
+          createdAt: true,
+        },
+      });
 
-    const domains = Array.from(
-      new Set(
-        architectureChanges
-          .map((change) => change.architectureDomain)
-          .filter((domain): domain is string => Boolean(domain))
-      )
-    );
+      // const recommendations = await prisma.engineeringRecommendation.findMany({
+      //   where: { repositoryId },
+      //   orderBy: [{ status: "asc" }, { createdAt: "desc" }],
+      // });
 
-    const technologies = Array.from(
-      new Set(
-        architectureChanges
-          .map((change) => change.detectedTechnology)
-          .filter((technology): technology is string => Boolean(technology))
-      )
-    );
+      const domains = Array.from(
+        new Set(
+          architectureChanges
+            .map((change) => change.architectureDomain)
+            .filter((domain): domain is string => Boolean(domain))
+        )
+      );
 
-    const repositoryTypes = Array.from(
-      new Set(
-        architectureChanges
-          .flatMap((change) => change.repositoryTypes?.split(",") || [])
-          .map((type) => type.trim())
-          .filter(Boolean)
-      )
-    );
+      const technologies = Array.from(
+        new Set(
+          architectureChanges
+            .map((change) => change.detectedTechnology)
+            .filter((technology): technology is string => Boolean(technology))
+        )
+      );
 
-    const reasoningSignals = Array.from(
-      new Set(
-        architectureChanges
-          .flatMap((change) => change.reasoningSignals?.split(" | ") || [])
-          .map((signal) => signal.trim())
-          .filter(Boolean)
-      )
-    );
+      const repositoryTypes = Array.from(
+        new Set(
+          architectureChanges
+            .flatMap((change) => change.repositoryTypes?.split(",") || [])
+            .map((type) => type.trim())
+            .filter(Boolean)
+        )
+      );
 
-    const architectureStyles = detectArchitectureStyle({
-      domains,
-      technologies,
-      signals: [],
-      repositoryTypes,
-    });
+      const reasoningSignals = Array.from(
+        new Set(
+          architectureChanges
+            .flatMap((change) => change.reasoningSignals?.split(" | ") || [])
+            .map((signal) => signal.trim())
+            .filter(Boolean)
+        )
+      );
 
-    const capabilities = {
-      frontendArchitecture: domains.includes("FRONTEND_ARCHITECTURE"),
-      apiLayer: domains.includes("API_LAYER"),
-      authentication: domains.includes("AUTHENTICATION"),
-      realtimeSystems: domains.includes("REALTIME_SYSTEMS"),
-      queueInfrastructure: domains.includes("QUEUE_INFRASTRUCTURE"),
-      databaseLayer: domains.includes("DATABASE_LAYER"),
-      cachingLayer: domains.includes("CACHING_LAYER"),
-      architectureIntelligence: domains.includes("ARCHITECTURE_INTELLIGENCE"),
-    };
+      const architectureStyles = detectArchitectureStyle({
+        domains,
+        technologies,
+        signals: [],
+        repositoryTypes,
+      });
 
-    const semanticProfile = generateRepositorySemanticProfile({
-      repositoryName: repository.name,
-      fullName: repository.fullName,
-      description: repository.description,
-      language: repository.language,
-      repositoryTypes,
-      domains,
-      technologies,
-      reasoningSignals,
-    });
+      const capabilities = {
+        frontendArchitecture: domains.includes("FRONTEND_ARCHITECTURE"),
+        apiLayer: domains.includes("API_LAYER"),
+        authentication: domains.includes("AUTHENTICATION"),
+        realtimeSystems: domains.includes("REALTIME_SYSTEMS"),
+        queueInfrastructure: domains.includes("QUEUE_INFRASTRUCTURE"),
+        databaseLayer: domains.includes("DATABASE_LAYER"),
+        cachingLayer: domains.includes("CACHING_LAYER"),
+        architectureIntelligence: domains.includes("ARCHITECTURE_INTELLIGENCE"),
+      };
 
-    const narrative = generateRepositoryNarrative({
-      repositoryName: repository.name,
-      repositoryTypes,
-      technologies,
-      domains,
-      capabilities,
-      architectureStyles,
-      architectureChangeCount: architectureChanges.length,
-    });
+      const semanticProfile = generateRepositorySemanticProfile({
+        repositoryName: repository.name,
+        fullName: repository.fullName,
+        description: repository.description,
+        language: repository.language,
+        repositoryTypes,
+        domains,
+        technologies,
+        reasoningSignals,
+      });
 
-    const confidence = calculateIntelligenceConfidence({
-      repositoryTypes,
-      domains,
-      technologies,
-      reasoningSignals,
-    });
-
-    const audit = auditRepositoryIntelligence({
-      repositoryTypes,
-      domains,
-      technologies,
-      reasoningSignals,
-    });
-
-    const evolutionDirection = inferEvolutionDirection({
-      domains,
-      repositoryTypes,
-    });
-
-    const engineeringReasoning = generateEngineeringReasoning({
-      capabilities,
-      domains,
-      technologies,
-      repositoryTypes,
-      architectureStyles,
-    });
-
-    const knowledgeGraph = [
-      ...buildTechnologyRelationships({
+      const narrative = generateRepositoryNarrative({
+        repositoryName: repository.name,
+        repositoryTypes,
         technologies,
         domains,
+        capabilities,
+        architectureStyles,
+        architectureChangeCount: architectureChanges.length,
+      });
+
+      const confidence = calculateIntelligenceConfidence({
         repositoryTypes,
-      }),
-      ...buildDomainRelationships(domains),
-    ];
+        domains,
+        technologies,
+        reasoningSignals,
+      });
 
-    const activeRecommendations = recommendations.filter(
-      (recommendation) => recommendation.status === "ACTIVE"
-    );
+      const audit = auditRepositoryIntelligence({
+        repositoryTypes,
+        domains,
+        technologies,
+        reasoningSignals,
+      });
 
-    const resolvedRecommendations = recommendations.filter(
-      (recommendation) => recommendation.status === "RESOLVED"
-    );
+      const evolutionDirection = inferEvolutionDirection({
+        domains,
+        repositoryTypes,
+      });
 
-    return {
-      success: true,
-      message: "Repository intelligence report fetched successfully",
-      data: {
-        repository,
+      const engineeringReasoning = generateEngineeringReasoning({
+        capabilities,
+        domains,
+        technologies,
+        repositoryTypes,
+        architectureStyles,
+      });
 
-        report: {
-          generatedAt: new Date().toISOString(),
-          headline: narrative.headline,
-          summary: narrative.summary,
-        },
+      const syncedRecommendations = await syncEngineeringRecommendations({
+        repositoryId,
+        recommendations: engineeringReasoning.recommendations,
+      });
 
-        semanticProfile,
-        narrative,
-        confidence,
-        audit,
-        evolutionDirection,
-        engineeringReasoning,
+      const activeRecommendations = syncedRecommendations.filter(
+        (recommendation) => recommendation.status === "ACTIVE"
+      );
 
-        recommendations: {
-          active: activeRecommendations,
-          resolved: resolvedRecommendations,
-          total: recommendations.length,
-        },
+      const resolvedRecommendations = syncedRecommendations.filter(
+        (recommendation) => recommendation.status === "RESOLVED"
+      );
 
-        intelligence: {
-          repositoryTypes,
-          domains,
+      const knowledgeGraph = [
+        ...buildTechnologyRelationships({
           technologies,
-          architectureStyles,
-          reasoningSignals,
-          capabilities,
+          domains,
+          repositoryTypes,
+        }),
+        ...buildDomainRelationships(domains),
+      ];
+
+      return {
+        success: true,
+        message: "Repository intelligence report fetched successfully",
+        data: {
+          repository,
+
+          report: {
+            generatedAt: new Date().toISOString(),
+            headline: narrative.headline,
+            summary: narrative.summary,
+          },
+
+          semanticProfile,
+          narrative,
+          confidence,
+          audit,
+          evolutionDirection,
+          engineeringReasoning,
+
+          recommendations: {
+            active: activeRecommendations,
+            resolved: resolvedRecommendations,
+            total: syncedRecommendations.length,
+          },
+
+          intelligence: {
+            repositoryTypes,
+            domains,
+            technologies,
+            architectureStyles,
+            reasoningSignals,
+            capabilities,
+          },
+
+          knowledgeGraph,
+
+          evidence: architectureChanges.slice(0, 10).map((change) => ({
+            summary: change.summary,
+            evolutionSummary: change.evolutionSummary,
+            architectureDomain: change.architectureDomain,
+            detectedTechnology: change.detectedTechnology,
+            createdAt: change.createdAt,
+          })),
         },
-
-        knowledgeGraph,
-
-        evidence: architectureChanges.slice(0, 10).map((change) => ({
-          summary: change.summary,
-          evolutionSummary: change.evolutionSummary,
-          architectureDomain: change.architectureDomain,
-          detectedTechnology: change.detectedTechnology,
-          createdAt: change.createdAt,
-        })),
-      },
-    };
-  }
-);
+      };
+    }
+  );
 
 
   //identity analysis

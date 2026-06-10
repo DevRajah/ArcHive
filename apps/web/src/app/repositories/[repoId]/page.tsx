@@ -30,9 +30,10 @@ import {
   useRepositoryArchitectureRadar,
   useRepositoryCapabilities,
   useRepositoryIntelligenceSummary,
-  useRepositoryNarrative,
+  //useRepositoryNarrative,
   useUntrackRepository,
 } from "@/hooks/useRepositories";
+import { RepositoryIntelligenceCards } from "@/components/repositories/RepositoryIntelligenceCards";
 
 export default function RepositoryDetailPage() {
   const params = useParams<{ repoId: string }>();
@@ -60,15 +61,15 @@ export default function RepositoryDetailPage() {
     isLoading: isPurposeLoading,
   } = useRepositoryPurpose(repoId);
 
-  const {
-    data: capabilities,
-    isLoading: isCapabilitiesLoading,
-  } = useRepositoryCapabilities(repoId);
+  // const {
+  //   data: capabilities,
+  //   isLoading: isCapabilitiesLoading,
+  // } = useRepositoryCapabilities(repoId);
 
-  const {
-    data: narrative,
-    isLoading: isNarrativeLoading,
-  } = useRepositoryNarrative(repoId);
+  // const {
+  //   data: narrative,
+  //   isLoading: isNarrativeLoading,
+  // } = useRepositoryNarrative(repoId);
 
   const {
     data: intelligenceSummary,
@@ -243,6 +244,8 @@ export default function RepositoryDetailPage() {
               trackingStatus={data.trackingStatus}
             />
 
+            <RepositoryIntelligenceCards repositoryId={repoId} />
+
             <RepositoryPurposeCard
               data={purpose}
               isLoading={isPurposeLoading}
@@ -257,17 +260,17 @@ export default function RepositoryDetailPage() {
               />
             </div>
 
-            <RepositoryNarrative
+            {/* <RepositoryNarrative
               data={narrative}
               isLoading={isNarrativeLoading}
-            />
+            /> */}
 
-            <div id="capabilities">
+            {/* <div id="capabilities">
               <RepositoryCapabilityMatrix
                 data={capabilities}
                 isLoading={isCapabilitiesLoading}
               />
-            </div>
+            </div> */}
 
             <div id="architecture-radar">
               <RepositoryArchitectureRadar
