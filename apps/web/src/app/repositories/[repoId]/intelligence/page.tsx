@@ -34,6 +34,29 @@ import { RelatedEngineeringRepositories } from "@/components/repositories/Relate
 import { RepositoryMarkdownReport } from "@/components/repositories/RepositoryMarkdownReport";
 
 
+function getDisplayValue(item: unknown) {
+    if (typeof item === "string") return item;
+
+    if (typeof item === "number") return String(item);
+
+    if (item && typeof item === "object") {
+        const record = item as Record<string, unknown>;
+
+        return (
+            String(
+                record.title ||
+                record.label ||
+                record.name ||
+                record.description ||
+                record.summary ||
+                JSON.stringify(record)
+            )
+        );
+    }
+
+    return "Unknown signal";
+}
+
 function BadgeList({
     items,
     variant = "secondary",
@@ -51,11 +74,15 @@ function BadgeList({
 
     return (
         <div className="flex flex-wrap gap-2">
-            {items.map((item) => (
-                <Badge key={item} variant={variant}>
-                    {formatFilterLabel(item)}
-                </Badge>
-            ))}
+            {items.map((item, index) => {
+                const value = getDisplayValue(item);
+
+                return (
+                    <Badge key={`${value}-${index}`} variant={variant}>
+                        {formatFilterLabel(value)}
+                    </Badge>
+                );
+            })}
         </div>
     );
 }
@@ -75,19 +102,23 @@ function InsightList({
 
     return (
         <ul className="space-y-2 text-sm text-muted-foreground">
-            {items.map((item) => (
-                <li
-                    key={item}
-                    className={`rounded-lg border p-3 ${tone === "warning"
-                        ? "border-yellow-500/30 bg-yellow-500/10"
-                        : tone === "success"
-                            ? "border-emerald-500/30 bg-emerald-500/10"
-                            : "border-border bg-background"
-                        }`}
-                >
-                    {item}
-                </li>
-            ))}
+            {items.map((item, index) => {
+                const value = getDisplayValue(item);
+
+                return (
+                    <li
+                        key={`${value}-${index}`}
+                        className={`rounded-lg border p-3 ${tone === "warning"
+                                ? "border-yellow-500/30 bg-yellow-500/10"
+                                : tone === "success"
+                                    ? "border-emerald-500/30 bg-emerald-500/10"
+                                    : "border-border bg-background"
+                            }`}
+                    >
+                        {value}
+                    </li>
+                );
+            })}
         </ul>
     );
 }
@@ -119,6 +150,8 @@ export default function RepositoryIntelligencePage() {
         data: markdownReport,
         isLoading: isMarkdownReportLoading,
     } = useRepositoryMarkdownReport(repoId);
+
+    const repositoryName = data?.repository?.fullName || "repository";
 
     return (
         <AppShell>
@@ -194,7 +227,7 @@ export default function RepositoryIntelligencePage() {
                 <RepositoryMarkdownReport
                     data={markdownReport}
                     isLoading={isMarkdownReportLoading}
-                    repositoryName={data.repository?.fullName}
+                    repositoryName={repositoryName}
                 />
 
                 {!isLoading && !isError && data && (
@@ -251,6 +284,8 @@ export default function RepositoryIntelligencePage() {
                                         {data.semanticProfile.semanticDescription}
                                     </p>
                                 )}
+
+
 
                                 <div className="mt-5 grid gap-4 md:grid-cols-2">
                                     <div className="rounded-xl border border-border bg-background p-4">
