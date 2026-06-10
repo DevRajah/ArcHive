@@ -932,6 +932,8 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
       };
     }
   );
+
+
   // recommendations analysis
   app.get<{ Params: { repositoryId: string } }>(
     "/:repositoryId/recommendations",
@@ -962,6 +964,123 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
           repository,
           recommendations,
         },
+      };
+    }
+  );
+
+  // resolve recommendation with optional evidence
+  app.patch<{
+    Params: { repositoryId: string; recommendationId: string };
+    Body: { evidence?: string };
+  }>(
+    "/:repositoryId/recommendations/:recommendationId/resolve",
+    async (request, reply) => {
+      const { repositoryId, recommendationId } = request.params;
+      const { evidence } = request.body || {};
+
+      const recommendation = await prisma.engineeringRecommendation.findFirst({
+        where: {
+          id: recommendationId,
+          repositoryId,
+        },
+      });
+
+      if (!recommendation) {
+        return reply.status(404).send({
+          success: false,
+          message: "Recommendation not found",
+        });
+      }
+
+      const updatedRecommendation =
+        await prisma.engineeringRecommendation.update({
+          where: { id: recommendationId },
+          data: {
+            status: "RESOLVED",
+            resolvedAt: new Date(),
+            evidence: evidence || "Manually marked as resolved",
+          },
+        });
+
+      return {
+        success: true,
+        message: "Recommendation resolved successfully",
+        data: updatedRecommendation,
+      };
+    }
+  );
+
+
+  // reopen recommendation
+  app.patch<{ Params: { repositoryId: string; recommendationId: string }; }>(
+    "/:repositoryId/recommendations/:recommendationId/dismiss",
+    async (request, reply) => {
+      const { repositoryId, recommendationId } = request.params;
+
+      const recommendation = await prisma.engineeringRecommendation.findFirst({
+        where: {
+          id: recommendationId,
+          repositoryId,
+        },
+      });
+
+      if (!recommendation) {
+        return reply.status(404).send({
+          success: false,
+          message: "Recommendation not found",
+        });
+      }
+
+      const updatedRecommendation =
+        await prisma.engineeringRecommendation.update({
+          where: { id: recommendationId },
+          data: {
+            status: "DISMISSED",
+          },
+        });
+
+      return {
+        success: true,
+        message: "Recommendation dismissed successfully",
+        data: updatedRecommendation,
+      };
+    }
+  );
+
+  // For recommendations that are marked as "RESOLVED", this endpoint allows reopening them back to "ACTIVE" status, which can be useful if the underlying issue re-emerges or if the resolution was not effective.
+  app.patch<{ Params: { repositoryId: string; recommendationId: string }; }>(
+    "/:repositoryId/recommendations/:recommendationId/reopen",
+    async (request, reply) => {
+      const { repositoryId, recommendationId } = request.params;
+
+      const recommendation = await prisma.engineeringRecommendation.findFirst({
+        where: {
+          id: recommendationId,
+          repositoryId,
+        },
+      });
+
+      if (!recommendation) {
+        return reply.status(404).send({
+          success: false,
+          message: "Recommendation not found",
+        });
+      }
+
+      const updatedRecommendation =
+        await prisma.engineeringRecommendation.update({
+          where: { id: recommendationId },
+          data: {
+            status: "ACTIVE",
+            resolvedAt: null,
+            evidence: null,
+          },
+        });
+
+      return {
+        success: true,
+        message: "Recommendation reopened successfully",
+        data: updatedRecommendation,
       };
     }
   );
@@ -1369,6 +1488,342 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
             architectureStyles,
             capabilities,
           },
+        },
+      };
+    }
+  );
+
+
+  // intelligence overview analysis
+  app.get("/intelligence-overview", async () => {
+    const repositories = await prisma.repository.findMany({
+      select: {
+        id: true,
+        name: true,
+        fullName: true,
+        language: true,
+        architectureChanges: {
+          select: {
+            architectureDomain: true,
+            detectedTechnology: true,
+            repositoryTypes: true,
+            reasoningSignals: true,
+          },
+        },
+      },
+    });
+
+    const data = repositories.map((repo) => {
+      const domains = Array.from(
+        new Set(
+          repo.architectureChanges
+            .map((change) => change.architectureDomain)
+            .filter((domain): domain is string => Boolean(domain))
+        )
+      );
+
+      const technologies = Array.from(
+        new Set(
+          repo.architectureChanges
+            .map((change) => change.detectedTechnology)
+            .filter((technology): technology is string => Boolean(technology))
+        )
+      );
+
+      const repositoryTypes = Array.from(
+        new Set(
+          repo.architectureChanges
+            .flatMap((change) => change.repositoryTypes?.split(",") || [])
+            .map((type) => type.trim())
+            .filter(Boolean)
+        )
+      );
+
+      const reasoningSignals = Array.from(
+        new Set(
+          repo.architectureChanges
+            .flatMap((change) => change.reasoningSignals?.split(" | ") || [])
+            .map((signal) => signal.trim())
+            .filter(Boolean)
+        )
+      );
+
+      const semanticProfile = generateRepositorySemanticProfile({
+        repositoryName: repo.name,
+        fullName: repo.fullName,
+        description: null,
+        language: repo.language,
+        repositoryTypes,
+        domains,
+        technologies,
+        reasoningSignals,
+      });
+
+      return {
+        repository: {
+          id: repo.id,
+          name: repo.name,
+          fullName: repo.fullName,
+          language: repo.language,
+        },
+        semanticProfile,
+        repositoryTypes,
+        domains,
+        technologies,
+      };
+    });
+
+    return {
+      success: true,
+      message: "Repository intelligence overview fetched successfully",
+      data,
+    };
+  });
+
+  // intelligence search analysis
+  app.get<{
+    Querystring: {
+      query?: string;
+      repositoryType?: string;
+      domain?: string;
+      technology?: string;
+    };
+  }>("/intelligence-search", async (request) => {
+    const { query, repositoryType, domain, technology } = request.query;
+
+    const repositories = await prisma.repository.findMany({
+      select: {
+        id: true,
+        name: true,
+        fullName: true,
+        language: true,
+        description: true,
+        architectureChanges: {
+          select: {
+            architectureDomain: true,
+            detectedTechnology: true,
+            repositoryTypes: true,
+            reasoningSignals: true,
+          },
+        },
+      },
+    });
+
+    const results = repositories
+      .map((repo) => {
+        const domains = Array.from(
+          new Set(
+            repo.architectureChanges
+              .map((change) => change.architectureDomain)
+              .filter((item): item is string => Boolean(item))
+          )
+        );
+
+        const technologies = Array.from(
+          new Set(
+            repo.architectureChanges
+              .map((change) => change.detectedTechnology)
+              .filter((item): item is string => Boolean(item))
+          )
+        );
+
+        const repositoryTypes = Array.from(
+          new Set(
+            repo.architectureChanges
+              .flatMap((change) => change.repositoryTypes?.split(",") || [])
+              .map((item) => item.trim())
+              .filter(Boolean)
+          )
+        );
+
+        const searchableText = [
+          repo.name,
+          repo.fullName,
+          repo.description,
+          repo.language,
+          ...domains,
+          ...technologies,
+          ...repositoryTypes,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+
+        const matchesQuery = query
+          ? searchableText.includes(query.toLowerCase())
+          : true;
+
+        const matchesRepositoryType = repositoryType
+          ? repositoryTypes.includes(repositoryType)
+          : true;
+
+        const matchesDomain = domain ? domains.includes(domain) : true;
+
+        const matchesTechnology = technology
+          ? technologies.some((item) =>
+            item.toLowerCase().includes(technology.toLowerCase())
+          )
+          : true;
+
+        if (
+          !matchesQuery ||
+          !matchesRepositoryType ||
+          !matchesDomain ||
+          !matchesTechnology
+        ) {
+          return null;
+        }
+
+        return {
+          repository: {
+            id: repo.id,
+            name: repo.name,
+            fullName: repo.fullName,
+            language: repo.language,
+          },
+          repositoryTypes,
+          domains,
+          technologies,
+        };
+      })
+      .filter(Boolean);
+
+    return {
+      success: true,
+      message: "Repository intelligence search completed successfully",
+      data: results,
+    };
+  });
+
+  // markdown report analysis
+  app.get<{ Params: { repositoryId: string } }>(
+    "/:repositoryId/intelligence-report/markdown",
+    async (request, reply) => {
+      const { repositoryId } = request.params;
+
+      const repository = await prisma.repository.findUnique({
+        where: { id: repositoryId },
+        select: {
+          id: true,
+          name: true,
+          fullName: true,
+          description: true,
+          language: true,
+        },
+      });
+
+      if (!repository) {
+        return reply.status(404).send({
+          success: false,
+          message: "Repository not found",
+        });
+      }
+
+      const architectureChanges = await prisma.architectureChange.findMany({
+        where: { repositoryId },
+        orderBy: { createdAt: "desc" },
+        select: {
+          architectureDomain: true,
+          detectedTechnology: true,
+          repositoryTypes: true,
+          reasoningSignals: true,
+          summary: true,
+          evolutionSummary: true,
+          createdAt: true,
+        },
+      });
+
+      const domains = Array.from(
+        new Set(
+          architectureChanges
+            .map((change) => change.architectureDomain)
+            .filter((domain): domain is string => Boolean(domain))
+        )
+      );
+
+      const technologies = Array.from(
+        new Set(
+          architectureChanges
+            .map((change) => change.detectedTechnology)
+            .filter((technology): technology is string => Boolean(technology))
+        )
+      );
+
+      const repositoryTypes = Array.from(
+        new Set(
+          architectureChanges
+            .flatMap((change) => change.repositoryTypes?.split(",") || [])
+            .map((type) => type.trim())
+            .filter(Boolean)
+        )
+      );
+
+      const reasoningSignals = Array.from(
+        new Set(
+          architectureChanges
+            .flatMap((change) => change.reasoningSignals?.split(" | ") || [])
+            .map((signal) => signal.trim())
+            .filter(Boolean)
+        )
+      );
+
+      const semanticProfile = generateRepositorySemanticProfile({
+        repositoryName: repository.name,
+        fullName: repository.fullName,
+        description: repository.description,
+        language: repository.language,
+        repositoryTypes,
+        domains,
+        technologies,
+        reasoningSignals,
+      });
+
+      const markdown = `# ${repository.name} Intelligence Report
+
+## Repository
+
+- Full Name: ${repository.fullName}
+- Language: ${repository.language || "Unknown"}
+- Semantic Category: ${semanticProfile.semanticLabel}
+- Confidence: ${semanticProfile.confidence.confidenceLevel} (${semanticProfile.confidence.confidenceScore}%)
+
+## Semantic Description
+
+${semanticProfile.semanticDescription}
+
+## Repository Types
+
+${repositoryTypes.map((type) => `- ${type}`).join("\n") || "- None detected"}
+
+## Architecture Domains
+
+${domains.map((domain) => `- ${domain}`).join("\n") || "- None detected"}
+
+## Detected Technologies
+
+${technologies.map((tech) => `- ${tech}`).join("\n") || "- None detected"}
+
+## Reasoning Signals
+
+${reasoningSignals.map((signal) => `- ${signal}`).join("\n") || "- None available"}
+
+## Recent Evidence
+
+${architectureChanges
+          .slice(0, 10)
+          .map(
+            (change) =>
+              `- ${change.summary} (${change.architectureDomain || "GENERAL"})`
+          )
+          .join("\n")}
+`;
+
+      return {
+        success: true,
+        message: "Repository intelligence markdown report generated successfully",
+        data: {
+          repository,
+          markdown,
         },
       };
     }

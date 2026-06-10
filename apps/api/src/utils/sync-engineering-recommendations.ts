@@ -15,6 +15,19 @@ export const syncEngineeringRecommendations = async ({
   recommendations: RecommendationInput[];
 }) => {
   for (const recommendation of recommendations) {
+    const existing = await prisma.engineeringRecommendation.findUnique({
+      where: {
+        repositoryId_recommendationKey: {
+          repositoryId,
+          recommendationKey: recommendation.key,
+        },
+      },
+    });
+
+    if (existing?.status === "DISMISSED" || existing?.status === "RESOLVED") {
+      continue;
+    }
+
     await prisma.engineeringRecommendation.upsert({
       where: {
         repositoryId_recommendationKey: {
@@ -38,6 +51,6 @@ export const syncEngineeringRecommendations = async ({
 
   return prisma.engineeringRecommendation.findMany({
     where: { repositoryId },
-    orderBy: { createdAt: "desc" },
+    orderBy: [{ status: "asc" }, { createdAt: "desc" }],
   });
 };
