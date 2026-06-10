@@ -70,6 +70,38 @@ export function useLiveDashboardUpdates() {
                         ),
                 });
 
+                queryClient.invalidateQueries({
+                    queryKey: QUERY_KEYS.REPOSITORY_INTELLIGENCE_REPORT(payload.repositoryId),
+                });
+
+                queryClient.invalidateQueries({
+                    queryKey: QUERY_KEYS.REPOSITORY_INTELLIGENCE_TIMELINE(payload.repositoryId),
+                });
+
+                queryClient.invalidateQueries({
+                    queryKey: QUERY_KEYS.REPOSITORY_RELATED(payload.repositoryId),
+                });
+
+                queryClient.invalidateQueries({
+                    queryKey: QUERY_KEYS.REPOSITORY_KNOWLEDGE_GRAPH(payload.repositoryId),
+                });
+
+                queryClient.invalidateQueries({
+                    queryKey: QUERY_KEYS.REPOSITORY_ENGINEERING_REASONING(payload.repositoryId),
+                });
+
+                queryClient.invalidateQueries({
+                    queryKey: QUERY_KEYS.REPOSITORY_RECOMMENDATIONS(payload.repositoryId),
+                });
+
+                queryClient.invalidateQueries({
+                    queryKey: QUERY_KEYS.REPOSITORY_INTELLIGENCE_AUDIT(payload.repositoryId),
+                });
+
+                queryClient.invalidateQueries({
+                    queryKey: QUERY_KEYS.REPOSITORY_SEMANTIC_PROFILE(payload.repositoryId),
+                });
+
 
             }
         }

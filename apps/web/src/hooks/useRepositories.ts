@@ -104,3 +104,40 @@ export function useRepositoryPurpose(repositoryId: string) {
     retry: false,
   });
 }
+
+export function useRepositoryIntelligenceReport(repositoryId: string) {
+  return useQuery({
+    queryKey: QUERY_KEYS.REPOSITORY_INTELLIGENCE_REPORT(repositoryId),
+    queryFn: () => repositoryService.getRepositoryIntelligenceReport(repositoryId),
+    enabled: Boolean(repositoryId),
+    retry: false,
+  });
+}
+
+export function useRepositoryIntelligenceTimeline(repositoryId: string) {
+  return useQuery({
+    queryKey: QUERY_KEYS.REPOSITORY_INTELLIGENCE_TIMELINE(repositoryId),
+    queryFn: () =>
+      repositoryService.getRepositoryIntelligenceTimeline(repositoryId),
+    enabled: Boolean(repositoryId),
+    retry: false,
+  });
+}
+
+export function useRelatedRepositories(repositoryId: string) {
+  return useQuery({
+    queryKey: QUERY_KEYS.REPOSITORY_RELATED(repositoryId),
+    queryFn: () => repositoryService.getRelatedRepositories(repositoryId),
+    enabled: Boolean(repositoryId),
+    retry: false,
+  });
+}
+
+export function useRepositoryMarkdownReport(repositoryId: string) {
+  return useQuery({
+    queryKey: QUERY_KEYS.REPOSITORY_INTELLIGENCE_MARKDOWN(repositoryId),
+    queryFn: () => repositoryService.getRepositoryMarkdownReport(repositoryId),
+    enabled: Boolean(repositoryId),
+    retry: false,
+  });
+}

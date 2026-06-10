@@ -8,6 +8,10 @@ import { RepositoryArchitectureRadarResponse } from "@/types/repository-radar.ty
 import { RepositoryNarrativeResponse } from "@/types/repository-narrative.types";
 import { RepositoryIntelligenceSummaryResponse } from "@/types/repository-intelligence-summary.types";
 import { RepositoryPurposeResponse } from "@/types/repository-purpose.types";
+import { RepositoryIntelligenceReportResponse } from "@/types/repository-intelligence-report.types";
+import { RepositoryIntelligenceTimelineResponse } from "@/types/repository-intelligence-timeline.types";
+import { RepositoryRelatedResponse } from "@/types/repository-related.types";
+import { RepositoryMarkdownReportResponse } from "@/types/repository-markdown-report.types";
 
 function requireUserId() {
   const userId = getUserId();
@@ -116,6 +120,46 @@ export const repositoryService = {
   ): Promise<RepositoryPurposeResponse> {
     const response = await api.get<ApiResponse<RepositoryPurposeResponse>>(
       `/repositories/${repositoryId}/purpose`
+    );
+
+    return response.data.data;
+  },
+
+  async getRepositoryIntelligenceReport(
+    repositoryId: string
+  ): Promise<RepositoryIntelligenceReportResponse> {
+    const response = await api.get<ApiResponse<RepositoryIntelligenceReportResponse>>(
+      `/repositories/${repositoryId}/intelligence-report`
+    );
+
+    return response.data.data;
+  },
+
+  async getRepositoryIntelligenceTimeline(
+    repositoryId: string
+  ): Promise<RepositoryIntelligenceTimelineResponse> {
+    const response = await api.get<
+      ApiResponse<RepositoryIntelligenceTimelineResponse>
+    >(`/repositories/${repositoryId}/intelligence-timeline`);
+
+    return response.data.data;
+  },
+
+  async getRelatedRepositories(
+    repositoryId: string
+  ): Promise<RepositoryRelatedResponse> {
+    const response = await api.get<ApiResponse<RepositoryRelatedResponse>>(
+      `/repositories/${repositoryId}/related`
+    );
+
+    return response.data.data;
+  },
+
+  async getRepositoryMarkdownReport(
+    repositoryId: string
+  ): Promise<RepositoryMarkdownReportResponse> {
+    const response = await api.get<ApiResponse<RepositoryMarkdownReportResponse>>(
+      `/repositories/${repositoryId}/intelligence-report/markdown`
     );
 
     return response.data.data;

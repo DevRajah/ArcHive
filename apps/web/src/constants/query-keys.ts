@@ -50,4 +50,49 @@ export const QUERY_KEYS = {
     "repository-purpose",
     repositoryId,
   ],
+
+  REPOSITORY_INTELLIGENCE_REPORT: (repositoryId: string) => [
+    "repository-intelligence-report",
+    repositoryId,
+  ],
+
+  REPOSITORY_INTELLIGENCE_TIMELINE: (repositoryId: string) => [
+    "repository-intelligence-timeline",
+    repositoryId,
+  ],
+
+  REPOSITORY_RELATED: (repositoryId: string) => [
+    "repository-related",
+    repositoryId,
+  ],
+
+  REPOSITORY_KNOWLEDGE_GRAPH: (repositoryId: string) => [
+    "repository-knowledge-graph",
+    repositoryId,
+  ],
+
+  REPOSITORY_ENGINEERING_REASONING: (repositoryId: string) => [
+    "repository-engineering-reasoning",
+    repositoryId,
+  ],
+
+  REPOSITORY_RECOMMENDATIONS: (repositoryId: string) => [
+    "repository-recommendations",
+    repositoryId,
+  ],
+
+  REPOSITORY_INTELLIGENCE_AUDIT: (repositoryId: string) => [
+    "repository-intelligence-audit",
+    repositoryId,
+  ],
+
+  REPOSITORY_SEMANTIC_PROFILE: (repositoryId: string) => [
+    "repository-semantic-profile",
+    repositoryId,
+  ],
+
+  REPOSITORY_INTELLIGENCE_MARKDOWN: (repositoryId: string) => [
+    "repository-intelligence-markdown",
+    repositoryId,
+  ],
 };
