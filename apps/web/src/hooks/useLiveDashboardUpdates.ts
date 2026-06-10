@@ -102,6 +102,14 @@ export function useLiveDashboardUpdates() {
                     queryKey: QUERY_KEYS.REPOSITORY_SEMANTIC_PROFILE(payload.repositoryId),
                 });
 
+                queryClient.invalidateQueries({
+                    queryKey: QUERY_KEYS.INTELLIGENCE_OVERVIEW,
+                });
+
+                queryClient.invalidateQueries({
+                    queryKey: ["intelligence-search"],
+                });
+
 
             }
         }

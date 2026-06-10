@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { QUERY_KEYS } from "@/constants/query-keys";
 import { repositoryService } from "@/services/repository.service";
 import { GithubRepository } from "@/types/repository.types";
+import { IntelligenceSearchParams } from "@/types/intelligence-search.types";
 
 export function useTrackedRepositories() {
   return useQuery({
@@ -138,6 +139,27 @@ export function useRepositoryMarkdownReport(repositoryId: string) {
     queryKey: QUERY_KEYS.REPOSITORY_INTELLIGENCE_MARKDOWN(repositoryId),
     queryFn: () => repositoryService.getRepositoryMarkdownReport(repositoryId),
     enabled: Boolean(repositoryId),
+    retry: false,
+  });
+}
+
+export function useIntelligenceOverview() {
+  return useQuery({
+    queryKey: QUERY_KEYS.INTELLIGENCE_OVERVIEW,
+    queryFn: () => repositoryService.getIntelligenceOverview(),
+    retry: false,
+  });
+}
+
+export function useIntelligenceSearch(params: IntelligenceSearchParams) {
+  const hasParams = Object.values(params).some(
+    (value) => typeof value === "string" && value.trim().length > 0
+  );
+
+  return useQuery({
+    queryKey: QUERY_KEYS.INTELLIGENCE_SEARCH(params),
+    queryFn: () => repositoryService.searchRepositoryIntelligence(params),
+    enabled: hasParams,
     retry: false,
   });
 }

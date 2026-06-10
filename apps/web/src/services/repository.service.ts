@@ -12,6 +12,11 @@ import { RepositoryIntelligenceReportResponse } from "@/types/repository-intelli
 import { RepositoryIntelligenceTimelineResponse } from "@/types/repository-intelligence-timeline.types";
 import { RepositoryRelatedResponse } from "@/types/repository-related.types";
 import { RepositoryMarkdownReportResponse } from "@/types/repository-markdown-report.types";
+import { IntelligenceOverviewResponse } from "@/types/intelligence-overview.types";
+import {
+  IntelligenceSearchParams,
+  IntelligenceSearchResponse,
+} from "@/types/intelligence-search.types";
 
 function requireUserId() {
   const userId = getUserId();
@@ -160,6 +165,36 @@ export const repositoryService = {
   ): Promise<RepositoryMarkdownReportResponse> {
     const response = await api.get<ApiResponse<RepositoryMarkdownReportResponse>>(
       `/repositories/${repositoryId}/intelligence-report/markdown`
+    );
+
+    return response.data.data;
+  },
+
+  async getIntelligenceOverview(): Promise<IntelligenceOverviewResponse> {
+    const response = await api.get<ApiResponse<IntelligenceOverviewResponse>>(
+      "/repositories/intelligence-overview"
+    );
+
+    return response.data.data;
+  },
+
+  async searchRepositoryIntelligence(
+    params: IntelligenceSearchParams
+  ): Promise<IntelligenceSearchResponse> {
+    const cleanedParams = Object.fromEntries(
+      Object.entries(params).filter(
+        ([_, value]) =>
+          value !== undefined &&
+          value !== null &&
+          String(value).trim() !== ""
+      )
+    );
+
+    const response = await api.get<ApiResponse<IntelligenceSearchResponse>>(
+      "/repositories/intelligence-search",
+      {
+        params: cleanedParams,
+      }
     );
 
     return response.data.data;

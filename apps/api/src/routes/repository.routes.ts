@@ -1591,19 +1591,29 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
   }>("/intelligence-search", async (request) => {
     const { query, repositoryType, domain, technology } = request.query;
 
+    const normalize = (value?: string | null) =>
+      value?.trim().toLowerCase() || "";
+
+    const normalizedQuery = normalize(query);
+    const normalizedRepositoryType = normalize(repositoryType);
+    const normalizedDomain = normalize(domain);
+    const normalizedTechnology = normalize(technology);
+
     const repositories = await prisma.repository.findMany({
       select: {
         id: true,
         name: true,
         fullName: true,
-        language: true,
         description: true,
+        language: true,
         architectureChanges: {
           select: {
             architectureDomain: true,
             detectedTechnology: true,
             repositoryTypes: true,
             reasoningSignals: true,
+            summary: true,
+            evolutionSummary: true,
           },
         },
       },
@@ -1636,6 +1646,15 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
           )
         );
 
+        const reasoningSignals = Array.from(
+          new Set(
+            repo.architectureChanges
+              .flatMap((change) => change.reasoningSignals?.split(" | ") || [])
+              .map((item) => item.trim())
+              .filter(Boolean)
+          )
+        );
+
         const searchableText = [
           repo.name,
           repo.fullName,
@@ -1644,28 +1663,41 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
           ...domains,
           ...technologies,
           ...repositoryTypes,
+          ...reasoningSignals,
+          ...repo.architectureChanges.map((change) => change.summary),
+          ...repo.architectureChanges.map((change) => change.evolutionSummary),
         ]
           .filter(Boolean)
           .join(" ")
           .toLowerCase();
 
-        const matchesQuery = query
-          ? searchableText.includes(query.toLowerCase())
+        const matchesQuery = normalizedQuery
+          ? searchableText.includes(normalizedQuery)
           : true;
 
-        const matchesRepositoryType = repositoryType
-          ? repositoryTypes.includes(repositoryType)
-          : true;
-
-        const matchesDomain = domain ? domains.includes(domain) : true;
-
-        const matchesTechnology = technology
-          ? technologies.some((item) =>
-            item.toLowerCase().includes(technology.toLowerCase())
+        const matchesRepositoryType = normalizedRepositoryType
+          ? repositoryTypes.some(
+            (type) => normalize(type) === normalizedRepositoryType
           )
           : true;
 
+        const matchesDomain = normalizedDomain
+          ? domains.some((item) => normalize(item) === normalizedDomain)
+          : true;
+
+        const matchesTechnology = normalizedTechnology
+          ? technologies.some((item) =>
+            normalize(item).includes(normalizedTechnology)
+          )
+          : true;
+
+        const hasAnyIntelligence =
+          domains.length > 0 ||
+          technologies.length > 0 ||
+          repositoryTypes.length > 0;
+
         if (
+          !hasAnyIntelligence ||
           !matchesQuery ||
           !matchesRepositoryType ||
           !matchesDomain ||
@@ -1679,19 +1711,36 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
             id: repo.id,
             name: repo.name,
             fullName: repo.fullName,
+            description: repo.description,
             language: repo.language,
           },
           repositoryTypes,
           domains,
           technologies,
+          reasoningSignals,
+          matchedSignals: {
+            query: query || null,
+            repositoryType: repositoryType || null,
+            domain: domain || null,
+            technology: technology || null,
+          },
         };
       })
-      .filter(Boolean);
+      .filter((item): item is NonNullable<typeof item> => Boolean(item));
 
     return {
       success: true,
       message: "Repository intelligence search completed successfully",
-      data: results,
+      data: {
+        count: results.length,
+        filters: {
+          query: query || null,
+          repositoryType: repositoryType || null,
+          domain: domain || null,
+          technology: technology || null,
+        },
+        results,
+      },
     };
   });
 

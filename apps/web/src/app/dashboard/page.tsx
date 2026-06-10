@@ -9,10 +9,18 @@ import { RecentQueueJobs } from "@/components/dashboard/RecentQueueJobs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDashboardSummary } from "@/hooks/useDashboard";
 import { LiveActivityIndicator } from "@/components/dashboard/LiveActivityIndicator";
+import { IntelligenceOverview } from "@/components/dashboard/IntelligenceOverview";
+import { IntelligenceSearch } from "@/components/dashboard/IntelligenceSearch";
+import { useIntelligenceOverview } from "@/hooks/useRepositories";
 
 export default function DashboardPage() {
   const { data: summary, isLoading, isError, error } = useDashboardSummary();
-  
+
+  const {
+    data: intelligenceOverview,
+    isLoading: isIntelligenceOverviewLoading,
+  } = useIntelligenceOverview();
+
   return (
     <AppShell>
       <div className="space-y-6">
@@ -54,6 +62,13 @@ export default function DashboardPage() {
         )}
 
         {!isLoading && !isError && <DashboardStats summary={summary} />}
+
+        <IntelligenceOverview
+          data={intelligenceOverview}
+          isLoading={isIntelligenceOverviewLoading}
+        />
+
+        <IntelligenceSearch />
 
         <div className="grid min-w-0 gap-6 xl:grid-cols-[1.4fr_1fr]">
           <RepositoryHealthChart

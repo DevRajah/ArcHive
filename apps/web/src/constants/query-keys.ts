@@ -2,6 +2,14 @@ export const QUERY_KEYS = {
   DASHBOARD_SUMMARY: ["dashboard-summary"],
   QUEUE_METRICS: ["queue-metrics"],
   QUEUE_RECENT_JOBS: ["queue-recent-jobs"],
+  INTELLIGENCE_OVERVIEW: ["intelligence-overview"],
+
+  INTELLIGENCE_SEARCH: (params: {
+  query?: string;
+  repositoryType?: string;
+  domain?: string;
+  technology?: string;
+}) => ["intelligence-search", params],
 
   REPOSITORIES: ["repositories"],
   GITHUB_REPOSITORIES: ["github-repositories"],
