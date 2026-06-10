@@ -1130,23 +1130,37 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
     async (request, reply) => {
       const { repositoryId } = request.params;
 
-      const repository = await prisma.repository.findUnique({
+      const sourceRepository = await prisma.repository.findUnique({
         where: { id: repositoryId },
         select: {
           id: true,
           name: true,
           fullName: true,
+          userId: true,
+          architectureChanges: {
+            select: {
+              architectureDomain: true,
+              detectedTechnology: true,
+              repositoryTypes: true,
+            },
+          },
         },
       });
 
-      if (!repository) {
+      if (!sourceRepository) {
         return reply.status(404).send({
           success: false,
           message: "Repository not found",
         });
       }
 
-      const allRepositories = await prisma.repository.findMany({
+      const repositories = await prisma.repository.findMany({
+        where: {
+          userId: sourceRepository.userId,
+          id: {
+            not: repositoryId,
+          },
+        },
         select: {
           id: true,
           name: true,
@@ -1160,17 +1174,6 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
           },
         },
       });
-
-      const sourceRepository = allRepositories.find(
-        (repo) => repo.id === repositoryId
-      );
-
-      if (!sourceRepository) {
-        return reply.status(404).send({
-          success: false,
-          message: "Source repository not found",
-        });
-      }
 
       const extractRepositoryIntelligence = (
         changes: {
@@ -1191,9 +1194,7 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
           new Set(
             changes
               .map((change) => change.detectedTechnology)
-              .filter(
-                (technology): technology is string => Boolean(technology)
-              )
+              .filter((technology): technology is string => Boolean(technology))
           )
         );
 
@@ -1217,25 +1218,20 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
         sourceRepository.architectureChanges
       );
 
-      const relatedRepositories = allRepositories
-        .filter((repo) => repo.id !== repositoryId)
+      const relatedRepositories = repositories
         .map((repo) => {
           const targetIntelligence = extractRepositoryIntelligence(
             repo.architectureChanges
           );
 
           const similarity = calculateRepositorySimilarity({
-            sourceRepositoryTypes:
-              sourceIntelligence.repositoryTypes,
+            sourceRepositoryTypes: sourceIntelligence.repositoryTypes,
             sourceDomains: sourceIntelligence.domains,
-            sourceTechnologies:
-              sourceIntelligence.technologies,
+            sourceTechnologies: sourceIntelligence.technologies,
 
-            targetRepositoryTypes:
-              targetIntelligence.repositoryTypes,
+            targetRepositoryTypes: targetIntelligence.repositoryTypes,
             targetDomains: targetIntelligence.domains,
-            targetTechnologies:
-              targetIntelligence.technologies,
+            targetTechnologies: targetIntelligence.technologies,
           });
 
           return {
@@ -1244,14 +1240,13 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
               name: repo.name,
               fullName: repo.fullName,
             },
-
             similarity,
           };
         })
+        .filter((item) => item.similarity.similarityScore > 0)
         .sort(
           (a, b) =>
-            b.similarity.similarityScore -
-            a.similarity.similarityScore
+            b.similarity.similarityScore - a.similarity.similarityScore
         )
         .slice(0, 8);
 
@@ -1259,7 +1254,12 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
         success: true,
         message: "Related repositories fetched successfully",
         data: {
-          repository,
+          repository: {
+            id: sourceRepository.id,
+            name: sourceRepository.name,
+            fullName: sourceRepository.fullName,
+          },
+          sourceIntelligence,
           relatedRepositories,
         },
       };
@@ -1374,93 +1374,93 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
   );
   // intelligence audit analysis
   app.get<{ Params: { repositoryId: string } }>(
-  "/:repositoryId/intelligence-audit",
-  async (request, reply) => {
-    const { repositoryId } = request.params;
+    "/:repositoryId/intelligence-audit",
+    async (request, reply) => {
+      const { repositoryId } = request.params;
 
-    const repository = await prisma.repository.findUnique({
-      where: { id: repositoryId },
-      select: {
-        id: true,
-        name: true,
-        fullName: true,
-      },
-    });
-
-    if (!repository) {
-      return reply.status(404).send({
-        success: false,
-        message: "Repository not found",
-      });
-    }
-
-    const architectureChanges = await prisma.architectureChange.findMany({
-      where: { repositoryId },
-      select: {
-        architectureDomain: true,
-        detectedTechnology: true,
-        repositoryTypes: true,
-        reasoningSignals: true,
-      },
-    });
-
-    const domains = Array.from(
-      new Set(
-        architectureChanges
-          .map((change) => change.architectureDomain)
-          .filter((domain): domain is string => Boolean(domain))
-      )
-    );
-
-    const technologies = Array.from(
-      new Set(
-        architectureChanges
-          .map((change) => change.detectedTechnology)
-          .filter((technology): technology is string => Boolean(technology))
-      )
-    );
-
-    const repositoryTypes = Array.from(
-      new Set(
-        architectureChanges
-          .flatMap((change) => change.repositoryTypes?.split(",") || [])
-          .map((type) => type.trim())
-          .filter(Boolean)
-      )
-    );
-
-    const reasoningSignals = Array.from(
-      new Set(
-        architectureChanges
-          .flatMap((change) => change.reasoningSignals?.split(" | ") || [])
-          .map((signal) => signal.trim())
-          .filter(Boolean)
-      )
-    );
-
-    const audit = auditRepositoryIntelligence({
-      repositoryTypes,
-      domains,
-      technologies,
-      reasoningSignals,
-    });
-
-    return {
-      success: true,
-      message: "Repository intelligence audit fetched successfully",
-      data: {
-        repository,
-        audit,
-        signals: {
-          repositoryTypes,
-          domains,
-          technologies,
-          reasoningSignals,
+      const repository = await prisma.repository.findUnique({
+        where: { id: repositoryId },
+        select: {
+          id: true,
+          name: true,
+          fullName: true,
         },
-      },
-    };
-  }
-);
+      });
+
+      if (!repository) {
+        return reply.status(404).send({
+          success: false,
+          message: "Repository not found",
+        });
+      }
+
+      const architectureChanges = await prisma.architectureChange.findMany({
+        where: { repositoryId },
+        select: {
+          architectureDomain: true,
+          detectedTechnology: true,
+          repositoryTypes: true,
+          reasoningSignals: true,
+        },
+      });
+
+      const domains = Array.from(
+        new Set(
+          architectureChanges
+            .map((change) => change.architectureDomain)
+            .filter((domain): domain is string => Boolean(domain))
+        )
+      );
+
+      const technologies = Array.from(
+        new Set(
+          architectureChanges
+            .map((change) => change.detectedTechnology)
+            .filter((technology): technology is string => Boolean(technology))
+        )
+      );
+
+      const repositoryTypes = Array.from(
+        new Set(
+          architectureChanges
+            .flatMap((change) => change.repositoryTypes?.split(",") || [])
+            .map((type) => type.trim())
+            .filter(Boolean)
+        )
+      );
+
+      const reasoningSignals = Array.from(
+        new Set(
+          architectureChanges
+            .flatMap((change) => change.reasoningSignals?.split(" | ") || [])
+            .map((signal) => signal.trim())
+            .filter(Boolean)
+        )
+      );
+
+      const audit = auditRepositoryIntelligence({
+        repositoryTypes,
+        domains,
+        technologies,
+        reasoningSignals,
+      });
+
+      return {
+        success: true,
+        message: "Repository intelligence audit fetched successfully",
+        data: {
+          repository,
+          audit,
+          signals: {
+            repositoryTypes,
+            domains,
+            technologies,
+            reasoningSignals,
+          },
+        },
+      };
+    }
+  );
 
 
   //identity analysis
