@@ -285,6 +285,7 @@ export const githubSyncRoutes = async (app: FastifyInstance) => {
           stars: metadata.stars,
           forks: metadata.forks,
           userId: user.id,
+          isTracked: false,
         },
         update: {
           githubRepoId: String(repo.id),
@@ -296,6 +297,7 @@ export const githubSyncRoutes = async (app: FastifyInstance) => {
           stars: metadata.stars,
           forks: metadata.forks,
           userId: user.id,
+          isTracked: false,
         },
       });
 
@@ -402,6 +404,7 @@ export const githubSyncRoutes = async (app: FastifyInstance) => {
           stars: metadata.stars,
           forks: metadata.forks,
           userId: user.id,
+          isTracked: true,
         },
         update: {
           githubRepoId: repo.githubRepoId || repo.fullName,
@@ -413,6 +416,7 @@ export const githubSyncRoutes = async (app: FastifyInstance) => {
           stars: metadata.stars,
           forks: metadata.forks,
           userId: user.id,
+          isTracked: true,
         },
       });
 
@@ -454,8 +458,10 @@ export const githubSyncRoutes = async (app: FastifyInstance) => {
     }
 
     const repositories = await prisma.repository.findMany({
-      where: { userId },
-      orderBy: { updatedAt: "desc" },
+      where: {
+        userId,
+        isTracked: true,
+      }, orderBy: { updatedAt: "desc" },
       include: {
         _count: {
           select: {
@@ -474,8 +480,7 @@ export const githubSyncRoutes = async (app: FastifyInstance) => {
     };
   });
 
-  app.patch(
-    "/users/:userId/repositories/:repositoryId/untrack",
+  app.patch("/users/:userId/repositories/:repositoryId/untrack",
     async (request, reply) => {
       const { userId, repositoryId } = request.params as {
         userId: string;

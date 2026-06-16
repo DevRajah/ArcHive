@@ -67,9 +67,9 @@ model Repository {
   defaultBranch  String
 
   language          String?
-  stars             Int      @default(0)
-  forks             Int      @default(0)
-
+  stars             Int        @default(0)
+  forks             Int        @default(0)
+  isTracked         Boolean    @default(false)
   userId String?
   user   User? @relation(fields: [userId], references: [id])
 

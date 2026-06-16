@@ -1251,7 +1251,10 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
       const { repositoryId } = request.params;
 
       const sourceRepository = await prisma.repository.findUnique({
-        where: { id: repositoryId },
+        where: {
+          id: repositoryId,
+          isTracked: true,
+        },
         select: {
           id: true,
           name: true,
@@ -1277,6 +1280,7 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
       const repositories = await prisma.repository.findMany({
         where: {
           userId: sourceRepository.userId,
+          isTracked: true,
           id: {
             not: repositoryId,
           },
@@ -1497,6 +1501,9 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
   // intelligence overview analysis
   app.get("/intelligence-overview", async () => {
     const repositories = await prisma.repository.findMany({
+      where: {
+        isTracked: true,
+      },
       select: {
         id: true,
         name: true,
@@ -1580,180 +1587,184 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
     };
   });
 
+
   // intelligence search analysis
- app.get<{
-  Querystring: {
-    query?: string;
-    repositoryType?: string;
-    domain?: string;
-    technology?: string;
-  };
-}>("/intelligence-search", async (request) => {
-  const { query, repositoryType, domain, technology } = request.query;
+  app.get<{
+    Querystring: {
+      query?: string;
+      repositoryType?: string;
+      domain?: string;
+      technology?: string;
+    };
+  }>("/intelligence-search", async (request) => {
+    const { query, repositoryType, domain, technology } = request.query;
 
-  const normalize = (value?: string | null) =>
-    value?.trim().toLowerCase() || "";
+    const normalize = (value?: string | null) =>
+      value?.trim().toLowerCase() || "";
 
-  const normalizedQuery = normalize(query);
-  const normalizedRepositoryType = normalize(repositoryType);
-  const normalizedDomain = normalize(domain);
-  const normalizedTechnology = normalize(technology);
+    const normalizedQuery = normalize(query);
+    const normalizedRepositoryType = normalize(repositoryType);
+    const normalizedDomain = normalize(domain);
+    const normalizedTechnology = normalize(technology);
 
-  const repositories = await prisma.repository.findMany({
-    select: {
-      id: true,
-      name: true,
-      fullName: true,
-      description: true,
-      language: true,
-      architectureChanges: {
-        select: {
-          architectureDomain: true,
-          detectedTechnology: true,
-          repositoryTypes: true,
-          reasoningSignals: true,
-          summary: true,
-          evolutionSummary: true,
+    const repositories = await prisma.repository.findMany({
+      where: {
+        isTracked: true,
+      },
+      select: {
+        id: true,
+        name: true,
+        fullName: true,
+        description: true,
+        language: true,
+        architectureChanges: {
+          select: {
+            architectureDomain: true,
+            detectedTechnology: true,
+            repositoryTypes: true,
+            reasoningSignals: true,
+            summary: true,
+            evolutionSummary: true,
+          },
         },
       },
-    },
-  });
+    });
 
-  const results = repositories
-    .map((repo) => {
-      const domains = Array.from(
-        new Set(
-          repo.architectureChanges
-            .map((change) => change.architectureDomain)
-            .filter((item): item is string => Boolean(item))
-        )
-      );
+    const results = repositories
+      .map((repo) => {
+        const domains = Array.from(
+          new Set(
+            repo.architectureChanges
+              .map((change) => change.architectureDomain)
+              .filter((item): item is string => Boolean(item))
+          )
+        );
 
-      const technologies = Array.from(
-        new Set(
-          repo.architectureChanges
-            .map((change) => change.detectedTechnology)
-            .filter((item): item is string => Boolean(item))
-        )
-      );
+        const technologies = Array.from(
+          new Set(
+            repo.architectureChanges
+              .map((change) => change.detectedTechnology)
+              .filter((item): item is string => Boolean(item))
+          )
+        );
 
-      const repositoryTypes = Array.from(
-        new Set(
-          repo.architectureChanges
-            .flatMap((change) => change.repositoryTypes?.split(",") || [])
-            .map((item) => item.trim())
-            .filter(Boolean)
-        )
-      );
+        const repositoryTypes = Array.from(
+          new Set(
+            repo.architectureChanges
+              .flatMap((change) => change.repositoryTypes?.split(",") || [])
+              .map((item) => item.trim())
+              .filter(Boolean)
+          )
+        );
 
-      const reasoningSignals = Array.from(
-        new Set(
-          repo.architectureChanges
-            .flatMap((change) => change.reasoningSignals?.split(" | ") || [])
-            .map((item) => item.trim())
-            .filter(Boolean)
-        )
-      );
+        const reasoningSignals = Array.from(
+          new Set(
+            repo.architectureChanges
+              .flatMap((change) => change.reasoningSignals?.split(" | ") || [])
+              .map((item) => item.trim())
+              .filter(Boolean)
+          )
+        );
 
-      const searchableText = [
-        repo.name,
-        repo.fullName,
-        repo.description,
-        repo.language,
-        ...domains,
-        ...technologies,
-        ...repositoryTypes,
-        ...reasoningSignals,
-        ...repo.architectureChanges.map((change) => change.summary),
-        ...repo.architectureChanges.map((change) => change.evolutionSummary),
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
+        const searchableText = [
+          repo.name,
+          repo.fullName,
+          repo.description,
+          repo.language,
+          ...domains,
+          ...technologies,
+          ...repositoryTypes,
+          ...reasoningSignals,
+          ...repo.architectureChanges.map((change) => change.summary),
+          ...repo.architectureChanges.map((change) => change.evolutionSummary),
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
 
-      const matchesQuery = normalizedQuery
-        ? searchableText.includes(normalizedQuery)
-        : true;
+        const matchesQuery = normalizedQuery
+          ? searchableText.includes(normalizedQuery)
+          : true;
 
-      const matchesRepositoryType = normalizedRepositoryType
-        ? repositoryTypes.some(
+        const matchesRepositoryType = normalizedRepositoryType
+          ? repositoryTypes.some(
             (type) => normalize(type) === normalizedRepositoryType
           )
-        : true;
+          : true;
 
-      const matchesDomain = normalizedDomain
-        ? domains.some((item) => normalize(item) === normalizedDomain)
-        : true;
+        const matchesDomain = normalizedDomain
+          ? domains.some((item) => normalize(item) === normalizedDomain)
+          : true;
 
-      const matchesTechnology = normalizedTechnology
-        ? technologies.some((item) =>
+        const matchesTechnology = normalizedTechnology
+          ? technologies.some((item) =>
             normalize(item).includes(normalizedTechnology)
           )
-        : true;
+          : true;
 
-      const hasAnyIntelligence =
-        domains.length > 0 ||
-        technologies.length > 0 ||
-        repositoryTypes.length > 0;
+        const hasAnyIntelligence =
+          domains.length > 0 ||
+          technologies.length > 0 ||
+          repositoryTypes.length > 0;
 
-      if (
-        !hasAnyIntelligence ||
-        !matchesQuery ||
-        !matchesRepositoryType ||
-        !matchesDomain ||
-        !matchesTechnology
-      ) {
-        return null;
-      }
+        if (
+          !hasAnyIntelligence ||
+          !matchesQuery ||
+          !matchesRepositoryType ||
+          !matchesDomain ||
+          !matchesTechnology
+        ) {
+          return null;
+        }
 
-      const semanticProfile = generateRepositorySemanticProfile({
-        repositoryName: repo.name,
-        fullName: repo.fullName,
-        description: repo.description,
-        language: repo.language,
-        repositoryTypes,
-        domains,
-        technologies,
-        reasoningSignals,
-      });
+        const semanticProfile = generateRepositorySemanticProfile({
+          repositoryName: repo.name,
+          fullName: repo.fullName,
+          description: repo.description,
+          language: repo.language,
+          repositoryTypes,
+          domains,
+          technologies,
+          reasoningSignals,
+        });
 
-      return {
-        id: repo.id,
-        name: repo.name,
-        fullName: repo.fullName,
-        description: repo.description,
-        language: repo.language,
-        semanticLabel: semanticProfile.semanticLabel,
-        semanticCategory: semanticProfile.semanticCategory,
-        confidence: semanticProfile.confidence,
-        repositoryTypes,
-        dominantDomains: domains.slice(0, 5),
-        technologies: technologies.slice(0, 8),
-        matchedSignals: {
+        return {
+          id: repo.id,
+          name: repo.name,
+          fullName: repo.fullName,
+          description: repo.description,
+          language: repo.language,
+          semanticLabel: semanticProfile.semanticLabel,
+          semanticCategory: semanticProfile.semanticCategory,
+          confidence: semanticProfile.confidence,
+          repositoryTypes,
+          dominantDomains: domains.slice(0, 5),
+          technologies: technologies.slice(0, 8),
+          matchedSignals: {
+            query: query || null,
+            repositoryType: repositoryType || null,
+            domain: domain || null,
+            technology: technology || null,
+          },
+        };
+      })
+      .filter((item): item is NonNullable<typeof item> => Boolean(item));
+
+    return {
+      success: true,
+      message: "Repository intelligence search completed successfully",
+      data: {
+        count: results.length,
+        filters: {
           query: query || null,
           repositoryType: repositoryType || null,
           domain: domain || null,
           technology: technology || null,
         },
-      };
-    })
-    .filter((item): item is NonNullable<typeof item> => Boolean(item));
-
-  return {
-    success: true,
-    message: "Repository intelligence search completed successfully",
-    data: {
-      count: results.length,
-      filters: {
-        query: query || null,
-        repositoryType: repositoryType || null,
-        domain: domain || null,
-        technology: technology || null,
+        results,
       },
-      results,
-    },
-  };
-});
+    };
+  });
 
   // markdown report analysis
   app.get<{ Params: { repositoryId: string } }>(
@@ -2514,6 +2525,7 @@ ${architectureChanges
       };
     }
   );
+
   // Intelligence summary synthesis - combines multiple signals for a high-level overview
   app.get<{ Params: { repositoryId: string } }>(
     "/:repositoryId/intelligence-summary",
@@ -2728,6 +2740,7 @@ ${architectureChanges
       },
     };
   });
+
   // Endpoint to trigger reprocessing of repository intelligence - for dev/testing purposes
   app.post<{ Params: { repositoryId: string } }>(
     "/:repositoryId/reprocess-intelligence",
