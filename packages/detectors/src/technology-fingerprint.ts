@@ -151,27 +151,32 @@ export const detectTechnologyFingerprint = (
     }
 
     // Data engineering
-    if (
+    const hasStrongDataEngineeringSignal =
         includesAny(combinedText, [
             "airflow",
             "dag",
             "dbt",
             "spark",
+            "pyspark",
             "kafka",
             "etl",
-            "pipeline",
-            "warehouse",
+            "elt",
+            "data warehouse",
             "snowflake",
             "bigquery",
-        ])
-    ) {
+            "data lake",
+            "batch pipeline",
+            "stream processing",
+        ]);
+
+    if (hasStrongDataEngineeringSignal) {
         add(technologies, ["Data Engineering"]);
         add(architectureDomains, ["DATA_PIPELINES"]);
         add(engineeringSignals, ["DATA_WORKFLOW"]);
         add(repositoryTypes, ["DATA_ENGINEERING_PROJECT"]);
 
         addReasoningSignal(
-            "Detected data engineering and ETL pipeline patterns"
+            "Detected strong data pipeline, warehouse, ETL, or workflow orchestration evidence"
         );
     }
 
@@ -256,33 +261,46 @@ export const detectTechnologyFingerprint = (
     }
 
     // Mobile
-    if (
-        includesAny(combinedText, [
-            "flutter",
-            "pubspec.yaml",
-            ".dart",
-            "android/",
-            "ios/",
-        ])
-    ) {
+    const hasStrongFlutterSignal =
+        filesChanged.some((file) => {
+            const normalizedFile = file.toLowerCase();
+
+            return (
+                normalizedFile === "pubspec.yaml" ||
+                normalizedFile.endsWith(".dart") ||
+                normalizedFile.startsWith("android/") ||
+                normalizedFile.startsWith("ios/")
+            );
+        }) || includesAny(combinedText, ["flutter sdk"]);
+
+    if (hasStrongFlutterSignal) {
         add(technologies, ["Flutter"]);
         add(architectureDomains, ["MOBILE_ARCHITECTURE"]);
         add(repositoryTypes, ["MOBILE_APPLICATION"]);
+
         addReasoningSignal(
-            "Detected Flutter-specific files and patterns"
+            "Detected Flutter/Dart mobile application structure"
         );
     }
 
-    if (
-        includesAny(combinedText, [
-            "react-native",
-            "expo",
-            "metro.config",
-        ])
-    ) {
+    const hasStrongReactNativeSignal =
+        filesChanged.some((file) => {
+            const normalizedFile = file.toLowerCase();
+
+            return (
+                normalizedFile.includes("react-native.config") ||
+                normalizedFile.includes("metro.config") ||
+                normalizedFile.includes("app.json") ||
+                normalizedFile.startsWith("android/") ||
+                normalizedFile.startsWith("ios/")
+            );
+        }) || includesAny(combinedText, ["react-native", "expo"]);
+
+    if (hasStrongReactNativeSignal) {
         add(technologies, ["React Native"]);
         add(architectureDomains, ["MOBILE_ARCHITECTURE"]);
         add(repositoryTypes, ["MOBILE_APPLICATION"]);
+
         addReasoningSignal(
             "Detected React Native-specific files and patterns"
         );
@@ -485,29 +503,29 @@ export const detectTechnologyFingerprint = (
         );
     }
 
-    if (
-        includesAny(combinedText, [
-            "ledger",
-            "payment",
-            "reconciliation",
-            "transaction",
-            "settlement",
-            "invoice",
-            "audit",
-            "billing",
-            "webhook",
-            "financial",
-        ])
-    ) {
+    const fintechSignals = [
+        includesAny(combinedText, ["ledger", "double-entry"]),
+        includesAny(combinedText, ["reconciliation", "reconcile"]),
+        includesAny(combinedText, ["settlement", "settlements"]),
+        includesAny(combinedText, ["payment webhook", "webhook signature"]),
+        includesAny(combinedText, ["idempotency", "idempotency key"]),
+        includesAny(combinedText, ["transaction processing", "financial transaction"]),
+        includesAny(combinedText, ["audit trail", "audit ledger"]),
+    ];
+
+    const fintechSignalCount = fintechSignals.filter(Boolean).length;
+
+    if (fintechSignalCount >= 2) {
         add(technologies, ["Financial Infrastructure"]);
         add(architectureDomains, ["FINANCIAL_SYSTEMS"]);
         add(engineeringSignals, ["FINANCIAL_PROCESSING"]);
         add(repositoryTypes, ["FINTECH_PLATFORM"]);
 
         addReasoningSignal(
-            "Detected financial terminology including ledger/payment/reconciliation"
+            `Detected ${fintechSignalCount} strong financial infrastructure signal(s)`
         );
     }
+
     const hasStrongObservabilitySignal =
         includesAny(combinedText, [
             "observability",
@@ -548,27 +566,30 @@ export const detectTechnologyFingerprint = (
             "Detected observability terminology including monitoring/metrics/telemetry"
         );
     }
-
-    if (
+    const hasStrongSecuritySignal =
         includesAny(combinedText, [
-            "fraud",
-            "threat",
-            "security",
-            "auth",
-            "anomaly",
-            "intrusion",
-            "attack",
-            "detection",
-            "risk engine",
-        ])
-    ) {
+            "threat detection",
+            "fraud detection",
+            "risk scoring",
+            "anomaly detection",
+            "vulnerability scanning",
+            "malware",
+            "intrusion detection",
+            "security event",
+            "security audit",
+            "access policy",
+            "rbac policy",
+            "permission policy",
+        ]);
+
+    if (hasStrongSecuritySignal) {
         add(technologies, ["Security Systems"]);
         add(architectureDomains, ["SECURITY_SYSTEMS"]);
         add(engineeringSignals, ["THREAT_DETECTION"]);
         add(repositoryTypes, ["SECURITY_PLATFORM"]);
 
         addReasoningSignal(
-            "Detected security and threat detection patterns"
+            "Detected strong security, risk, threat, or anomaly detection evidence"
         );
     }
 
