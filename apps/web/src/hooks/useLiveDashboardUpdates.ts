@@ -109,6 +109,17 @@ export function useLiveDashboardUpdates() {
                 queryClient.invalidateQueries({
                     queryKey: ["intelligence-search"],
                 });
+                queryClient.invalidateQueries({
+                    queryKey: QUERY_KEYS.REPOSITORY_KNOWLEDGE_GRAPH(payload.repositoryId),
+                });
+
+                queryClient.invalidateQueries({
+                    queryKey: QUERY_KEYS.REPOSITORY_INTELLIGENCE_AUDIT(payload.repositoryId),
+                });
+
+                queryClient.invalidateQueries({
+                    queryKey: QUERY_KEYS.REPOSITORY_RECOMMENDATIONS(payload.repositoryId),
+                });
 
 
             }

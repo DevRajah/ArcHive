@@ -13,6 +13,9 @@ import { RepositoryIntelligenceTimelineResponse } from "@/types/repository-intel
 import { RepositoryRelatedResponse } from "@/types/repository-related.types";
 import { RepositoryMarkdownReportResponse } from "@/types/repository-markdown-report.types";
 import { IntelligenceOverviewResponse } from "@/types/intelligence-overview.types";
+import { RepositoryKnowledgeGraphResponse } from "@/types/repository-knowledge-graph.types";
+import { RepositoryIntelligenceAuditResponse } from "@/types/repository-intelligence-audit.types";
+import { RepositoryRecommendationsResponse } from "@/types/repository-recommendations.types";
 import {
   IntelligenceSearchParams,
   IntelligenceSearchResponse,
@@ -195,6 +198,36 @@ export const repositoryService = {
       {
         params: cleanedParams,
       }
+    );
+
+    return response.data.data;
+  },
+
+  async getRepositoryKnowledgeGraph(
+    repositoryId: string
+  ): Promise<RepositoryKnowledgeGraphResponse> {
+    const response = await api.get<ApiResponse<RepositoryKnowledgeGraphResponse>>(
+      `/repositories/${repositoryId}/knowledge-graph`
+    );
+
+    return response.data.data;
+  },
+
+  async getRepositoryIntelligenceAudit(
+    repositoryId: string
+  ): Promise<RepositoryIntelligenceAuditResponse> {
+    const response = await api.get<ApiResponse<RepositoryIntelligenceAuditResponse>>(
+      `/repositories/${repositoryId}/intelligence-audit`
+    );
+
+    return response.data.data;
+  },
+
+  async getRepositoryRecommendations(
+    repositoryId: string
+  ): Promise<RepositoryRecommendationsResponse> {
+    const response = await api.get<ApiResponse<RepositoryRecommendationsResponse>>(
+      `/repositories/${repositoryId}/recommendations`
     );
 
     return response.data.data;

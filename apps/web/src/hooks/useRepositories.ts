@@ -163,3 +163,30 @@ export function useIntelligenceSearch(params: IntelligenceSearchParams) {
     retry: false,
   });
 }
+
+export function useRepositoryKnowledgeGraph(repositoryId: string) {
+  return useQuery({
+    queryKey: QUERY_KEYS.REPOSITORY_KNOWLEDGE_GRAPH(repositoryId),
+    queryFn: () => repositoryService.getRepositoryKnowledgeGraph(repositoryId),
+    enabled: Boolean(repositoryId),
+    retry: false,
+  });
+}
+
+export function useRepositoryIntelligenceAudit(repositoryId: string) {
+  return useQuery({
+    queryKey: QUERY_KEYS.REPOSITORY_INTELLIGENCE_AUDIT(repositoryId),
+    queryFn: () => repositoryService.getRepositoryIntelligenceAudit(repositoryId),
+    enabled: Boolean(repositoryId),
+    retry: false,
+  });
+}
+
+export function useRepositoryRecommendations(repositoryId: string) {
+  return useQuery({
+    queryKey: QUERY_KEYS.REPOSITORY_RECOMMENDATIONS(repositoryId),
+    queryFn: () => repositoryService.getRepositoryRecommendations(repositoryId),
+    enabled: Boolean(repositoryId),
+    retry: false,
+  });
+}

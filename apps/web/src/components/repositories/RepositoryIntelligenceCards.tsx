@@ -8,6 +8,8 @@ import {
     Layers3,
     Network,
     Radar,
+    ShieldCheck,
+    Lightbulb,
 } from "lucide-react";
 
 interface RepositoryIntelligenceCardsProps {
@@ -49,6 +51,27 @@ const cards = [
             "Review chronological engineering activity, events, and repository evolution history.",
         hrefSuffix: "timeline",
         icon: GitBranch,
+    },
+    {
+        title: "Knowledge Graph",
+        description:
+            "Explore relationships between technologies, architecture domains, and repository types.",
+        hrefSuffix: "knowledge-graph",
+        icon: Network,
+    },
+    {
+        title: "Intelligence Audit",
+        description:
+            "Review confidence, warnings, strengths, improvement areas, and signals used.",
+        hrefSuffix: "audit",
+        icon: ShieldCheck,
+    },
+    {
+        title: "Recommendations",
+        description:
+            "View active, resolved, and dismissed engineering recommendations.",
+        hrefSuffix: "recommendations",
+        icon: Lightbulb,
     },
 ];
 
