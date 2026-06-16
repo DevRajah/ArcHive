@@ -1,4 +1,4 @@
-import { FastifyInstance } from "fastify";
+import { FastifyInstance, FastifyReply } from "fastify";
 import axios from "axios";
 import { prisma } from "@archive/database";
 
@@ -16,11 +16,26 @@ type GitHubUserResponse = {
 };
 
 const getFrontendUrl = () => {
-  return process.env.FRONTEND_URL || "http://localhost:3000";
+  return (
+    process.env.FRONTEND_URL ||
+    process.env.CLIENT_URL ||
+    process.env.WEB_URL ||
+    "http://localhost:3000"
+  ).replace(/\/$/, "");
 };
 
-const redirectToOAuthFailure = (reply: any) => {
-  return reply.redirect(`${getFrontendUrl()}/connect-github?error=github_oauth_failed`);
+const buildFrontendUrl = (path: string) => {
+  return new URL(path, getFrontendUrl());
+};
+
+const redirectToOAuthFailure = (reply: FastifyReply) => {
+  const failureUrl = buildFrontendUrl("/connect-github");
+
+  failureUrl.searchParams.set("error", "github_oauth_failed");
+
+  console.log("GitHub OAuth failure redirect URL:", failureUrl.toString());
+
+  return reply.redirect(failureUrl.toString());
 };
 
 export const githubOAuthRoutes = async (app: FastifyInstance) => {
@@ -41,9 +56,12 @@ export const githubOAuthRoutes = async (app: FastifyInstance) => {
       scope: "read:user repo admin:repo_hook",
     });
 
-    return reply.redirect(
-      `https://github.com/login/oauth/authorize?${params.toString()}`
-    );
+    const githubAuthorizationUrl = `https://github.com/login/oauth/authorize?${params.toString()}`;
+
+    console.log("GitHub OAuth start URL:", githubAuthorizationUrl);
+    console.log("GitHub OAuth callback URL:", callbackUrl);
+
+    return reply.redirect(githubAuthorizationUrl);
   });
 
   app.get("/callback", async (request, reply) => {
@@ -64,6 +82,13 @@ export const githubOAuthRoutes = async (app: FastifyInstance) => {
       if (!clientId || !clientSecret || !callbackUrl) {
         return redirectToOAuthFailure(reply);
       }
+
+      console.log("OAuth redirect env values:", {
+        FRONTEND_URL: process.env.FRONTEND_URL,
+        CLIENT_URL: process.env.CLIENT_URL,
+        WEB_URL: process.env.WEB_URL,
+        GITHUB_OAUTH_CALLBACK_URL: callbackUrl,
+      });
 
       // I exchange the temporary GitHub code for an access token on the backend
       // because the client secret must never be exposed in the frontend.
@@ -155,16 +180,22 @@ export const githubOAuthRoutes = async (app: FastifyInstance) => {
         });
       }
 
-      const encodedUsername = encodeURIComponent(user.username);
-      const encodedAvatarUrl = encodeURIComponent(user.avatarUrl || "");
+      const finalRedirectUrl = buildFrontendUrl("/github/callback");
 
-      return reply.redirect(
-        `${getFrontendUrl()}/github/callback?userId=${user.id}&username=${encodedUsername}&avatarUrl=${encodedAvatarUrl}`
+      finalRedirectUrl.searchParams.set("userId", user.id);
+      finalRedirectUrl.searchParams.set("username", user.username);
+      finalRedirectUrl.searchParams.set("avatarUrl", user.avatarUrl || "");
+
+      console.log(
+        "GitHub OAuth final frontend redirect URL:",
+        finalRedirectUrl.toString()
       );
+
+      return reply.redirect(finalRedirectUrl.toString());
     } catch (error) {
       request.log.error(error);
 
       return redirectToOAuthFailure(reply);
-    } 
+    }
   });
-}; 
+};

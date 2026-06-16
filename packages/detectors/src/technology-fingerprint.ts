@@ -592,27 +592,34 @@ export const detectTechnologyFingerprint = (
         );
     }
 
-    if (
+    const hasStrongDevtoolSignal =
         includesAny(combinedText, [
             "scaffold",
+            "scaffolding",
             "generator",
             "template",
             "codegen",
             "cli",
             "commander",
             "inquirer",
-            "boilerplate",
+            "boilerplate generator",
             "create-app",
-        ])
-    ) {
+            "create app",
+            "plugin",
+            "developer tooling",
+        ]) ||
+        (
+            includesAny(combinedText, ["template", "boilerplate"]) &&
+            includesAny(combinedText, ["generator", "scaffold", "cli", "codegen"])
+        )
+
+    if (hasStrongDevtoolSignal) {
         add(technologies, ["Developer Tooling"]);
         add(architectureDomains, ["DEVELOPER_INFRASTRUCTURE"]);
         add(engineeringSignals, ["CODE_GENERATION"]);
         add(repositoryTypes, ["DEVTOOL_PLATFORM"]);
 
-        addReasoningSignal(
-            "Detected CLI and scaffolding tooling patterns"
-        );
+        addReasoningSignal("Detected CLI and scaffolding tooling patterns");
     }
 
     if (
