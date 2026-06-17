@@ -143,31 +143,60 @@ export const detectTechnologyFingerprint = (
     if (
         includesAny(combinedText, [
             "tensorflow",
-            "torch",
             "pytorch",
+            "torch",
+            "scikit-learn",
             "sklearn",
-            "scikit",
-            "transformers",
-            "langchain",
-            "openai",
-            "llm",
-            "model",
-            "inference",
-            "notebook",
-            ".ipynb",
         ])
     ) {
-        add(technologies, ["AI / ML"]);
-        add(architectureDomains, ["AI_INFRASTRUCTURE"]);
-        add(engineeringSignals, ["MACHINE_LEARNING"]);
-        add(repositoryTypes, ["AI_ML_PROJECT"]);
-        addReasoningSignal(
-            "Detected AI and machine learning frameworks and patterns"
+        addEvidence(
+            "AI_ML_PROJECT",
+            "Detected machine learning framework dependency",
+            35
+        );
+    }
+
+    if (
+        includesAny(combinedText, [
+            "huggingface",
+            "transformers",
+            "langchain",
+            "llamaindex",
+        ])
+    ) {
+        addEvidence(
+            "AI_ML_PROJECT",
+            "Detected AI framework or LLM application tooling",
+            35
+        );
+    }
+
+    if (
+        includesAny(combinedText, [
+            "model inference",
+            "inference pipeline",
+            "train model",
+            "model training",
+            "ml pipeline",
+        ])
+    ) {
+        addEvidence(
+            "AI_ML_PROJECT",
+            "Detected model training or inference pipeline evidence",
+            30
+        );
+    }
+
+    if (filesChanged.some((file) => file.toLowerCase().endsWith(".ipynb"))) {
+        addEvidence(
+            "AI_ML_PROJECT",
+            "Detected notebook-based AI/ML workflow",
+            20
         );
     }
 
     // Data engineering
-    const hasStrongDataEngineeringSignal =
+    if (
         includesAny(combinedText, [
             "airflow",
             "dag",
@@ -175,27 +204,44 @@ export const detectTechnologyFingerprint = (
             "spark",
             "pyspark",
             "kafka",
+        ])
+    ) {
+        addEvidence(
+            "DATA_ENGINEERING_PROJECT",
+            "Detected data engineering framework or workflow orchestration dependency",
+            35
+        );
+    }
+
+    if (
+        includesAny(combinedText, [
             "etl",
             "elt",
             "data warehouse",
             "snowflake",
             "bigquery",
             "data lake",
-            "batch pipeline",
-            "stream processing",
-        ]);
-
-    if (hasStrongDataEngineeringSignal) {
-        add(technologies, ["Data Engineering"]);
-        add(architectureDomains, ["DATA_PIPELINES"]);
-        add(engineeringSignals, ["DATA_WORKFLOW"]);
-        add(repositoryTypes, ["DATA_ENGINEERING_PROJECT"]);
-
-        addReasoningSignal(
-            "Detected strong data pipeline, warehouse, ETL, or workflow orchestration evidence"
+        ])
+    ) {
+        addEvidence(
+            "DATA_ENGINEERING_PROJECT",
+            "Detected ETL, warehouse, or data lake architecture evidence",
+            30
         );
     }
 
+    if (
+        includesAny(combinedText, [
+            "batch pipeline",
+            "stream processing",
+        ])
+    ) {
+        addEvidence(
+            "DATA_ENGINEERING_PROJECT",
+            "Detected batch or stream processing pipeline evidence",
+            25
+        );
+    }
 
     // Go
     const hasGoProjectSignal =
@@ -276,7 +322,7 @@ export const detectTechnologyFingerprint = (
         );
     }
 
-    // Mobile
+    // MOBILE_APPLICATION
     const hasStrongFlutterSignal =
         filesChanged.some((file) => {
             const normalizedFile = file.toLowerCase();
@@ -623,30 +669,50 @@ export const detectTechnologyFingerprint = (
             "Detected observability terminology including monitoring/metrics/telemetry"
         );
     }
-    const hasStrongSecuritySignal =
+
+    //Security Platform
+    if (
         includesAny(combinedText, [
             "threat detection",
             "fraud detection",
-            "risk scoring",
             "anomaly detection",
+            "intrusion detection",
+        ])
+    ) {
+        addEvidence(
+            "SECURITY_PLATFORM",
+            "Detected threat, fraud, anomaly, or intrusion detection evidence",
+            35
+        );
+    }
+
+    if (
+        includesAny(combinedText, [
             "vulnerability scanning",
             "malware",
-            "intrusion detection",
             "security event",
             "security audit",
+        ])
+    ) {
+        addEvidence(
+            "SECURITY_PLATFORM",
+            "Detected security scanning, malware, audit, or security event evidence",
+            30
+        );
+    }
+
+    if (
+        includesAny(combinedText, [
+            "risk scoring",
             "access policy",
             "rbac policy",
             "permission policy",
-        ]);
-
-    if (hasStrongSecuritySignal) {
-        add(technologies, ["Security Systems"]);
-        add(architectureDomains, ["SECURITY_SYSTEMS"]);
-        add(engineeringSignals, ["THREAT_DETECTION"]);
-        add(repositoryTypes, ["SECURITY_PLATFORM"]);
-
-        addReasoningSignal(
-            "Detected strong security, risk, threat, or anomaly detection evidence"
+        ])
+    ) {
+        addEvidence(
+            "SECURITY_PLATFORM",
+            "Detected risk scoring or security policy evidence",
+            25
         );
     }
 
@@ -670,6 +736,7 @@ export const detectTechnologyFingerprint = (
         );
     }
 
+    //Dev Tool Platform
     const hasStrongDevtoolSignal =
         includesAny(combinedText, [
             "scaffold",
@@ -722,6 +789,8 @@ export const detectTechnologyFingerprint = (
             "Detected developer platform and infrastructure patterns"
         );
     }
+    
+    // Transport Platform
     const hasStrongTransportSignal =
         includesAny(combinedText, [
             "transit",
