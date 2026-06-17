@@ -1,9 +1,11 @@
+import { calculateEvidenceResults, EvidenceItem, EvidenceResult } from "./evidence-engine";
 export type TechnologyFingerprintResult = {
     technologies: string[];
     architectureDomains: string[];
     engineeringSignals: string[];
     repositoryTypes: string[];
     reasoningSignals: string[];
+    evidenceResults: EvidenceResult[];
 };
 
 const includesAny = (value: string, keywords: string[]) => {
@@ -22,6 +24,20 @@ const addReasoningSignal = (signal: string) => {
     if (!reasoningSignals.includes(signal)) {
         reasoningSignals.push(signal);
     }
+};
+
+const evidenceItems: EvidenceItem[] = [];
+
+const addEvidence = (
+    repositoryType: string,
+    label: string,
+    weight: number
+) => {
+    evidenceItems.push({
+        repositoryType,
+        label,
+        weight,
+    });
 };
 
 export const detectTechnologyFingerprint = (
@@ -503,29 +519,70 @@ export const detectTechnologyFingerprint = (
         );
     }
 
-    const fintechSignals = [
-        includesAny(combinedText, ["ledger", "double-entry"]),
-        includesAny(combinedText, ["reconciliation", "reconcile"]),
-        includesAny(combinedText, ["settlement", "settlements"]),
-        includesAny(combinedText, ["payment webhook", "webhook signature"]),
-        includesAny(combinedText, ["idempotency", "idempotency key"]),
-        includesAny(combinedText, ["transaction processing", "financial transaction"]),
-        includesAny(combinedText, ["audit trail", "audit ledger"]),
-    ];
-
-    const fintechSignalCount = fintechSignals.filter(Boolean).length;
-
-    if (fintechSignalCount >= 2) {
-        add(technologies, ["Financial Infrastructure"]);
-        add(architectureDomains, ["FINANCIAL_SYSTEMS"]);
-        add(engineeringSignals, ["FINANCIAL_PROCESSING"]);
-        add(repositoryTypes, ["FINTECH_PLATFORM"]);
-
-        addReasoningSignal(
-            `Detected ${fintechSignalCount} strong financial infrastructure signal(s)`
+    // Fintech
+    if (includesAny(combinedText, ["ledger", "double-entry"])) {
+        addEvidence(
+            "FINTECH_PLATFORM",
+            "Detected ledger or double-entry accounting terminology",
+            30
         );
     }
 
+    if (includesAny(combinedText, ["reconciliation", "reconcile"])) {
+        addEvidence(
+            "FINTECH_PLATFORM",
+            "Detected reconciliation workflow terminology",
+            30
+        );
+    }
+
+    if (includesAny(combinedText, ["settlement", "settlements"])) {
+        addEvidence(
+            "FINTECH_PLATFORM",
+            "Detected settlement workflow terminology",
+            25
+        );
+    }
+
+    if (includesAny(combinedText, ["payment webhook", "webhook signature"])) {
+        addEvidence(
+            "FINTECH_PLATFORM",
+            "Detected payment webhook or webhook signature evidence",
+            25
+        );
+    }
+
+    if (includesAny(combinedText, ["idempotency", "idempotency key"])) {
+        addEvidence(
+            "FINTECH_PLATFORM",
+            "Detected idempotency or payment safety evidence",
+            25
+        );
+    }
+
+    if (
+        includesAny(combinedText, [
+            "transaction processing",
+            "financial transaction",
+        ])
+    ) {
+        addEvidence(
+            "FINTECH_PLATFORM",
+            "Detected financial transaction processing",
+            20
+        );
+    }
+
+    if (includesAny(combinedText, ["audit trail", "audit ledger"])) {
+        addEvidence(
+            "FINTECH_PLATFORM",
+            "Detected financial audit trail",
+            20
+        );
+    }
+
+
+    // Observability platform
     const hasStrongObservabilitySignal =
         includesAny(combinedText, [
             "observability",
@@ -748,6 +805,22 @@ export const detectTechnologyFingerprint = (
         );
     }
 
+    const evidenceResults = calculateEvidenceResults(evidenceItems);
+
+    for (const result of evidenceResults) {
+        if (result.repositoryType === "FINTECH_PLATFORM") {
+            add(technologies, ["Financial Infrastructure"]);
+            add(architectureDomains, ["FINANCIAL_SYSTEMS"]);
+            add(engineeringSignals, ["FINANCIAL_PROCESSING"]);
+        }
+
+        add(repositoryTypes, [result.repositoryType]);
+
+        for (const evidence of result.evidence) {
+            addReasoningSignal(evidence);
+        }
+    }
+
 
 
     return {
@@ -755,6 +828,7 @@ export const detectTechnologyFingerprint = (
         architectureDomains: Array.from(architectureDomains),
         engineeringSignals: Array.from(engineeringSignals),
         repositoryTypes: Array.from(repositoryTypes),
-        reasoningSignals
+        reasoningSignals,
+        evidenceResults,
     };
 };
