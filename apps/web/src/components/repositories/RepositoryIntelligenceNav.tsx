@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   Activity,
   Brain,
+  ChevronDown,
   FileSearch,
   GitBranch,
   Layers3,
@@ -14,13 +15,20 @@ import {
   ShieldCheck,
 } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 
 interface RepositoryIntelligenceNavProps {
   repositoryId: string;
 }
 
-const items = [
+const primaryItems = [
   {
     label: "Overview",
     href: "",
@@ -37,14 +45,17 @@ const items = [
     icon: FileSearch,
   },
   {
-    label: "Capabilities",
-    href: "capabilities",
-    icon: Layers3,
-  },
-  {
     label: "Architecture",
     href: "architecture",
     icon: Network,
+  },
+];
+
+const moreItems = [
+  {
+    label: "Capabilities",
+    href: "capabilities",
+    icon: Layers3,
   },
   {
     label: "Evolution",
@@ -71,35 +82,46 @@ const items = [
     href: "knowledge-graph",
     icon: Network,
   },
+  {
+    label: "Related",
+    href: "related",
+    icon: GitBranch,
+  },
 ];
+
+function getHref(repositoryId: string, href: string) {
+  return href ? `/repositories/${repositoryId}/${href}` : `/repositories/${repositoryId}`;
+}
+
+function isItemActive(pathname: string, href: string) {
+  return href === "" ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
+}
 
 export function RepositoryIntelligenceNav({
   repositoryId,
 }: RepositoryIntelligenceNavProps) {
   const pathname = usePathname();
 
+  const moreIsActive = moreItems.some((item) => {
+    const href = getHref(repositoryId, item.href);
+    return pathname === href || pathname.startsWith(`${href}/`);
+  });
+
   return (
     <div className="rounded-xl border border-border bg-card p-3">
-      <div className="flex gap-2 overflow-x-auto">
-        {items.map((item) => {
+      <div className="flex flex-wrap items-center gap-2">
+        {primaryItems.map((item) => {
           const Icon = item.icon;
-
-          const href = item.href
-            ? `/repositories/${repositoryId}/${item.href}`
-            : `/repositories/${repositoryId}`;
-
-          const isActive =
-            item.href === ""
-              ? pathname === href
-              : pathname === href || pathname.startsWith(`${href}/`);
+          const href = getHref(repositoryId, item.href);
+          const active = isItemActive(pathname, href);
 
           return (
             <Link
               key={item.href || "overview"}
               href={href}
               className={cn(
-                "flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted-foreground transition hover:bg-accent hover:text-foreground",
-                isActive && "bg-primary/10 text-primary"
+                "flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted-foreground transition hover:bg-accent hover:text-foreground",
+                active && "bg-primary/10 text-primary"
               )}
             >
               <Icon className="h-4 w-4" />
@@ -107,6 +129,45 @@ export function RepositoryIntelligenceNav({
             </Link>
           );
         })}
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant={moreIsActive ? "secondary" : "ghost"}
+              size="sm"
+              className={cn(
+                "gap-2",
+                moreIsActive && "bg-primary/10 text-primary hover:bg-primary/10"
+              )}
+            >
+              More
+              <ChevronDown className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+
+          <DropdownMenuContent align="end" className="w-56">
+            {moreItems.map((item) => {
+              const Icon = item.icon;
+              const href = getHref(repositoryId, item.href);
+              const active = pathname === href || pathname.startsWith(`${href}/`);
+
+              return (
+                <DropdownMenuItem key={item.href} asChild>
+                  <Link
+                    href={href}
+                    className={cn(
+                      "flex cursor-pointer items-center gap-2",
+                      active && "text-primary"
+                    )}
+                  >
+                    <Icon className="h-4 w-4" />
+                    {item.label}
+                  </Link>
+                </DropdownMenuItem>
+              );
+            })}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   );
