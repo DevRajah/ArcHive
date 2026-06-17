@@ -62,78 +62,76 @@ export function RepositoryIntelligenceTimeline({
         </div>
       </div>
 
-      <div className="mt-6 space-y-5">
-        {data.phases.map((phase) => (
-          <div
-            key={`${phase.domain}-${phase.phaseType}-${phase.startedAt}`}
-            className="rounded-xl border border-border bg-background p-5"
-          >
-            <div className="flex flex-col justify-between gap-3 md:flex-row md:items-start">
-              <div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="font-semibold">{phase.title}</h3>
+      <div className="mt-6 grid gap-5 xl:grid-cols-2">        {data.phases.map((phase) => (
+        <div
+          key={`${phase.domain}-${phase.phaseType}-${phase.startedAt}`}
+          className="rounded-xl border border-border bg-background p-5"
+        >
+          <div className="flex flex-col justify-between gap-3 md:flex-row md:items-start">
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="font-semibold">{phase.title}</h3>
 
-                  <Badge variant="secondary">
-                    {formatFilterLabel(phase.domain)}
-                  </Badge>
-                </div>
-
-                {phase.description && (
-                  <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                    {phase.description}
-                  </p>
-                )}
+                <Badge variant="secondary">
+                  {formatFilterLabel(phase.domain)}
+                </Badge>
               </div>
 
-              <Badge variant="outline">
-                {phase.totalChanges} changes
-              </Badge>
+              {phase.description && (
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                  {phase.description}
+                </p>
+              )}
             </div>
 
-            <div className="mt-4 flex flex-wrap gap-2">
-              {phase.technologies?.map((technology) => (
-                <Badge key={technology} variant="outline">
-                  {technology}
-                </Badge>
+            <Badge variant="outline">
+              {phase.totalChanges} changes
+            </Badge>
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            {phase.technologies?.map((technology) => (
+              <Badge key={technology} variant="outline">
+                {technology}
+              </Badge>
+            ))}
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-4 text-xs text-muted-foreground">
+            <span className="flex items-center gap-1">
+              <Clock3 className="h-3.5 w-3.5" />
+              Started: {formatDate(phase.startedAt)}
+            </span>
+
+            <span className="flex items-center gap-1">
+              <Network className="h-3.5 w-3.5" />
+              Latest: {formatDate(phase.latestActivityAt)}
+            </span>
+          </div>
+
+          {phase.highlights && phase.highlights.length > 0 && (
+            <div className="mt-5 space-y-3">
+              {phase.highlights.slice(0, 2).map((highlight, index) => (
+                <div
+                  key={`${highlight.createdAt}-${index}`}
+                  className="rounded-lg border border-border bg-card p-3"
+                >
+                  {highlight.summary && (
+                    <p className="text-xs leading-5 text-muted-foreground">                      {highlight.summary}
+                    </p>
+                  )}
+
+                  {highlight.evolutionSummary && (
+                    <p className="mt-2 text-xs leading-5 text-muted-foreground">
+                      {highlight.evolutionSummary}
+                    </p>
+                  )}
+                </div>
               ))}
             </div>
-
-            <div className="mt-4 flex flex-wrap gap-4 text-xs text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <Clock3 className="h-3.5 w-3.5" />
-                Started: {formatDate(phase.startedAt)}
-              </span>
-
-              <span className="flex items-center gap-1">
-                <Network className="h-3.5 w-3.5" />
-                Latest: {formatDate(phase.latestActivityAt)}
-              </span>
-            </div>
-
-            {phase.highlights && phase.highlights.length > 0 && (
-              <div className="mt-5 space-y-3">
-                {phase.highlights.slice(0, 3).map((highlight, index) => (
-                  <div
-                    key={`${highlight.createdAt}-${index}`}
-                    className="rounded-lg border border-border bg-card p-3"
-                  >
-                    {highlight.summary && (
-                      <p className="text-sm text-muted-foreground">
-                        {highlight.summary}
-                      </p>
-                    )}
-
-                    {highlight.evolutionSummary && (
-                      <p className="mt-2 text-xs leading-5 text-muted-foreground">
-                        {highlight.evolutionSummary}
-                      </p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        ))}
+          )}
+        </div>
+      ))}
       </div>
     </div>
   );

@@ -33,7 +33,7 @@ import { RepositoryIntelligenceTimeline } from "@/components/repositories/Reposi
 import { RelatedEngineeringRepositories } from "@/components/repositories/RelatedEngineeringRepositories";
 import { RepositoryMarkdownReport } from "@/components/repositories/RepositoryMarkdownReport";
 import { EngineeringEvidenceCard } from "@/components/repositories/EngineeringEvidenceCard";
-
+import { PageContent } from "@/components/layout/PageContent";
 
 function getDisplayValue(item: unknown) {
     if (typeof item === "string") return item;
@@ -156,7 +156,7 @@ export default function RepositoryIntelligencePage() {
 
     return (
         <AppShell>
-            <div className="space-y-6">
+            <PageContent>
                 <Button asChild variant="ghost" className="px-0">
                     <Link href={`/repositories/${repoId}`}>
                         <ArrowLeft className="mr-2 h-4 w-4" />
@@ -500,7 +500,7 @@ export default function RepositoryIntelligencePage() {
                         </div>
                     </>
                 )}
-            </div>
+            </PageContent>
         </AppShell>
     );
 }

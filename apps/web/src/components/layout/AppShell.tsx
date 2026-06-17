@@ -28,7 +28,7 @@ export function AppShell({ children }: AppShellProps) {
         <div className="flex flex-1 flex-col">
           <Topbar />
 
-          <main className="flex-1 p-6">{children}</main>
+          <main className="flex-1 overflow-x-hidden">{children}</main>
         </div>
       </div>
     </RequireSession>

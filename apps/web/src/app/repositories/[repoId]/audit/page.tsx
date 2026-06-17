@@ -11,22 +11,29 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useRepositoryIntelligenceAudit } from "@/hooks/useRepositories";
 import { formatFilterLabel } from "@/lib/filters";
 import { RepositoryIntelligenceNav } from "@/components/repositories/RepositoryIntelligenceNav";
+import { PageContent } from "@/components/layout/PageContent";
 
 function normalizeList(value: unknown): string[] {
     if (Array.isArray(value)) {
-        return value.map((item) =>
-            typeof item === "string" ? item : JSON.stringify(item)
-        );
+        return value.flatMap((item) => normalizeList(item));
     }
 
     if (typeof value === "string") {
+        try {
+            const parsed = JSON.parse(value);
+
+            if (Array.isArray(parsed)) {
+                return parsed.map((item) => String(item));
+            }
+        } catch {
+            return [value];
+        }
+
         return [value];
     }
 
     if (value && typeof value === "object") {
-        return Object.values(value).map((item) =>
-            typeof item === "string" ? item : JSON.stringify(item)
-        );
+        return Object.values(value).flatMap((item) => normalizeList(item));
     }
 
     return [];
@@ -78,7 +85,7 @@ export default function RepositoryAuditPage() {
 
     return (
         <AppShell>
-            <div className="space-y-6">
+            <PageContent>
                 <Button asChild variant="ghost" className="px-0">
                     <Link href={`/repositories/${repoId}`}>
                         <ArrowLeft className="mr-2 h-4 w-4" />
@@ -142,7 +149,7 @@ export default function RepositoryAuditPage() {
                         </div>
                     </>
                 )}
-            </div>
+            </PageContent>
         </AppShell>
     );
 }

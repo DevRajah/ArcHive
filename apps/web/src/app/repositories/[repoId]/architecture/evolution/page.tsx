@@ -19,6 +19,7 @@ import { useRepositoryArchitectureEvolution } from "@/hooks/useArchitecture";
 import { useRepositoryLiveStatus } from "@/hooks/useRepositoryLiveStatus";
 import { formatFilterLabel, matchesSearch } from "@/lib/filters";
 import { RepositoryIntelligenceNav } from "@/components/repositories/RepositoryIntelligenceNav";
+import { PageContent } from "@/components/layout/PageContent";
 
 export default function ArchitectureEvolutionPage() {
   const params = useParams<{ repoId: string }>();
@@ -91,7 +92,7 @@ export default function ArchitectureEvolutionPage() {
 
   return (
     <AppShell>
-      <div className="space-y-6">
+      <PageContent>
         <Button asChild variant="ghost" className="px-0">
           <Link href={`/repositories/${repoId}/architecture`}>
             <ArrowLeft className="mr-2 h-4 w-4" />
@@ -227,7 +228,7 @@ export default function ArchitectureEvolutionPage() {
             )}
           </>
         )}
-      </div>
+      </PageContent>
     </AppShell>
   );
 }
