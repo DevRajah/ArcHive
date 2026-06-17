@@ -22,6 +22,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useRepositoryTimeline } from "@/hooks/useTimeline";
 import { useRepositoryLiveStatus } from "@/hooks/useRepositoryLiveStatus";
 import { matchesSearch, formatFilterLabel } from "@/lib/filters";
+import { RepositoryIntelligenceNav } from "@/components/repositories/RepositoryIntelligenceNav";
 
 function formatEventType(eventType?: string) {
   if (!eventType || eventType === "UNKNOWN") return "Engineering Event";
@@ -141,6 +142,7 @@ export default function TimelinePage() {
             </Badge>
           </div>
         </div>
+        <RepositoryIntelligenceNav repositoryId={repoId} />
 
         {!isLoading && !isError && timelineEntries && timelineEntries.length > 0 && (
           <ActivityFilters

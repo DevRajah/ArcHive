@@ -21,7 +21,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useRepositoryIntelligenceReport } from "@/hooks/useRepositories";
 import { useRepositoryLiveStatus } from "@/hooks/useRepositoryLiveStatus";
 import { formatFilterLabel } from "@/lib/filters";
-
+import { RepositoryIntelligenceNav } from "@/components/repositories/RepositoryIntelligenceNav";
 
 import {
     useRelatedRepositories,
@@ -32,6 +32,7 @@ import {
 import { RepositoryIntelligenceTimeline } from "@/components/repositories/RepositoryIntelligenceTimeline";
 import { RelatedEngineeringRepositories } from "@/components/repositories/RelatedEngineeringRepositories";
 import { RepositoryMarkdownReport } from "@/components/repositories/RepositoryMarkdownReport";
+import { EngineeringEvidenceCard } from "@/components/repositories/EngineeringEvidenceCard";
 
 
 function getDisplayValue(item: unknown) {
@@ -109,10 +110,10 @@ function InsightList({
                     <li
                         key={`${value}-${index}`}
                         className={`rounded-lg border p-3 ${tone === "warning"
-                                ? "border-yellow-500/30 bg-yellow-500/10"
-                                : tone === "success"
-                                    ? "border-emerald-500/30 bg-emerald-500/10"
-                                    : "border-border bg-background"
+                            ? "border-yellow-500/30 bg-yellow-500/10"
+                            : tone === "success"
+                                ? "border-emerald-500/30 bg-emerald-500/10"
+                                : "border-border bg-background"
                             }`}
                     >
                         {value}
@@ -192,6 +193,8 @@ export default function RepositoryIntelligencePage() {
                     </div>
                 </div>
 
+                <RepositoryIntelligenceNav repositoryId={repoId} />
+
                 {isLoading && (
                     <div className="space-y-6">
                         <Skeleton className="h-56 rounded-xl" />
@@ -267,6 +270,13 @@ export default function RepositoryIntelligencePage() {
                                 </div>
                             </div>
                         </div>
+
+                        <EngineeringEvidenceCard
+                            domains={data.intelligence?.domains}
+                            technologies={data.intelligence?.technologies}
+                            repositoryTypes={data.intelligence?.repositoryTypes}
+                            reasoningSignals={data.intelligence?.reasoningSignals}
+                        />
 
                         <div className="grid gap-6 xl:grid-cols-[1fr_0.9fr]">
                             <div className="rounded-xl border border-border bg-card p-6">

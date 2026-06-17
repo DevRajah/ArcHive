@@ -23,6 +23,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useRepositoryArchitecture } from "@/hooks/useArchitecture";
 import { useRepositoryLiveStatus } from "@/hooks/useRepositoryLiveStatus";
 import { formatFilterLabel, matchesSearch } from "@/lib/filters";
+import { RepositoryIntelligenceNav } from "@/components/repositories/RepositoryIntelligenceNav";
 
 function formatLabel(value?: string | null) {
   if (!value || value === "UNKNOWN") return "Architecture Change";
@@ -164,6 +165,8 @@ export default function ArchitecturePage() {
               <Badge variant="secondary">{totalChanges} changes</Badge>
             </div>          </div>
         </div>
+
+        <RepositoryIntelligenceNav repositoryId={repoId} />
 
         {!isLoading &&
           !isError &&

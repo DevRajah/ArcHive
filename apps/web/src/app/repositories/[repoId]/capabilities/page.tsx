@@ -13,6 +13,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useRepositoryCapabilities } from "@/hooks/useRepositories";
 import { useRepositoryOverview } from "@/hooks/useRepositoryOverview";
 import { useRepositoryLiveStatus } from "@/hooks/useRepositoryLiveStatus";
+import { RepositoryCrossLinks } from "@/components/repositories/RepositoryCrossLinks";
+import { RepositoryIntelligenceNav } from "@/components/repositories/RepositoryIntelligenceNav";
 
 export default function RepositoryCapabilitiesPage() {
   const params = useParams<{ repoId: string }>();
@@ -70,6 +72,8 @@ export default function RepositoryCapabilitiesPage() {
           </div>
         </div>
 
+        <RepositoryIntelligenceNav repositoryId={repoId} />
+
         {isLoading && (
           <div className="space-y-6">
             <Skeleton className="h-72 rounded-xl" />
@@ -97,6 +101,27 @@ export default function RepositoryCapabilitiesPage() {
             isLoading={isLoading}
           />
         )}
+
+        <RepositoryCrossLinks
+          title="Related Intelligence"
+          links={[
+            {
+              label: "Architecture Evolution",
+              description: "Connect capabilities to architecture changes and evolution lanes.",
+              href: `/repositories/${repoId}/architecture/evolution`,
+            },
+            {
+              label: "Knowledge Graph",
+              description: "View capability relationships as repository knowledge edges.",
+              href: `/repositories/${repoId}/knowledge-graph`,
+            },
+            {
+              label: "Recommendations",
+              description: "Review suggested engineering improvements.",
+              href: `/repositories/${repoId}/recommendations`,
+            },
+          ]}
+        />
       </div>
     </AppShell>
   );

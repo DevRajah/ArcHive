@@ -17,6 +17,8 @@ import {
 } from "@/hooks/useRepositories";
 import { useRepositoryOverview } from "@/hooks/useRepositoryOverview";
 import { useRepositoryLiveStatus } from "@/hooks/useRepositoryLiveStatus";
+import { RepositoryCrossLinks } from "@/components/repositories/RepositoryCrossLinks";
+import { RepositoryIntelligenceNav } from "@/components/repositories/RepositoryIntelligenceNav";
 
 export default function RepositoryNarrativePage() {
   const params = useParams<{ repoId: string }>();
@@ -79,6 +81,8 @@ export default function RepositoryNarrativePage() {
           </div>
         </div>
 
+        <RepositoryIntelligenceNav repositoryId={repoId} />
+
         {(isNarrativeLoading || isPurposeLoading) && (
           <div className="space-y-6">
             <Skeleton className="h-52 rounded-xl" />
@@ -110,6 +114,26 @@ export default function RepositoryNarrativePage() {
             <RepositoryNarrative
               data={narrative}
               isLoading={isNarrativeLoading}
+            />
+
+            <RepositoryCrossLinks
+              links={[
+                {
+                  label: "Capability Intelligence",
+                  description: "Inspect maturity, complexity, technologies, and detected repository types.",
+                  href: `/repositories/${repoId}/capabilities`,
+                },
+                {
+                  label: "Architecture Evolution",
+                  description: "See how architecture domains evolved over time.",
+                  href: `/repositories/${repoId}/architecture/evolution`,
+                },
+                {
+                  label: "Knowledge Graph",
+                  description: "Explore relationships between technologies and architecture domains.",
+                  href: `/repositories/${repoId}/knowledge-graph`,
+                },
+              ]}
             />
           </>
         )}
