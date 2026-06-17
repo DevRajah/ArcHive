@@ -1,7 +1,4 @@
-import {
-  EvidenceItem,
-  EvidenceResult,
-} from "./evidence-types";
+import { EvidenceItem, EvidenceResult } from "./evidence-types";
 import { RepositoryType } from "../constants";
 import { getEvidenceThreshold } from "./evidence-thresholds";
 
@@ -18,8 +15,8 @@ export const calculateEvidenceResults = (
 
   return Array.from(grouped.entries())
     .map(([repositoryType, items]) => {
-      const totalWeight = items.reduce((sum, item) => sum + item.weight, 0);
-      const confidence = Math.min(100, totalWeight);
+      const totalScore = items.reduce((sum, item) => sum + item.weight, 0);
+      const confidence = Math.min(100, totalScore);
 
       const evidence = Array.from(new Set(items.map((item) => item.label)));
 
@@ -34,12 +31,14 @@ export const calculateEvidenceResults = (
       return {
         repositoryType,
         confidence,
+        totalScore,
         evidence,
         strongestEvidence,
       };
     })
     .filter(
-      (result) => result.confidence >= getEvidenceThreshold(result.repositoryType)
+      (result) =>
+        result.totalScore >= getEvidenceThreshold(result.repositoryType)
     )
-    .sort((a, b) => b.confidence - a.confidence);
+    .sort((a, b) => b.totalScore - a.totalScore);
 };

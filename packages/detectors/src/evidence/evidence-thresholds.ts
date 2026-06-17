@@ -1,5 +1,5 @@
-import { RepositoryType } from "./evidence-types";
-//import { RepositoryType } from "../constants";
+//import { RepositoryType } from "./evidence-types";
+import { RepositoryType } from "../constants";
 
 export const defaultEvidenceThreshold = 60;
 
@@ -13,7 +13,7 @@ export const evidenceThresholds: Partial<Record<RepositoryType, number>> = {
   DATA_ENGINEERING_PROJECT: 65,
   MOBILE_APPLICATION: 60,
   SMART_TRANSPORT_PLATFORM: 65,
-  INFRASTRUCTURE_REPOSITORY: 60,
+  INFRASTRUCTURE_PLATFORM: 60,
   DESIGN_SYSTEM: 60,
   GO_SERVICE: 55,
   RUST_SERVICE: 55,

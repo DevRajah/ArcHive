@@ -26,15 +26,23 @@ import {
 } from "./evidence";
 
 import {
-  ArchitectureDomains,
-  EngineeringSignals,
-  RepositoryTypes,
-  Technologies,
+    ArchitectureDomains,
+    EngineeringSignals,
+    RepositoryTypes,
+    RepositoryType,
+    Technologies,
 } from "./constants";
 
 import { detectEngineeringCapabilities } from "./capabilities";
-import { buildRepositoryDNA,
-    RepositoryDNA } from "./dna"
+import {
+    buildRepositoryDNA,
+    RepositoryDNA
+} from "./dna"
+
+import {
+    inferRepositoryPersona,
+    RepositoryPersona,
+} from "./persona";
 
 export type TechnologyFingerprintResult = {
     technologies: string[];
@@ -45,6 +53,10 @@ export type TechnologyFingerprintResult = {
     evidenceResults: EvidenceResult[];
     capabilities: ReturnType<typeof detectEngineeringCapabilities>;
     repositoryDNA: RepositoryDNA
+    repositoryPersona: RepositoryPersona;
+    //repositoryIdentity: RepositoryIdentity;
+
+    //rankedEvidence: RankedEvidence[];
 };
 
 const includesAny = (value: string, keywords: string[]) => {
@@ -560,155 +572,193 @@ export const detectTechnologyFingerprint = (
 
     const evidenceResults = calculateEvidenceResults(evidenceContext.evidenceItems);
 
+    // const {
+    //     repositoryIdentity,
+    //     rankedEvidence,
+    // } = rankRepositoryEvidence(
+    //     calculateEvidenceResults(evidenceContext.evidenceItems)
+    // );
+
     for (const result of evidenceResults) {
         switch (result.repositoryType) {
-            case "FINTECH_PLATFORM":
-                add(technologies, ["Financial Infrastructure"]);
-                add(architectureDomains, ["FINANCIAL_SYSTEMS"]);
-                add(engineeringSignals, ["FINANCIAL_PROCESSING"]);
+            case RepositoryTypes.FINTECH_PLATFORM:
+                add(technologies, [Technologies.FINANCIAL_INFRASTRUCTURE]);
+                add(architectureDomains, [ArchitectureDomains.FINANCIAL_SYSTEMS]);
+                add(engineeringSignals, [EngineeringSignals.FINANCIAL_PROCESSING]);
                 break;
 
-            case "DEVTOOL_PLATFORM":
-                add(technologies, ["Developer Tooling"]);
-                add(architectureDomains, ["DEVELOPER_INFRASTRUCTURE"]);
-                add(engineeringSignals, ["CODE_GENERATION"]);
+            case RepositoryTypes.DEVTOOL_PLATFORM:
+                add(technologies, [Technologies.DEVELOPER_TOOLING]);
+                add(architectureDomains, [ArchitectureDomains.DEVELOPER_INFRASTRUCTURE]);
+                add(engineeringSignals, [EngineeringSignals.CODE_GENERATION]);
                 break;
 
-            case "DEVELOPER_PLATFORM":
-                add(technologies, ["Developer Infrastructure"]);
-                add(architectureDomains, ["DEVELOPER_INFRASTRUCTURE"]);
-                add(engineeringSignals, ["PLATFORM_ENGINEERING"]);
+            case RepositoryTypes.DEVELOPER_PLATFORM:
+                add(technologies, [Technologies.DEVELOPER_INFRASTRUCTURE]);
+                add(architectureDomains, [ArchitectureDomains.DEVELOPER_INFRASTRUCTURE]);
+                add(engineeringSignals, [EngineeringSignals.PLATFORM_ENGINEERING]);
                 break;
 
-            case "OBSERVABILITY_PLATFORM":
-                add(technologies, ["Observability"]);
-                add(architectureDomains, ["OBSERVABILITY_SYSTEMS"]);
-                add(engineeringSignals, ["SYSTEM_MONITORING"]);
+            case RepositoryTypes.OBSERVABILITY_PLATFORM:
+                add(technologies, [Technologies.OBSERVABILITY]);
+                add(architectureDomains, [ArchitectureDomains.OBSERVABILITY_SYSTEMS]);
+                add(engineeringSignals, [EngineeringSignals.SYSTEM_MONITORING]);
                 break;
 
-            case "AI_ML_PROJECT":
-                add(technologies, ["AI / ML"]);
-                add(architectureDomains, ["AI_INFRASTRUCTURE"]);
-                add(engineeringSignals, ["MACHINE_LEARNING"]);
+            case RepositoryTypes.SECURITY_PLATFORM:
+                add(technologies, [Technologies.SECURITY_SYSTEMS]);
+                add(architectureDomains, [ArchitectureDomains.SECURITY_SYSTEMS]);
+                add(engineeringSignals, [EngineeringSignals.THREAT_DETECTION]);
                 break;
 
-            case "SECURITY_PLATFORM":
-                add(technologies, ["Security Systems"]);
-                add(architectureDomains, ["SECURITY_SYSTEMS"]);
-                add(engineeringSignals, ["THREAT_DETECTION"]);
+            case RepositoryTypes.AI_ML_PROJECT:
+                add(technologies, [Technologies.AI_ML]);
+                add(architectureDomains, [ArchitectureDomains.AI_INFRASTRUCTURE]);
+                add(engineeringSignals, [EngineeringSignals.MACHINE_LEARNING]);
                 break;
 
-            case "MOBILE_APPLICATION":
-                add(technologies, ["Mobile Application"]);
-                add(architectureDomains, ["MOBILE_ARCHITECTURE"]);
-                add(engineeringSignals, ["MOBILE_ENGINEERING"]);
+            case RepositoryTypes.MOBILE_APPLICATION:
+                add(technologies, [Technologies.MOBILE_APPLICATION]);
+                add(architectureDomains, [ArchitectureDomains.MOBILE_ARCHITECTURE]);
+                add(engineeringSignals, [EngineeringSignals.MOBILE_ENGINEERING]);
                 break;
 
-            case "DATA_ENGINEERING_PROJECT":
-                add(technologies, ["Data Engineering"]);
-                add(architectureDomains, ["DATA_PIPELINES"]);
-                add(engineeringSignals, ["DATA_WORKFLOW"]);
-                break;
-            case "SECURITY_PLATFORM":
-                add(technologies, ["Security Systems"]);
-                add(architectureDomains, ["SECURITY_SYSTEMS"]);
-                add(engineeringSignals, ["THREAT_DETECTION"]);
+            case RepositoryTypes.DATA_ENGINEERING_PROJECT:
+                add(technologies, [Technologies.DATA_ENGINEERING]);
+                add(architectureDomains, [ArchitectureDomains.DATA_PIPELINES]);
+                add(engineeringSignals, [EngineeringSignals.DATA_WORKFLOW]);
                 break;
 
-            case "AI_ML_PROJECT":
-                add(technologies, ["AI / ML"]);
-                add(architectureDomains, ["AI_INFRASTRUCTURE"]);
-                add(engineeringSignals, ["MACHINE_LEARNING"]);
+            case RepositoryTypes.SMART_TRANSPORT_PLATFORM:
+                add(technologies, [Technologies.TRANSPORT_SYSTEMS]);
+                add(architectureDomains, [ArchitectureDomains.MOBILITY_SYSTEMS]);
+                add(engineeringSignals, [EngineeringSignals.ROUTE_OPTIMIZATION]);
                 break;
 
-            case "MOBILE_APPLICATION":
-                add(technologies, ["Mobile Application"]);
-                add(architectureDomains, ["MOBILE_ARCHITECTURE"]);
-                add(engineeringSignals, ["MOBILE_ENGINEERING"]);
+            case RepositoryTypes.BACKEND_SERVICE:
+                add(technologies, [Technologies.BACKEND_SERVICES]);
+                add(architectureDomains, [ArchitectureDomains.SERVICE_ARCHITECTURE]);
+                add(
+                    engineeringSignals,
+                    [EngineeringSignals.BACKEND_APPLICATION_DEVELOPMENT]
+                );
                 break;
 
-            case "SMART_TRANSPORT_PLATFORM":
-                add(technologies, ["Transport Systems"]);
-                add(architectureDomains, ["MOBILITY_SYSTEMS"]);
-                add(engineeringSignals, ["ROUTE_OPTIMIZATION"]);
+            case RepositoryTypes.FRONTEND_APPLICATION:
+                add(technologies, [Technologies.FRONTEND_ENGINEERING]);
+                add(architectureDomains, [ArchitectureDomains.FRONTEND_ARCHITECTURE]);
+                add(
+                    engineeringSignals,
+                    [EngineeringSignals.USER_INTERFACE_ENGINEERING]
+                );
                 break;
 
-            case "DATA_ENGINEERING_PROJECT":
-                add(technologies, ["Data Engineering"]);
-                add(architectureDomains, ["DATA_PIPELINES"]);
-                add(engineeringSignals, ["DATA_WORKFLOW"]);
+            case RepositoryTypes.DOCUMENTATION_HEAVY_REPOSITORY:
+                add(technologies, [Technologies.TECHNICAL_DOCUMENTATION]);
+                add(architectureDomains, [ArchitectureDomains.KNOWLEDGE_MANAGEMENT]);
+                add(
+                    engineeringSignals,
+                    [EngineeringSignals.DOCUMENTATION_ENGINEERING]
+                );
                 break;
 
-            case "BACKEND_SERVICE":
-                add(technologies, ["Backend Services"]);
-                add(architectureDomains, ["SERVICE_ARCHITECTURE"]);
-                add(engineeringSignals, ["BACKEND_APPLICATION_DEVELOPMENT"]);
+            case RepositoryTypes.DESIGN_SYSTEM:
+                add(technologies, [Technologies.DESIGN_SYSTEMS]);
+                add(
+                    architectureDomains,
+                    [ArchitectureDomains.DESIGN_SYSTEM_ARCHITECTURE]
+                );
+                add(
+                    engineeringSignals,
+                    [EngineeringSignals.COMPONENT_DRIVEN_DEVELOPMENT]
+                );
                 break;
 
-            case "FRONTEND_APPLICATION":
-                add(technologies, ["Frontend Engineering"]);
-                add(architectureDomains, ["FRONTEND_ARCHITECTURE"]);
-                add(engineeringSignals, ["USER_INTERFACE_ENGINEERING"]);
+            case RepositoryTypes.PACKAGE_LIBRARY:
+                add(technologies, [Technologies.PACKAGE_LIBRARIES]);
+                add(architectureDomains, [ArchitectureDomains.LIBRARY_ARCHITECTURE]);
+                add(
+                    engineeringSignals,
+                    [EngineeringSignals.REUSABLE_SOFTWARE_COMPONENTS]
+                );
                 break;
 
-            case "DOCUMENTATION_HEAVY_REPOSITORY":
-                add(technologies, ["Technical Documentation"]);
-                add(architectureDomains, ["KNOWLEDGE_MANAGEMENT"]);
-                add(engineeringSignals, ["DOCUMENTATION_ENGINEERING"]);
+            case RepositoryTypes.INFRASTRUCTURE_PLATFORM:
+                add(technologies, [Technologies.INFRASTRUCTURE_AUTOMATION]);
+                add(
+                    architectureDomains,
+                    [ArchitectureDomains.PLATFORM_INFRASTRUCTURE]
+                );
+                add(
+                    engineeringSignals,
+                    [EngineeringSignals.INFRASTRUCTURE_AS_CODE]
+                );
                 break;
 
-            case "DESIGN_SYSTEM":
-                add(technologies, ["Design Systems"]);
-                add(architectureDomains, ["DESIGN_SYSTEM_ARCHITECTURE"]);
-                add(engineeringSignals, ["COMPONENT_DRIVEN_DEVELOPMENT"]);
+            case RepositoryTypes.MESSAGING_PLATFORM:
+                add(technologies, [Technologies.MESSAGING_SYSTEMS]);
+                add(
+                    architectureDomains,
+                    [ArchitectureDomains.EVENT_DRIVEN_ARCHITECTURE]
+                );
+                add(
+                    engineeringSignals,
+                    [EngineeringSignals.ASYNCHRONOUS_COMMUNICATION]
+                );
                 break;
 
-            case "PACKAGE_LIBRARY":
-                add(technologies, ["Package Libraries"]);
-                add(architectureDomains, ["LIBRARY_ARCHITECTURE"]);
-                add(engineeringSignals, ["REUSABLE_SOFTWARE_COMPONENTS"]);
+            case RepositoryTypes.ECOMMERCE_PLATFORM:
+                add(technologies, [Technologies.COMMERCE_SYSTEMS]);
+                add(architectureDomains, [ArchitectureDomains.DIGITAL_COMMERCE]);
+                add(
+                    engineeringSignals,
+                    [EngineeringSignals.TRANSACTION_PROCESSING]
+                );
                 break;
 
-            case "INFRASTRUCTURE_PLATFORM":
-                add(technologies, ["Infrastructure Automation"]);
-                add(architectureDomains, ["PLATFORM_INFRASTRUCTURE"]);
-                add(engineeringSignals, ["INFRASTRUCTURE_AS_CODE"]);
+            case RepositoryTypes.EDUCATION_PLATFORM:
+                add(technologies, [Technologies.EDUCATIONAL_TECHNOLOGY]);
+                add(architectureDomains, [ArchitectureDomains.LEARNING_SYSTEMS]);
+                add(
+                    engineeringSignals,
+                    [EngineeringSignals.DIGITAL_LEARNING]
+                );
                 break;
 
-            case "MESSAGING_PLATFORM":
-                add(technologies, ["Messaging Systems"]);
-                add(architectureDomains, ["EVENT_DRIVEN_ARCHITECTURE"]);
-                add(engineeringSignals, ["ASYNCHRONOUS_COMMUNICATION"]);
+            case RepositoryTypes.HEALTHCARE_PLATFORM:
+                add(technologies, [Technologies.HEALTHCARE_TECHNOLOGY]);
+                add(
+                    architectureDomains,
+                    [ArchitectureDomains.HEALTH_INFORMATION_SYSTEMS]
+                );
+                add(
+                    engineeringSignals,
+                    [EngineeringSignals.CLINICAL_INFORMATION_MANAGEMENT]
+                );
                 break;
 
-            case "ECOMMERCE_PLATFORM":
-                add(technologies, ["Commerce Systems"]);
-                add(architectureDomains, ["DIGITAL_COMMERCE"]);
-                add(engineeringSignals, ["TRANSACTION_PROCESSING"]);
+            case RepositoryTypes.ENERGY_PLATFORM:
+                add(technologies, [Technologies.ENERGY_SYSTEMS]);
+                add(
+                    architectureDomains,
+                    [ArchitectureDomains.SMART_ENERGY_SYSTEMS]
+                );
+                add(
+                    engineeringSignals,
+                    [EngineeringSignals.ENERGY_MONITORING]
+                );
                 break;
 
-            case "EDUCATION_PLATFORM":
-                add(technologies, ["Educational Technology"]);
-                add(architectureDomains, ["LEARNING_SYSTEMS"]);
-                add(engineeringSignals, ["DIGITAL_LEARNING"]);
-                break;
-
-            case "HEALTHCARE_PLATFORM":
-                add(technologies, ["Healthcare Technology"]);
-                add(architectureDomains, ["HEALTH_INFORMATION_SYSTEMS"]);
-                add(engineeringSignals, ["CLINICAL_INFORMATION_MANAGEMENT"]);
-                break;
-
-            case "ENERGY_PLATFORM":
-                add(technologies, ["Energy Systems"]);
-                add(architectureDomains, ["SMART_ENERGY_SYSTEMS"]);
-                add(engineeringSignals, ["ENERGY_MONITORING"]);
-                break;
-
-            case "COLLABORATION_PLATFORM":
-                add(technologies, ["Collaboration Systems"]);
-                add(architectureDomains, ["COLLABORATIVE_COMPUTING"]);
-                add(engineeringSignals, ["REALTIME_COLLABORATION"]);
+            case RepositoryTypes.COLLABORATION_PLATFORM:
+                add(technologies, [Technologies.COLLABORATION_SYSTEMS]);
+                add(
+                    architectureDomains,
+                    [ArchitectureDomains.COLLABORATIVE_COMPUTING]
+                );
+                add(
+                    engineeringSignals,
+                    [EngineeringSignals.REALTIME_COLLABORATION]
+                );
                 break;
         }
 
@@ -724,6 +774,11 @@ export const detectTechnologyFingerprint = (
         commitMessages,
         repositoryContext: combinedText,
     });
+
+    const repositoryPersona = inferRepositoryPersona(
+  Array.from(repositoryTypes) as RepositoryType[],
+  capabilities.map((capability) => capability.key)
+);
 
     const repositoryDNA = buildRepositoryDNA({
         repositoryTypes: Array.from(repositoryTypes),
@@ -743,5 +798,8 @@ export const detectTechnologyFingerprint = (
         evidenceResults,
         capabilities,
         repositoryDNA,
+        repositoryPersona,
+        //repositoryIdentity,
+        //rankedEvidence,
     };
 };

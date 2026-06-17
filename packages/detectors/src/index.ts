@@ -22,6 +22,8 @@ export * from "./capabilities";
 export * from "./evidence";
 export * from "./dna";
 export * from "./constants";
+export * from "./classification";
+export * from "./persona";
 
 export type ArchitectureDetectionInput = {
   eventType: string;

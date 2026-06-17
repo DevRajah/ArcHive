@@ -56,6 +56,7 @@ export type EvidenceResult = {
     confidence: number;
     evidence: string[];
     strongestEvidence: string[];
+    totalScore: number;
 };
 
 export type EvidenceContextInput = {
