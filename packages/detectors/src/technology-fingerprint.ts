@@ -1,4 +1,34 @@
-import { calculateEvidenceResults, EvidenceItem, EvidenceResult } from "./evidence-engine";
+import {
+    createEvidenceContext,
+    calculateEvidenceResults,
+    detectFintechEvidence,
+    detectDeveloperToolEvidence,
+    detectDeveloperPlatformEvidence,
+    detectObservabilityEvidence,
+    EvidenceResult,
+    detectSecurityEvidence,
+    detectAiEvidence,
+    detectMobileEvidence,
+    detectTransportEvidence,
+    detectDataEngineeringEvidence,
+    detectBackendServiceEvidence,
+    detectFrontendEvidence,
+    detectDocumentationEvidence,
+    detectDesignSystemEvidence,
+    detectPackageSdkEvidence,
+    detectInfrastructureEvidence,
+    detectMessagingEvidence,
+    detectHealthcareEvidence,
+    detectEducationEvidence,
+    detectEnergyEvidence,
+    detectEcommerceEvidence,
+    detectCollaborationEvidence
+} from "./evidence";
+
+import { detectEngineeringCapabilities } from "./capabilities";
+import { buildRepositoryDNA,
+    RepositoryDNA } from "./dna"
+
 export type TechnologyFingerprintResult = {
     technologies: string[];
     architectureDomains: string[];
@@ -6,6 +36,8 @@ export type TechnologyFingerprintResult = {
     repositoryTypes: string[];
     reasoningSignals: string[];
     evidenceResults: EvidenceResult[];
+    capabilities: ReturnType<typeof detectEngineeringCapabilities>;
+    repositoryDNA: RepositoryDNA
 };
 
 const includesAny = (value: string, keywords: string[]) => {
@@ -16,28 +48,6 @@ const includesAny = (value: string, keywords: string[]) => {
 
 const add = (set: Set<string>, values: string[]) => {
     values.forEach((value) => set.add(value));
-};
-
-const reasoningSignals: string[] = [];
-
-const addReasoningSignal = (signal: string) => {
-    if (!reasoningSignals.includes(signal)) {
-        reasoningSignals.push(signal);
-    }
-};
-
-const evidenceItems: EvidenceItem[] = [];
-
-const addEvidence = (
-    repositoryType: string,
-    label: string,
-    weight: number
-) => {
-    evidenceItems.push({
-        repositoryType,
-        label,
-        weight,
-    });
 };
 
 export const detectTechnologyFingerprint = (
@@ -52,6 +62,58 @@ export const detectTechnologyFingerprint = (
     const architectureDomains = new Set<string>();
     const engineeringSignals = new Set<string>();
     const repositoryTypes = new Set<string>();
+    const reasoningSignals: string[] = [];
+
+    const addReasoningSignal = (signal: string) => {
+        if (!reasoningSignals.includes(signal)) {
+            reasoningSignals.push(signal);
+        }
+    };
+
+    const evidenceContext = createEvidenceContext({
+        filesChanged,
+        commitMessages,
+        repositoryContext: combinedText,
+    });
+
+    const addEvidence = (
+        repositoryType: Parameters<typeof evidenceContext.addEvidence>[0],
+        label: string,
+        weight: number,
+        category: Parameters<typeof evidenceContext.addEvidence>[3] = "DOMAIN_LANGUAGE",
+        strength: Parameters<typeof evidenceContext.addEvidence>[4] = "MEDIUM"
+    ) => {
+        evidenceContext.addEvidence(
+            repositoryType,
+            label,
+            weight,
+            category,
+            strength
+        );
+    };
+
+    detectFintechEvidence(evidenceContext);
+    detectDeveloperToolEvidence(evidenceContext);
+    detectDeveloperPlatformEvidence(evidenceContext);
+    detectObservabilityEvidence(evidenceContext);
+    detectSecurityEvidence(evidenceContext);
+    detectAiEvidence(evidenceContext);
+    detectMobileEvidence(evidenceContext);
+    detectTransportEvidence(evidenceContext);
+    detectDataEngineeringEvidence(evidenceContext);
+    detectBackendServiceEvidence(evidenceContext);
+    detectFrontendEvidence(evidenceContext);
+    detectDocumentationEvidence(evidenceContext);
+    detectDesignSystemEvidence(evidenceContext);
+    detectPackageSdkEvidence(evidenceContext);
+    detectInfrastructureEvidence(evidenceContext);
+    detectMessagingEvidence(evidenceContext);
+    detectHealthcareEvidence(evidenceContext);
+    detectEducationEvidence(evidenceContext);
+    detectEnergyEvidence(evidenceContext);
+    detectEcommerceEvidence(evidenceContext);
+    detectCollaborationEvidence(evidenceContext);
+
 
     // JavaScript / TypeScript backend
     if (
@@ -139,109 +201,6 @@ export const detectTechnologyFingerprint = (
         );
     }
 
-    // AI / ML
-    if (
-        includesAny(combinedText, [
-            "tensorflow",
-            "pytorch",
-            "torch",
-            "scikit-learn",
-            "sklearn",
-        ])
-    ) {
-        addEvidence(
-            "AI_ML_PROJECT",
-            "Detected machine learning framework dependency",
-            35
-        );
-    }
-
-    if (
-        includesAny(combinedText, [
-            "huggingface",
-            "transformers",
-            "langchain",
-            "llamaindex",
-        ])
-    ) {
-        addEvidence(
-            "AI_ML_PROJECT",
-            "Detected AI framework or LLM application tooling",
-            35
-        );
-    }
-
-    if (
-        includesAny(combinedText, [
-            "model inference",
-            "inference pipeline",
-            "train model",
-            "model training",
-            "ml pipeline",
-        ])
-    ) {
-        addEvidence(
-            "AI_ML_PROJECT",
-            "Detected model training or inference pipeline evidence",
-            30
-        );
-    }
-
-    if (filesChanged.some((file) => file.toLowerCase().endsWith(".ipynb"))) {
-        addEvidence(
-            "AI_ML_PROJECT",
-            "Detected notebook-based AI/ML workflow",
-            20
-        );
-    }
-
-    // Data engineering
-    if (
-        includesAny(combinedText, [
-            "airflow",
-            "dag",
-            "dbt",
-            "spark",
-            "pyspark",
-            "kafka",
-        ])
-    ) {
-        addEvidence(
-            "DATA_ENGINEERING_PROJECT",
-            "Detected data engineering framework or workflow orchestration dependency",
-            35
-        );
-    }
-
-    if (
-        includesAny(combinedText, [
-            "etl",
-            "elt",
-            "data warehouse",
-            "snowflake",
-            "bigquery",
-            "data lake",
-        ])
-    ) {
-        addEvidence(
-            "DATA_ENGINEERING_PROJECT",
-            "Detected ETL, warehouse, or data lake architecture evidence",
-            30
-        );
-    }
-
-    if (
-        includesAny(combinedText, [
-            "batch pipeline",
-            "stream processing",
-        ])
-    ) {
-        addEvidence(
-            "DATA_ENGINEERING_PROJECT",
-            "Detected batch or stream processing pipeline evidence",
-            25
-        );
-    }
 
     // Go
     const hasGoProjectSignal =
@@ -319,52 +278,6 @@ export const detectTechnologyFingerprint = (
         add(repositoryTypes, ["PHP_WEB_APPLICATION"]);
         addReasoningSignal(
             "Detected PHP-specific frameworks and patterns"
-        );
-    }
-
-    // MOBILE_APPLICATION
-    const hasStrongFlutterSignal =
-        filesChanged.some((file) => {
-            const normalizedFile = file.toLowerCase();
-
-            return (
-                normalizedFile === "pubspec.yaml" ||
-                normalizedFile.endsWith(".dart") ||
-                normalizedFile.startsWith("android/") ||
-                normalizedFile.startsWith("ios/")
-            );
-        }) || includesAny(combinedText, ["flutter sdk"]);
-
-    if (hasStrongFlutterSignal) {
-        add(technologies, ["Flutter"]);
-        add(architectureDomains, ["MOBILE_ARCHITECTURE"]);
-        add(repositoryTypes, ["MOBILE_APPLICATION"]);
-
-        addReasoningSignal(
-            "Detected Flutter/Dart mobile application structure"
-        );
-    }
-
-    const hasStrongReactNativeSignal =
-        filesChanged.some((file) => {
-            const normalizedFile = file.toLowerCase();
-
-            return (
-                normalizedFile.includes("react-native.config") ||
-                normalizedFile.includes("metro.config") ||
-                normalizedFile.includes("app.json") ||
-                normalizedFile.startsWith("android/") ||
-                normalizedFile.startsWith("ios/")
-            );
-        }) || includesAny(combinedText, ["react-native", "expo"]);
-
-    if (hasStrongReactNativeSignal) {
-        add(technologies, ["React Native"]);
-        add(architectureDomains, ["MOBILE_ARCHITECTURE"]);
-        add(repositoryTypes, ["MOBILE_APPLICATION"]);
-
-        addReasoningSignal(
-            "Detected React Native-specific files and patterns"
         );
     }
 
@@ -565,157 +478,6 @@ export const detectTechnologyFingerprint = (
         );
     }
 
-    // Fintech
-    if (includesAny(combinedText, ["ledger", "double-entry"])) {
-        addEvidence(
-            "FINTECH_PLATFORM",
-            "Detected ledger or double-entry accounting terminology",
-            30
-        );
-    }
-
-    if (includesAny(combinedText, ["reconciliation", "reconcile"])) {
-        addEvidence(
-            "FINTECH_PLATFORM",
-            "Detected reconciliation workflow terminology",
-            30
-        );
-    }
-
-    if (includesAny(combinedText, ["settlement", "settlements"])) {
-        addEvidence(
-            "FINTECH_PLATFORM",
-            "Detected settlement workflow terminology",
-            25
-        );
-    }
-
-    if (includesAny(combinedText, ["payment webhook", "webhook signature"])) {
-        addEvidence(
-            "FINTECH_PLATFORM",
-            "Detected payment webhook or webhook signature evidence",
-            25
-        );
-    }
-
-    if (includesAny(combinedText, ["idempotency", "idempotency key"])) {
-        addEvidence(
-            "FINTECH_PLATFORM",
-            "Detected idempotency or payment safety evidence",
-            25
-        );
-    }
-
-    if (
-        includesAny(combinedText, [
-            "transaction processing",
-            "financial transaction",
-        ])
-    ) {
-        addEvidence(
-            "FINTECH_PLATFORM",
-            "Detected financial transaction processing",
-            20
-        );
-    }
-
-    if (includesAny(combinedText, ["audit trail", "audit ledger"])) {
-        addEvidence(
-            "FINTECH_PLATFORM",
-            "Detected financial audit trail",
-            20
-        );
-    }
-
-
-    // Observability platform
-    const hasStrongObservabilitySignal =
-        includesAny(combinedText, [
-            "observability",
-            "telemetry",
-            "traces",
-            "opentelemetry",
-            "prometheus",
-            "grafana",
-            "metrics pipeline",
-            "system monitoring",
-            "queue monitoring",
-            "worker health",
-            "runtime metrics",
-        ]) ||
-        (
-            includesAny(combinedText, [
-                "monitoring",
-                "metrics",
-                "health",
-            ]) &&
-            includesAny(combinedText, [
-                "queue",
-                "worker",
-                "service",
-                "infrastructure",
-                "system",
-                "runtime",
-            ])
-        );
-
-    if (hasStrongObservabilitySignal) {
-        add(technologies, ["Observability"]);
-        add(architectureDomains, ["OBSERVABILITY_SYSTEMS"]);
-        add(engineeringSignals, ["SYSTEM_MONITORING"]);
-        add(repositoryTypes, ["OBSERVABILITY_PLATFORM"]);
-
-        addReasoningSignal(
-            "Detected observability terminology including monitoring/metrics/telemetry"
-        );
-    }
-
-    //Security Platform
-    if (
-        includesAny(combinedText, [
-            "threat detection",
-            "fraud detection",
-            "anomaly detection",
-            "intrusion detection",
-        ])
-    ) {
-        addEvidence(
-            "SECURITY_PLATFORM",
-            "Detected threat, fraud, anomaly, or intrusion detection evidence",
-            35
-        );
-    }
-
-    if (
-        includesAny(combinedText, [
-            "vulnerability scanning",
-            "malware",
-            "security event",
-            "security audit",
-        ])
-    ) {
-        addEvidence(
-            "SECURITY_PLATFORM",
-            "Detected security scanning, malware, audit, or security event evidence",
-            30
-        );
-    }
-
-    if (
-        includesAny(combinedText, [
-            "risk scoring",
-            "access policy",
-            "rbac policy",
-            "permission policy",
-        ])
-    ) {
-        addEvidence(
-            "SECURITY_PLATFORM",
-            "Detected risk scoring or security policy evidence",
-            25
-        );
-    }
-
     if (
         includesAny(combinedText, [
             "crdt",
@@ -736,91 +498,6 @@ export const detectTechnologyFingerprint = (
         );
     }
 
-    //Dev Tool Platform
-    const hasStrongDevtoolSignal =
-        includesAny(combinedText, [
-            "scaffold",
-            "scaffolding",
-            "generator",
-            "template",
-            "codegen",
-            "cli",
-            "commander",
-            "inquirer",
-            "boilerplate generator",
-            "create-app",
-            "create app",
-            "plugin",
-            "developer tooling",
-        ]) ||
-        (
-            includesAny(combinedText, ["template", "boilerplate"]) &&
-            includesAny(combinedText, ["generator", "scaffold", "cli", "codegen"])
-        )
-
-    if (hasStrongDevtoolSignal) {
-        add(technologies, ["Developer Tooling"]);
-        add(architectureDomains, ["DEVELOPER_INFRASTRUCTURE"]);
-        add(engineeringSignals, ["CODE_GENERATION"]);
-        add(repositoryTypes, ["DEVTOOL_PLATFORM"]);
-
-        addReasoningSignal("Detected CLI and scaffolding tooling patterns");
-    }
-
-    if (
-        includesAny(combinedText, [
-            "sdk",
-            "platform",
-            "developer platform",
-            "tooling",
-            "runtime",
-            "service orchestration",
-            "service composition",
-            "infra tooling",
-            "worker platform",
-        ])
-    ) {
-        add(technologies, ["Developer Infrastructure"]);
-        add(architectureDomains, ["DEVELOPER_INFRASTRUCTURE"]);
-        add(engineeringSignals, ["PLATFORM_ENGINEERING"]);
-        add(repositoryTypes, ["DEVELOPER_PLATFORM"]);
-
-        addReasoningSignal(
-            "Detected developer platform and infrastructure patterns"
-        );
-    }
-    
-    // Transport Platform
-    const hasStrongTransportSignal =
-        includesAny(combinedText, [
-            "transit",
-            "delay prediction",
-            "public transport",
-            "station",
-            "bus",
-            "train",
-            "mobility",
-        ]) ||
-        (
-            includesAny(combinedText, ["route", "journey"]) &&
-            includesAny(combinedText, [
-                "transport",
-                "transit",
-                "bus",
-                "train",
-            ])
-        );
-
-    if (hasStrongTransportSignal) {
-        add(technologies, ["Transport Systems"]);
-        add(architectureDomains, ["MOBILITY_SYSTEMS"]);
-        add(engineeringSignals, ["ROUTE_OPTIMIZATION"]);
-        add(repositoryTypes, ["SMART_TRANSPORT_PLATFORM"]);
-
-        addReasoningSignal(
-            "Detected transport or mobility terminology including transit/routes/stations"
-        );
-    }
 
     if (
         includesAny(combinedText, [
@@ -874,13 +551,158 @@ export const detectTechnologyFingerprint = (
         );
     }
 
-    const evidenceResults = calculateEvidenceResults(evidenceItems);
+    const evidenceResults = calculateEvidenceResults(evidenceContext.evidenceItems);
 
     for (const result of evidenceResults) {
-        if (result.repositoryType === "FINTECH_PLATFORM") {
-            add(technologies, ["Financial Infrastructure"]);
-            add(architectureDomains, ["FINANCIAL_SYSTEMS"]);
-            add(engineeringSignals, ["FINANCIAL_PROCESSING"]);
+        switch (result.repositoryType) {
+            case "FINTECH_PLATFORM":
+                add(technologies, ["Financial Infrastructure"]);
+                add(architectureDomains, ["FINANCIAL_SYSTEMS"]);
+                add(engineeringSignals, ["FINANCIAL_PROCESSING"]);
+                break;
+
+            case "DEVTOOL_PLATFORM":
+                add(technologies, ["Developer Tooling"]);
+                add(architectureDomains, ["DEVELOPER_INFRASTRUCTURE"]);
+                add(engineeringSignals, ["CODE_GENERATION"]);
+                break;
+
+            case "DEVELOPER_PLATFORM":
+                add(technologies, ["Developer Infrastructure"]);
+                add(architectureDomains, ["DEVELOPER_INFRASTRUCTURE"]);
+                add(engineeringSignals, ["PLATFORM_ENGINEERING"]);
+                break;
+
+            case "OBSERVABILITY_PLATFORM":
+                add(technologies, ["Observability"]);
+                add(architectureDomains, ["OBSERVABILITY_SYSTEMS"]);
+                add(engineeringSignals, ["SYSTEM_MONITORING"]);
+                break;
+
+            case "AI_ML_PROJECT":
+                add(technologies, ["AI / ML"]);
+                add(architectureDomains, ["AI_INFRASTRUCTURE"]);
+                add(engineeringSignals, ["MACHINE_LEARNING"]);
+                break;
+
+            case "SECURITY_PLATFORM":
+                add(technologies, ["Security Systems"]);
+                add(architectureDomains, ["SECURITY_SYSTEMS"]);
+                add(engineeringSignals, ["THREAT_DETECTION"]);
+                break;
+
+            case "MOBILE_APPLICATION":
+                add(technologies, ["Mobile Application"]);
+                add(architectureDomains, ["MOBILE_ARCHITECTURE"]);
+                add(engineeringSignals, ["MOBILE_ENGINEERING"]);
+                break;
+
+            case "DATA_ENGINEERING_PROJECT":
+                add(technologies, ["Data Engineering"]);
+                add(architectureDomains, ["DATA_PIPELINES"]);
+                add(engineeringSignals, ["DATA_WORKFLOW"]);
+                break;
+            case "SECURITY_PLATFORM":
+                add(technologies, ["Security Systems"]);
+                add(architectureDomains, ["SECURITY_SYSTEMS"]);
+                add(engineeringSignals, ["THREAT_DETECTION"]);
+                break;
+
+            case "AI_ML_PROJECT":
+                add(technologies, ["AI / ML"]);
+                add(architectureDomains, ["AI_INFRASTRUCTURE"]);
+                add(engineeringSignals, ["MACHINE_LEARNING"]);
+                break;
+
+            case "MOBILE_APPLICATION":
+                add(technologies, ["Mobile Application"]);
+                add(architectureDomains, ["MOBILE_ARCHITECTURE"]);
+                add(engineeringSignals, ["MOBILE_ENGINEERING"]);
+                break;
+
+            case "SMART_TRANSPORT_PLATFORM":
+                add(technologies, ["Transport Systems"]);
+                add(architectureDomains, ["MOBILITY_SYSTEMS"]);
+                add(engineeringSignals, ["ROUTE_OPTIMIZATION"]);
+                break;
+
+            case "DATA_ENGINEERING_PROJECT":
+                add(technologies, ["Data Engineering"]);
+                add(architectureDomains, ["DATA_PIPELINES"]);
+                add(engineeringSignals, ["DATA_WORKFLOW"]);
+                break;
+
+            case "BACKEND_SERVICE":
+                add(technologies, ["Backend Services"]);
+                add(architectureDomains, ["SERVICE_ARCHITECTURE"]);
+                add(engineeringSignals, ["BACKEND_APPLICATION_DEVELOPMENT"]);
+                break;
+
+            case "FRONTEND_APPLICATION":
+                add(technologies, ["Frontend Engineering"]);
+                add(architectureDomains, ["FRONTEND_ARCHITECTURE"]);
+                add(engineeringSignals, ["USER_INTERFACE_ENGINEERING"]);
+                break;
+
+            case "DOCUMENTATION_HEAVY_REPOSITORY":
+                add(technologies, ["Technical Documentation"]);
+                add(architectureDomains, ["KNOWLEDGE_MANAGEMENT"]);
+                add(engineeringSignals, ["DOCUMENTATION_ENGINEERING"]);
+                break;
+
+            case "DESIGN_SYSTEM":
+                add(technologies, ["Design Systems"]);
+                add(architectureDomains, ["DESIGN_SYSTEM_ARCHITECTURE"]);
+                add(engineeringSignals, ["COMPONENT_DRIVEN_DEVELOPMENT"]);
+                break;
+
+            case "PACKAGE_LIBRARY":
+                add(technologies, ["Package Libraries"]);
+                add(architectureDomains, ["LIBRARY_ARCHITECTURE"]);
+                add(engineeringSignals, ["REUSABLE_SOFTWARE_COMPONENTS"]);
+                break;
+
+            case "INFRASTRUCTURE_PLATFORM":
+                add(technologies, ["Infrastructure Automation"]);
+                add(architectureDomains, ["PLATFORM_INFRASTRUCTURE"]);
+                add(engineeringSignals, ["INFRASTRUCTURE_AS_CODE"]);
+                break;
+
+            case "MESSAGING_PLATFORM":
+                add(technologies, ["Messaging Systems"]);
+                add(architectureDomains, ["EVENT_DRIVEN_ARCHITECTURE"]);
+                add(engineeringSignals, ["ASYNCHRONOUS_COMMUNICATION"]);
+                break;
+
+            case "ECOMMERCE_PLATFORM":
+                add(technologies, ["Commerce Systems"]);
+                add(architectureDomains, ["DIGITAL_COMMERCE"]);
+                add(engineeringSignals, ["TRANSACTION_PROCESSING"]);
+                break;
+
+            case "EDUCATION_PLATFORM":
+                add(technologies, ["Educational Technology"]);
+                add(architectureDomains, ["LEARNING_SYSTEMS"]);
+                add(engineeringSignals, ["DIGITAL_LEARNING"]);
+                break;
+
+            case "HEALTHCARE_PLATFORM":
+                add(technologies, ["Healthcare Technology"]);
+                add(architectureDomains, ["HEALTH_INFORMATION_SYSTEMS"]);
+                add(engineeringSignals, ["CLINICAL_INFORMATION_MANAGEMENT"]);
+                break;
+
+            case "ENERGY_PLATFORM":
+                add(technologies, ["Energy Systems"]);
+                add(architectureDomains, ["SMART_ENERGY_SYSTEMS"]);
+                add(engineeringSignals, ["ENERGY_MONITORING"]);
+                break;
+
+            case "COLLABORATION_PLATFORM":
+                add(technologies, ["Collaboration Systems"]);
+                add(architectureDomains, ["COLLABORATIVE_COMPUTING"]);
+                add(engineeringSignals, ["REALTIME_COLLABORATION"]);
+                break;
         }
 
         add(repositoryTypes, [result.repositoryType]);
@@ -889,6 +711,19 @@ export const detectTechnologyFingerprint = (
             addReasoningSignal(evidence);
         }
     }
+
+    const capabilities = detectEngineeringCapabilities({
+        filesChanged,
+        commitMessages,
+        repositoryContext: combinedText,
+    });
+
+    const repositoryDNA = buildRepositoryDNA({
+        repositoryTypes: Array.from(repositoryTypes),
+        technologies: Array.from(technologies),
+        architectureDomains: Array.from(architectureDomains),
+        capabilities,
+    });
 
 
 
@@ -899,5 +734,7 @@ export const detectTechnologyFingerprint = (
         repositoryTypes: Array.from(repositoryTypes),
         reasoningSignals,
         evidenceResults,
+        capabilities,
+        repositoryDNA,
     };
 };

@@ -18,7 +18,9 @@ export * from "./technology-relationships";
 export * from "./domain-relationships";
 export * from "./intelligence-audit";
 export * from "./intelligence-timeline";
-export * from "./evidence-engine";
+export * from "./capabilities";
+export * from "./evidence";
+export * from "./dna";
 
 export type ArchitectureDetectionInput = {
   eventType: string;
