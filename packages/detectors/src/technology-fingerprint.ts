@@ -25,6 +25,13 @@ import {
     detectCollaborationEvidence
 } from "./evidence";
 
+import {
+  ArchitectureDomains,
+  EngineeringSignals,
+  RepositoryTypes,
+  Technologies,
+} from "./constants";
+
 import { detectEngineeringCapabilities } from "./capabilities";
 import { buildRepositoryDNA,
     RepositoryDNA } from "./dna"

@@ -3,9 +3,9 @@ import {
   EvidenceContext,
   EvidenceContextInput,
   EvidenceStrength,
-  RepositoryType,
   EvidenceItem 
 } from "./evidence-types";
+import { RepositoryType } from "../constants";
 
 export const createEvidenceContext = ({
   filesChanged,

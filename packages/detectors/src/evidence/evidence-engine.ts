@@ -1,8 +1,8 @@
 import {
   EvidenceItem,
   EvidenceResult,
-  RepositoryType,
 } from "./evidence-types";
+import { RepositoryType } from "../constants";
 import { getEvidenceThreshold } from "./evidence-thresholds";
 
 export const calculateEvidenceResults = (
