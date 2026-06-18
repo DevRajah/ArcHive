@@ -86,6 +86,12 @@ import {
     RepositoryHealth,
 } from "./repository-health";
 
+import {
+    ArchitectureDriftReport,
+    buildArchitectureDriftReport,
+} from "./architecture-drift";
+
+
 import { runTechnologyDetectors } from "./technologies";
 
 export type TechnologyFingerprintResult = {
@@ -106,6 +112,7 @@ export type TechnologyFingerprintResult = {
     weaknessReport: WeaknessReport;
     recommendationReport: RecommendationReport;
     repositoryHealth: RepositoryHealth;
+    architectureDrift: ArchitectureDriftReport;
     //repositoryIdentity: RepositoryIdentity;
 
     //rankedEvidence: RankedEvidence[];
@@ -918,6 +925,13 @@ export const detectTechnologyFingerprint = (
         recommendationReport,
     });
 
+    const architectureDrift = buildArchitectureDriftReport({
+        architectureDomains: Array.from(architectureDomains),
+        repositoryTypes: Array.from(repositoryTypes),
+        technologies: Array.from(technologies),
+        reasoningSignals,
+    });
+
 
 
     return {
@@ -938,6 +952,7 @@ export const detectTechnologyFingerprint = (
         weaknessReport,
         recommendationReport,
         repositoryHealth,
+        architectureDrift,
         //repositoryIdentity,
         //rankedEvidence,
     };
