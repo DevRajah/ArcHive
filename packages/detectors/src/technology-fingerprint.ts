@@ -51,6 +51,21 @@ import {
     RepositoryPersona,
 } from "./persona";
 
+import {
+    buildRepositoryMaturity,
+    RepositoryMaturity,
+} from "./maturity";
+
+import {
+    buildProductionReadiness,
+    ProductionReadiness,
+} from "./production-readiness";
+
+import {
+    buildTechnicalDebtReport,
+    TechnicalDebtReport,
+} from "./technical-debt";
+
 import { runTechnologyDetectors } from "./technologies";
 
 export type TechnologyFingerprintResult = {
@@ -64,6 +79,9 @@ export type TechnologyFingerprintResult = {
     repositoryDNA: RepositoryDNA
     repositoryPersona: RepositoryPersona;
     engineeringQuality: EngineeringQualityResult;
+    repositoryMaturity: RepositoryMaturity;
+    productionReadiness: ProductionReadiness;
+    technicalDebt: TechnicalDebtReport;
     //repositoryIdentity: RepositoryIdentity;
 
     //rankedEvidence: RankedEvidence[];
@@ -819,6 +837,31 @@ export const detectTechnologyFingerprint = (
 
 
 
+    const productionReadiness =
+        buildProductionReadiness({
+
+            engineeringQuality,
+
+        });
+
+    const repositoryMaturity = buildRepositoryMaturity({
+        engineeringQuality,
+        productionReadiness,
+        repositoryTypes: Array.from(repositoryTypes),
+        technologies: Array.from(technologies),
+        architectureDomains: Array.from(architectureDomains),
+        engineeringSignals: Array.from(engineeringSignals),
+        reasoningSignals,
+    });
+
+    const technicalDebt = buildTechnicalDebtReport({
+        engineeringQuality,
+        productionReadiness,
+        repositoryMaturity,
+    });
+
+
+
     return {
         technologies: Array.from(technologies),
         architectureDomains: Array.from(architectureDomains),
@@ -830,6 +873,9 @@ export const detectTechnologyFingerprint = (
         repositoryDNA,
         repositoryPersona,
         engineeringQuality,
+        repositoryMaturity,
+        productionReadiness,
+        technicalDebt,
         //repositoryIdentity,
         //rankedEvidence,
     };
