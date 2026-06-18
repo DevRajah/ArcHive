@@ -81,6 +81,11 @@ import {
     RecommendationReport,
 } from "./recommendations";
 
+import {
+    buildRepositoryHealth,
+    RepositoryHealth,
+} from "./repository-health";
+
 import { runTechnologyDetectors } from "./technologies";
 
 export type TechnologyFingerprintResult = {
@@ -100,6 +105,7 @@ export type TechnologyFingerprintResult = {
     strengthReport: StrengthReport;
     weaknessReport: WeaknessReport;
     recommendationReport: RecommendationReport;
+    repositoryHealth: RepositoryHealth;
     //repositoryIdentity: RepositoryIdentity;
 
     //rankedEvidence: RankedEvidence[];
@@ -902,6 +908,16 @@ export const detectTechnologyFingerprint = (
         productionReadiness,
     });
 
+    const repositoryHealth = buildRepositoryHealth({
+        engineeringQuality,
+        productionReadiness,
+        repositoryMaturity,
+        technicalDebt,
+        strengthReport,
+        weaknessReport,
+        recommendationReport,
+    });
+
 
 
     return {
@@ -921,6 +937,7 @@ export const detectTechnologyFingerprint = (
         strengthReport,
         weaknessReport,
         recommendationReport,
+        repositoryHealth,
         //repositoryIdentity,
         //rankedEvidence,
     };
