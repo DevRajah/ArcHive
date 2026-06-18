@@ -12,6 +12,7 @@ import { LiveActivityIndicator } from "@/components/dashboard/LiveActivityIndica
 import { IntelligenceOverview } from "@/components/dashboard/IntelligenceOverview";
 import { IntelligenceSearch } from "@/components/dashboard/IntelligenceSearch";
 import { useIntelligenceOverview } from "@/hooks/useRepositories";
+import { DashboardIntelligenceActions } from "@/components/dashboard/DashboardIntelligenceActions";
 
 export default function DashboardPage() {
   const { data: summary, isLoading, isError, error } = useDashboardSummary();
@@ -60,6 +61,8 @@ export default function DashboardPage() {
             </p>
           </div>
         )}
+
+        <DashboardIntelligenceActions />
 
         {!isLoading && !isError && <DashboardStats summary={summary} />}
 

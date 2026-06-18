@@ -190,3 +190,16 @@ export function useRepositoryRecommendations(repositoryId: string) {
     retry: false,
   });
 }
+
+export function useReprocessRepository() {
+  return useMutation({
+    mutationFn: (repositoryId: string) =>
+      repositoryService.reprocessRepository(repositoryId),
+  });
+}
+
+export function useReprocessAllRepositories() {
+  return useMutation({
+    mutationFn: () => repositoryService.reprocessAllRepositories(),
+  });
+}

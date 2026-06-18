@@ -232,4 +232,12 @@ export const repositoryService = {
 
     return response.data.data;
   },
+
+  async reprocessRepository(repositoryId: string): Promise<void> {
+    await api.post(`/repositories/${repositoryId}/reprocess`);
+  },
+
+  async reprocessAllRepository(): Promise<void> {
+    await api.post("/repositories/reprocess-all");
+  },
 };
