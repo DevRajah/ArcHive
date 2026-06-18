@@ -33,6 +33,7 @@ export * from "./strengths";
 export * from "./weaknesses";
 export * from "./recommendations";
 export * from "./repository-health";
+export * from "./repository-comparison";
 
 export type ArchitectureDetectionInput = {
   eventType: string;

@@ -18,6 +18,7 @@ import {
   buildDomainRelationships,
   auditRepositoryIntelligence,
   buildIntelligenceTimeline,
+  compareRepositories,
 
 } from "@archive/detectors";
 
@@ -743,6 +744,143 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
       };
     }
   );
+
+
+  // Target and compare repos
+
+  app.get<{
+    Params: {
+      repositoryId: string;
+      targetRepositoryId: string;
+    };
+  }>("/:repositoryId/compare/:targetRepositoryId", async (request, reply) => {
+    const { repositoryId, targetRepositoryId } = request.params;
+
+    if (repositoryId === targetRepositoryId) {
+      return reply.status(400).send({
+        success: false,
+        message: "Cannot compare a repository with itself",
+      });
+    }
+
+    const repositories = await prisma.repository.findMany({
+      where: {
+        id: {
+          in: [repositoryId, targetRepositoryId],
+        },
+        isTracked: true,
+      },
+      select: {
+        id: true,
+        name: true,
+        fullName: true,
+        architectureChanges: {
+          select: {
+            repositoryTypes: true,
+            detectedTechnology: true,
+            architectureDomain: true,
+            reasoningSignals: true,
+          },
+        },
+      },
+    });
+
+    const sourceRepository = repositories.find((repo) => repo.id === repositoryId);
+    const targetRepository = repositories.find(
+      (repo) => repo.id === targetRepositoryId
+    );
+
+    if (!sourceRepository || !targetRepository) {
+      return reply.status(404).send({
+        success: false,
+        message: "One or both tracked repositories were not found",
+      });
+    }
+
+    type ArchitectureChangeSignalRow = {
+      repositoryTypes: string | null;
+      detectedTechnology: string | null;
+      architectureDomain: string | null;
+      reasoningSignals: string | null;
+    };
+
+    const splitSignalList = (value: string | null) => {
+      if (!value) {
+        return [];
+      }
+
+      return value
+        .split(/[,|]/)
+        .map((item) => item.trim())
+        .filter(Boolean);
+    };
+
+    const extractSignals = (changes: ArchitectureChangeSignalRow[]) => {
+      const repositoryTypes = Array.from(
+        new Set(changes.flatMap((change) => splitSignalList(change.repositoryTypes)))
+      );
+
+      const technologies = Array.from(
+        new Set(
+          changes
+            .map((change) => change.detectedTechnology)
+            .filter((value): value is string => Boolean(value))
+        )
+      );
+
+      const architectureDomains = Array.from(
+        new Set(
+          changes
+            .map((change) => change.architectureDomain)
+            .filter((value): value is string => Boolean(value))
+        )
+      );
+
+      const engineeringSignals = Array.from(
+        new Set(changes.flatMap((change) => splitSignalList(change.reasoningSignals)))
+      );
+
+      return {
+        repositoryTypes,
+        technologies,
+        architectureDomains,
+        engineeringSignals,
+      };
+    };
+    const sourceSignals = extractSignals(sourceRepository.architectureChanges);
+    const targetSignals = extractSignals(targetRepository.architectureChanges);
+
+    const comparison = compareRepositories({
+      source: {
+        name: sourceRepository.name,
+        ...sourceSignals,
+      },
+      target: {
+        name: targetRepository.name,
+        ...targetSignals,
+      },
+    });
+
+    return {
+      success: true,
+      message: "Repository comparison fetched successfully",
+      data: {
+        sourceRepository: {
+          id: sourceRepository.id,
+          name: sourceRepository.name,
+          fullName: sourceRepository.fullName,
+        },
+        targetRepository: {
+          id: targetRepository.id,
+          name: targetRepository.name,
+          fullName: targetRepository.fullName,
+        },
+        comparison,
+      },
+    };
+  });
+
+
   // semantic profile analysis
   app.get<{ Params: { repositoryId: string } }>(
     "/:repositoryId/semantic-profile",
