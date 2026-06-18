@@ -29,6 +29,9 @@ export * from "./engineering-quality";
 export * from "./maturity";
 export * from "./production-readiness";
 export * from "./technical-debt";
+export * from "./strengths";
+export * from "./weaknesses";
+export * from "./recommendations";
 
 export type ArchitectureDetectionInput = {
   eventType: string;

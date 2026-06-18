@@ -66,6 +66,21 @@ import {
     TechnicalDebtReport,
 } from "./technical-debt";
 
+import {
+    buildStrengthReport,
+    StrengthReport,
+} from "./strengths";
+
+import {
+    buildWeaknessReport,
+    WeaknessReport,
+} from "./weaknesses";
+
+import {
+    buildRecommendationReport,
+    RecommendationReport,
+} from "./recommendations";
+
 import { runTechnologyDetectors } from "./technologies";
 
 export type TechnologyFingerprintResult = {
@@ -82,6 +97,9 @@ export type TechnologyFingerprintResult = {
     repositoryMaturity: RepositoryMaturity;
     productionReadiness: ProductionReadiness;
     technicalDebt: TechnicalDebtReport;
+    strengthReport: StrengthReport;
+    weaknessReport: WeaknessReport;
+    recommendationReport: RecommendationReport;
     //repositoryIdentity: RepositoryIdentity;
 
     //rankedEvidence: RankedEvidence[];
@@ -860,6 +878,30 @@ export const detectTechnologyFingerprint = (
         repositoryMaturity,
     });
 
+    const strengthReport =
+        buildStrengthReport({
+
+            engineeringQuality,
+
+            repositoryMaturity,
+
+            productionReadiness,
+
+        });
+
+    const weaknessReport = buildWeaknessReport({
+        engineeringQuality,
+        repositoryMaturity,
+        productionReadiness,
+        technicalDebt,
+    });
+
+    const recommendationReport = buildRecommendationReport({
+        weaknessReport,
+        technicalDebt,
+        productionReadiness,
+    });
+
 
 
     return {
@@ -876,6 +918,9 @@ export const detectTechnologyFingerprint = (
         repositoryMaturity,
         productionReadiness,
         technicalDebt,
+        strengthReport,
+        weaknessReport,
+        recommendationReport,
         //repositoryIdentity,
         //rankedEvidence,
     };
