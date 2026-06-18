@@ -33,6 +33,13 @@ import {
     Technologies,
 } from "./constants";
 
+import {
+    buildEngineeringQuality,
+    createEngineeringQualityContext,
+    EngineeringQualityResult,
+    runQualityDetectors,
+} from "./engineering-quality";
+
 import { detectEngineeringCapabilities } from "./capabilities";
 import {
     buildRepositoryDNA,
@@ -56,6 +63,7 @@ export type TechnologyFingerprintResult = {
     capabilities: ReturnType<typeof detectEngineeringCapabilities>;
     repositoryDNA: RepositoryDNA
     repositoryPersona: RepositoryPersona;
+    engineeringQuality: EngineeringQualityResult;
     //repositoryIdentity: RepositoryIdentity;
 
     //rankedEvidence: RankedEvidence[];
@@ -791,6 +799,19 @@ export const detectTechnologyFingerprint = (
         capabilities,
     });
 
+    const qualityContext = createEngineeringQualityContext({
+        technologies: Array.from(technologies),
+        architectureDomains: Array.from(architectureDomains),
+        repositoryTypes: Array.from(repositoryTypes),
+        capabilities,
+        repositoryDNA,
+        repositoryPersona,
+    });
+
+    runQualityDetectors(qualityContext);
+
+    const engineeringQuality = buildEngineeringQuality(qualityContext);
+
     for (const technology of evidenceContext.technologyEvidence) {
         add(technologies, [technology.name]);
         addReasoningSignal(technology.reason);
@@ -808,6 +829,7 @@ export const detectTechnologyFingerprint = (
         capabilities,
         repositoryDNA,
         repositoryPersona,
+        engineeringQuality,
         //repositoryIdentity,
         //rankedEvidence,
     };

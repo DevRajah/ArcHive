@@ -33,6 +33,39 @@ import {
     detectOllamaTechnology,
 } from "./index";
 
+import {
+    detectJwtTechnology,
+    detectOAuthTechnology,
+    detectRbacTechnology,
+    detectApiKeyTechnology,
+    detectEncryptionTechnology,
+    detectRateLimitingTechnology,
+} from "./security";
+
+import {
+    detectCypressTechnology,
+    detectJestTechnology,
+    detectPlaywrightTechnology,
+    detectSupertestTechnology,
+    detectVitestTechnology,
+} from "./testing";
+
+import {
+    detectGrpcTechnology,
+    detectSocketIoTechnology,
+    detectSseTechnology,
+    detectWebSocketTechnology,
+} from "./realtime";
+
+import {
+    detectCleanArchitectureTechnology,
+    detectCqrsTechnology,
+    detectDddTechnology,
+    detectEventDrivenTechnology,
+    detectHexagonalTechnology,
+    detectMicroservicesTechnology,
+} from "./architecture";
+
 import { TechnologyDetector } from "./types";
 
 export const technologyDetectors: TechnologyDetector[] = [
@@ -72,6 +105,31 @@ export const technologyDetectors: TechnologyDetector[] = [
     detectLangChainTechnology,
     detectMcpTechnology,
     detectOllamaTechnology,
+
+    detectJwtTechnology,
+    detectOAuthTechnology,
+    detectRbacTechnology,
+    detectApiKeyTechnology,
+    detectEncryptionTechnology,
+    detectRateLimitingTechnology,
+
+    detectJestTechnology,
+    detectVitestTechnology,
+    detectCypressTechnology,
+    detectPlaywrightTechnology,
+    detectSupertestTechnology,
+
+    detectSocketIoTechnology,
+    detectWebSocketTechnology,
+    detectSseTechnology,
+    detectGrpcTechnology,
+
+    detectMicroservicesTechnology,
+    detectCqrsTechnology,
+    detectEventDrivenTechnology,
+    detectDddTechnology,
+    detectHexagonalTechnology,
+    detectCleanArchitectureTechnology,
 ];
 
 export const runTechnologyDetectors = (context: Parameters<TechnologyDetector>[0]) => {
