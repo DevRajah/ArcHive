@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { GitCompareArrows, RefreshCcw, Sparkles } from "lucide-react";
+import { BriefcaseBusiness, GitCompareArrows, RefreshCcw, Sparkles, } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
@@ -96,6 +96,13 @@ export function DashboardIntelligenceActions() {
                         </p>
                     </div>
                 </div>
+
+                <Button asChild variant="outline">
+                    <Link href="/portfolio">
+                        <BriefcaseBusiness className="mr-2 h-4 w-4" />
+                        Portfolio Intelligence
+                    </Link>
+                </Button>
 
                 <div className="flex flex-wrap gap-3">
                     <Button asChild variant="outline">
