@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { GitBranch, Loader2 } from "lucide-react";
-import { saveSession } from "@/lib/auth";
-import { Button } from "@/components/ui/button";
 
-export default function GitHubCallbackPage() {
+import { Button } from "@/components/ui/button";
+import { saveSession } from "@/lib/auth";
+
+function GitHubCallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -76,5 +77,31 @@ export default function GitHubCallbackPage() {
         </p>
       </div>
     </main>
+  );
+}
+
+export default function GitHubCallbackPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="flex min-h-screen items-center justify-center bg-background px-6">
+          <div className="w-full max-w-lg rounded-2xl border border-border bg-card p-8 text-center">
+            <div className="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-xl bg-primary/10">
+              <Loader2 className="h-7 w-7 animate-spin text-primary" />
+            </div>
+
+            <h1 className="text-2xl font-bold">
+              Completing GitHub connection
+            </h1>
+
+            <p className="mt-3 text-sm text-muted-foreground">
+              ArcHive is preparing your engineering intelligence workspace.
+            </p>
+          </div>
+        </main>
+      }
+    >
+      <GitHubCallbackContent />
+    </Suspense>
   );
 }

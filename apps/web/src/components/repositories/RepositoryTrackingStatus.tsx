@@ -7,10 +7,10 @@ interface RepositoryTrackingStatusProps {
   lastLiveUpdatedAt: string | null;
   trackingStatus?: {
     isTracked?: boolean;
-    webhookStatus?: "CONNECTED" | "MISSING" | "UNKNOWN";
+    webhookStatus?: "CONNECTED" | "MISSING" | "UNKNOWN" | string;
     lastEngineeringEventAt?: string | null;
     lastQueueStatus?: string | null;
-    realtimeStatus?: "CONNECTED" | "DISCONNECTED" | "UNKNOWN";
+    realtimeStatus?: "CONNECTED" | "DISCONNECTED" | "UNKNOWN" | string;
   };
 }
 

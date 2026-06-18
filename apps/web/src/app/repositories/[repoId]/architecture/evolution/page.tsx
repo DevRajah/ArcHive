@@ -3,92 +3,101 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useParams } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import {
+  ArrowLeft,
+  Boxes,
+  GitBranch,
+  Network,
+  Search,
+  Sparkles,
+} from "lucide-react";
 
 import { AppShell } from "@/components/layout/AppShell";
-import { ArchitectureDomainOverview } from "@/components/architecture/ArchitectureDomainOverview";
-import { ArchitectureEvolutionFilters } from "@/components/architecture/ArchitectureEvolutionFilters";
-import { ArchitectureEvolutionLanes } from "@/components/architecture/ArchitectureEvolutionLanes";
-import { ArchitectureEvolutionSummary } from "@/components/architecture/ArchitectureEvolutionSummary";
-import { ArchitectureIntelligenceGraph } from "@/components/architecture/ArchitectureIntelligenceGraph";
+import { PageContent } from "@/components/layout/PageContent";
+import { RepositoryIntelligenceNav } from "@/components/repositories/RepositoryIntelligenceNav";
 import { RepositoryLiveStatus } from "@/components/repositories/RepositoryLiveStatus";
-import { Button } from "@/components/ui/button";
+
+import { BadgeGroup } from "@/components/intelligence-v2/BadgeGroup";
+import { InsightList } from "@/components/intelligence-v2/InsightList";
+import { IntelligenceSection } from "@/components/intelligence-v2/IntelligenceSection";
+import { ScoreCard } from "@/components/intelligence-v2/ScoreCard";
+
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+
 import { useRepositoryArchitectureEvolution } from "@/hooks/useArchitecture";
 import { useRepositoryLiveStatus } from "@/hooks/useRepositoryLiveStatus";
-import { formatFilterLabel, matchesSearch } from "@/lib/filters";
-import { RepositoryIntelligenceNav } from "@/components/repositories/RepositoryIntelligenceNav";
-import { PageContent } from "@/components/layout/PageContent";
+import { formatFilterLabel } from "@/lib/filters";
+
+function matchesSearch(value: string | undefined | null, search: string) {
+  if (!search.trim()) return true;
+
+  return value?.toLowerCase().includes(search.toLowerCase()) ?? false;
+}
+
+function getLatestDate(values: Array<string | null | undefined>) {
+  const validDates = values
+    .map((value) => (value ? new Date(value) : null))
+    .filter((value): value is Date => Boolean(value && !Number.isNaN(value.getTime())))
+    .sort((a, b) => b.getTime() - a.getTime());
+
+  return validDates[0]?.toLocaleString() || "Unknown";
+}
 
 export default function ArchitectureEvolutionPage() {
   const params = useParams<{ repoId: string }>();
   const repoId = params.repoId;
 
-  const [search, setSearch] = useState("");
-  const [selectedDomain, setSelectedDomain] = useState("ALL");
-
   const liveStatus = useRepositoryLiveStatus(repoId);
 
-  const {
-    data,
-    isLoading,
-    isError,
-    error,
-  } = useRepositoryArchitectureEvolution(repoId);
+  const { data, isLoading, isError, error } =
+    useRepositoryArchitectureEvolution(repoId);
 
-  const domainOptions = useMemo(() => {
-    if (!data?.domains) return [];
+  const [search, setSearch] = useState("");
 
-    return data.domains.map((domain) => domain.domain);
-  }, [data?.domains]);
+  const domains = data?.domains || [];
+  const architectureStyles = data?.insights?.architectureStyles || [];
+
+  const totalChanges = data?.summary?.totalArchitectureChanges || 0;
+  const totalDomains = data?.summary?.totalDomains || domains.length;
+  const mostActiveDomain = data?.summary?.mostActiveDomain;
 
   const filteredDomains = useMemo(() => {
-    if (!data?.domains) return [];
-
-    const query = search.trim();
-
-    return data.domains
-      .filter((domain) => {
-        const matchesDomain =
-          selectedDomain === "ALL" || domain.domain === selectedDomain;
-
-        const matchesQuery =
-          !query ||
-          matchesSearch(domain.label, query) ||
-          matchesSearch(domain.domain, query) ||
-          domain.technologies.some((technology) =>
-            matchesSearch(technology, query)
-          ) ||
-          domain.changes.some((change) => {
-            return (
-              matchesSearch(change.changeType, query) ||
-              matchesSearch(change.summary, query) ||
-              matchesSearch(change.evolutionSummary, query) ||
-              matchesSearch(change.detectedTechnology, query) ||
-              matchesSearch(change.fileAffected, query)
-            );
-          });
-
-        return matchesDomain && matchesQuery;
-      })
+    return domains
       .map((domain) => {
-        if (!query) return domain;
+        const changes = domain.changes.filter((change) => {
+          return (
+            matchesSearch(change.changeType, search) ||
+            matchesSearch(change.summary, search) ||
+            matchesSearch(change.evolutionSummary, search) ||
+            matchesSearch(change.detectedTechnology, search) ||
+            matchesSearch(change.fileAffected, search) ||
+            matchesSearch(domain.label, search) ||
+            matchesSearch(domain.domain, search)
+          );
+        });
 
         return {
           ...domain,
-          changes: domain.changes.filter((change) => {
-            return (
-              matchesSearch(change.changeType, query) ||
-              matchesSearch(change.summary, query) ||
-              matchesSearch(change.evolutionSummary, query) ||
-              matchesSearch(change.detectedTechnology, query) ||
-              matchesSearch(change.fileAffected, query)
-            );
-          }),
+          changes,
         };
+      })
+      .filter((domain) => {
+        if (!search.trim()) return true;
+
+        return (
+          matchesSearch(domain.label, search) ||
+          matchesSearch(domain.domain, search) ||
+          domain.changes.length > 0
+        );
       });
-  }, [data?.domains, search, selectedDomain]);
+  }, [domains, search]);
+
+  const latestActivity = getLatestDate(
+    domains.map((domain) => domain.latestChangeAt)
+  );
 
   return (
     <AppShell>
@@ -101,7 +110,7 @@ export default function ArchitectureEvolutionPage() {
         </Button>
 
         <div className="rounded-xl border border-border bg-card p-6">
-          <div className="flex flex-col justify-between gap-4 md:flex-row md:items-start">
+          <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
             <div>
               <div className="flex flex-wrap items-center gap-3">
                 <h1 className="text-3xl font-bold tracking-tight">
@@ -114,8 +123,9 @@ export default function ArchitectureEvolutionPage() {
               </div>
 
               <p className="mt-2 max-w-3xl text-muted-foreground">
-                Explore architecture evolution grouped by system domains,
-                technologies, files, and engineering intelligence changes.
+                Evolution scorecard showing architecture domains, engineering
+                styles, change patterns, technologies, and system growth over
+                time.
               </p>
 
               <div className="mt-4">
@@ -127,19 +137,19 @@ export default function ArchitectureEvolutionPage() {
             </div>
           </div>
         </div>
+
         <RepositoryIntelligenceNav repositoryId={repoId} />
 
         {isLoading && (
           <div className="space-y-6">
-            <div className="grid gap-6 md:grid-cols-3">
-              {[1, 2, 3].map((item) => (
-                <Skeleton key={item} className="h-36 rounded-xl" />
-              ))}
+            <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+              <Skeleton className="h-40 rounded-xl" />
+              <Skeleton className="h-40 rounded-xl" />
+              <Skeleton className="h-40 rounded-xl" />
+              <Skeleton className="h-40 rounded-xl" />
             </div>
 
-            {[1, 2].map((item) => (
-              <Skeleton key={item} className="h-72 rounded-xl" />
-            ))}
+            <Skeleton className="h-80 rounded-xl" />
           </div>
         )}
 
@@ -159,73 +169,242 @@ export default function ArchitectureEvolutionPage() {
 
         {!isLoading && !isError && data && (
           <>
-            <ArchitectureEvolutionSummary summary={data.summary} />
+            <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+              <ScoreCard
+                label="Architecture Changes"
+                score={Math.min(totalChanges * 10, 100)}
+                level={`${totalChanges.toLocaleString()} changes`}
+                description="Total architecture-level changes detected by ArcHive."
+              />
 
-            {data.insights?.architectureStyles &&
-              data.insights.architectureStyles.length > 0 && (
-                <div className="rounded-xl border border-border bg-card p-6">
-                  <h2 className="text-lg font-semibold">
-                    Architecture Styles
-                  </h2>
+              <ScoreCard
+                label="Architecture Domains"
+                score={Math.min(totalDomains * 20, 100)}
+                level={`${totalDomains.toLocaleString()} domains`}
+                description="Distinct architecture areas affected over time."
+              />
 
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    High-level engineering patterns detected across this
-                    repository.
-                  </p>
+              <div className="rounded-xl border border-border bg-card p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm text-muted-foreground">
+                      Most Active Domain
+                    </p>
 
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {data.insights.architectureStyles.map((style) => (
-                      <Badge key={style} variant="secondary">
-                        {formatFilterLabel(style)}
-                      </Badge>
-                    ))}
+                    <h3 className="mt-3 text-xl font-bold">
+                      {mostActiveDomain
+                        ? formatFilterLabel(mostActiveDomain)
+                        : "Unknown"}
+                    </h3>
                   </div>
+
+                  <Network className="h-5 w-5 text-primary" />
+                </div>
+
+                <p className="mt-4 text-xs leading-5 text-muted-foreground">
+                  Architecture area with the highest detected evolution.
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-border bg-card p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm text-muted-foreground">
+                      Latest Activity
+                    </p>
+
+                    <h3 className="mt-3 text-xl font-bold">
+                      {latestActivity}
+                    </h3>
+                  </div>
+
+                  <GitBranch className="h-5 w-5 text-primary" />
+                </div>
+
+                <p className="mt-4 text-xs leading-5 text-muted-foreground">
+                  Most recent grouped architecture evolution signal.
+                </p>
+              </div>
+            </div>
+
+            <IntelligenceSection
+              title="Architecture Styles"
+              description="High-level engineering styles detected across this repository."
+            >
+              <BadgeGroup items={architectureStyles} />
+            </IntelligenceSection>
+
+            <IntelligenceSection
+              title="Evolution Search"
+              description="Search architecture domains, technologies, files, change types, and evolution summaries."
+            >
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+
+                <Input
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Search evolution signals..."
+                  className="pl-9"
+                />
+              </div>
+            </IntelligenceSection>
+
+            <IntelligenceSection
+              title="Architecture Domains"
+              description="Grouped evolution lanes showing which parts of the system changed and why."
+            >
+              {filteredDomains.length === 0 ? (
+                <div className="rounded-xl border border-border bg-background p-6 text-center">
+                  <p className="font-medium">No matching domains found</p>
+
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Try another search term or clear the search field.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid gap-5 lg:grid-cols-2">
+                  {filteredDomains.map((domain) => (
+                    <div
+                      key={domain.domain}
+                      className="rounded-xl border border-border bg-background p-5"
+                    >
+                      <div className="flex flex-col justify-between gap-3 md:flex-row md:items-start">
+                        <div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h3 className="font-semibold">
+                              {domain.label || formatFilterLabel(domain.domain)}
+                            </h3>
+
+                            <Badge variant="secondary">
+                              {domain.totalChanges} changes
+                            </Badge>
+                          </div>
+
+                          <p className="mt-2 text-sm text-muted-foreground">
+                            Latest activity:{" "}
+                            {domain.latestChangeAt
+                              ? new Date(domain.latestChangeAt).toLocaleString()
+                              : "Unknown"}
+                          </p>
+                        </div>
+
+                        <Boxes className="h-5 w-5 text-primary" />
+                      </div>
+
+                      {domain.technologies && domain.technologies.length > 0 && (
+                        <div className="mt-4">
+                          <BadgeGroup
+                            items={domain.technologies}
+                            variant="outline"
+                            humanize={false}
+                            limit={5}
+                          />
+                        </div>
+                      )}
+
+                      <div className="mt-5 space-y-3">
+                        {domain.changes.slice(0, 3).map((change) => (
+                          <div
+                            key={change.id}
+                            className="rounded-lg border border-border bg-card p-4"
+                          >
+                            <div className="flex flex-wrap items-center gap-2">
+                              <Badge variant="outline">
+                                {formatFilterLabel(change.changeType)}
+                              </Badge>
+
+                              {change.detectedTechnology && (
+                                <Badge variant="secondary">
+                                  {change.detectedTechnology}
+                                </Badge>
+                              )}
+                            </div>
+
+                            <p className="mt-3 text-sm leading-6 text-muted-foreground">
+                              {change.summary ||
+                                "Architecture change detected."}
+                            </p>
+
+                            {change.evolutionSummary && (
+                              <p className="mt-2 text-xs leading-5 text-muted-foreground">
+                                {change.evolutionSummary}
+                              </p>
+                            )}
+
+                            {change.fileAffected && (
+                              <p className="mt-3 break-all rounded-md bg-background p-2 text-xs text-muted-foreground">
+                                {change.fileAffected}
+                              </p>
+                            )}
+                          </div>
+                        ))}
+
+                        {domain.changes.length > 3 && (
+                          <p className="text-xs text-muted-foreground">
+                            +{domain.changes.length - 3} more changes hidden
+                            for readability.
+                          </p>
+                        )}
+
+                        {domain.changes.length === 0 && (
+                          <p className="text-sm text-muted-foreground">
+                            No matching changes in this domain.
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
+            </IntelligenceSection>
 
-            {data.domains.length > 0 && (
-              <ArchitectureEvolutionFilters
-                search={search}
-                onSearchChange={setSearch}
-                selectedDomain={selectedDomain}
-                onDomainChange={setSelectedDomain}
-                domains={domainOptions}
-              />
-            )}
+            <IntelligenceSection
+              title="Evolution Intelligence Notes"
+              description="Compact evidence extracted from the latest architecture evolution signals."
+            >
+              <div className="grid gap-6 lg:grid-cols-2">
+                <div className="rounded-xl border border-border bg-background p-5">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="h-5 w-5 text-primary" />
+                    <p className="font-medium">Recent Evolution Summaries</p>
+                  </div>
 
-            <ArchitectureDomainOverview domains={filteredDomains} />
+                  <div className="mt-4">
+                    <InsightList
+                      items={domains
+                        .flatMap((domain) =>
+                          domain.changes.map(
+                            (change) => change.evolutionSummary
+                          )
+                        )
+                        .filter(Boolean)}
+                      limit={5}
+                      empty="No evolution summaries available yet."
+                    />
+                  </div>
+                </div>
 
-            <ArchitectureIntelligenceGraph
-              data={{
-                ...data,
-                domains: filteredDomains,
-              }}
-            />
+                <div className="rounded-xl border border-border bg-background p-5">
+                  <div className="flex items-center gap-2">
+                    <GitBranch className="h-5 w-5 text-primary" />
+                    <p className="font-medium">Recent Architecture Changes</p>
+                  </div>
 
-            {data.domains.length === 0 ? (
-              <div className="rounded-xl border border-border bg-card p-10 text-center">
-                <h2 className="text-xl font-semibold">
-                  No architecture evolution yet
-                </h2>
-
-                <p className="mt-2 text-sm text-muted-foreground">
-                  ArcHive has not grouped architecture changes into evolution
-                  domains for this repository yet.
-                </p>
+                  <div className="mt-4">
+                    <InsightList
+                      items={domains
+                        .flatMap((domain) =>
+                          domain.changes.map((change) => change.summary)
+                        )
+                        .filter(Boolean)}
+                      limit={5}
+                      empty="No recent architecture change summaries available."
+                    />
+                  </div>
+                </div>
               </div>
-            ) : filteredDomains.length === 0 ? (
-              <div className="rounded-xl border border-border bg-card p-10 text-center">
-                <h2 className="text-xl font-semibold">
-                  No matching evolution signals
-                </h2>
-
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Try adjusting your search or selected architecture domain.
-                </p>
-              </div>
-            ) : (
-              <ArchitectureEvolutionLanes domains={filteredDomains} />
-            )}
+            </IntelligenceSection>
           </>
         )}
       </PageContent>

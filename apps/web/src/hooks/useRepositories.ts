@@ -200,6 +200,6 @@ export function useReprocessRepository() {
 
 export function useReprocessAllRepositories() {
   return useMutation({
-    mutationFn: () => repositoryService.reprocessAllRepositories(),
+    mutationFn: () => repositoryService.reprocessAllRepository(),
   });
 }
