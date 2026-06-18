@@ -44,6 +44,8 @@ import {
     RepositoryPersona,
 } from "./persona";
 
+import { runTechnologyDetectors } from "./technologies";
+
 export type TechnologyFingerprintResult = {
     technologies: string[];
     architectureDomains: string[];
@@ -94,6 +96,8 @@ export const detectTechnologyFingerprint = (
         commitMessages,
         repositoryContext: combinedText,
     });
+
+    runTechnologyDetectors(evidenceContext);
 
     const addEvidence = (
         repositoryType: Parameters<typeof evidenceContext.addEvidence>[0],
@@ -776,9 +780,9 @@ export const detectTechnologyFingerprint = (
     });
 
     const repositoryPersona = inferRepositoryPersona(
-  Array.from(repositoryTypes) as RepositoryType[],
-  capabilities.map((capability) => capability.key)
-);
+        Array.from(repositoryTypes) as RepositoryType[],
+        capabilities.map((capability) => capability.key)
+    );
 
     const repositoryDNA = buildRepositoryDNA({
         repositoryTypes: Array.from(repositoryTypes),
@@ -786,6 +790,11 @@ export const detectTechnologyFingerprint = (
         architectureDomains: Array.from(architectureDomains),
         capabilities,
     });
+
+    for (const technology of evidenceContext.technologyEvidence) {
+        add(technologies, [technology.name]);
+        addReasoningSignal(technology.reason);
+    }
 
 
 

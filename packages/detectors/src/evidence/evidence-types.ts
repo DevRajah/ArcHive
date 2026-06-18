@@ -70,6 +70,7 @@ export type EvidenceContext = {
     commitMessages: string[];
     combinedText: string;
     evidenceItems: EvidenceItem[];
+    technologyEvidence: TechnologyEvidence[];
     addEvidence: (
         repositoryType: RepositoryType,
         label: string,
@@ -77,5 +78,19 @@ export type EvidenceContext = {
         category: EvidenceCategory,
         strength: EvidenceStrength
     ) => void;
+
+    addTechnology: (
+        name: string,
+        reason: string,
+        weight: number,
+        strength: EvidenceStrength
+    ) => void;
+};
+
+export type TechnologyEvidence = {
+    name: string;
+    reason: string;
+    weight: number;
+    strength: EvidenceStrength;
 };
 
