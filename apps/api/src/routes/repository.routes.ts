@@ -126,6 +126,7 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
     });
   });
 
+  // Fetch Repos
   app.get("/", async () => {
     const repositories = await prisma.repository.findMany({
       orderBy: {
@@ -139,6 +140,8 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
       data: repositories,
     };
   });
+
+
   //repository details with tracking status
   app.get<{ Params: { repositoryId: string } }>("/:repositoryId", async (request, reply) => {
     const { repositoryId } = request.params;
@@ -354,6 +357,8 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
       };
     }
   );
+
+
   //detailed architecture evolution analysis
   app.get<{ Params: { repositoryId: string } }>(
     "/:repositoryId/architecture-evolution",
@@ -504,6 +509,153 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
       };
     }
   );
+
+  // Detailed intelligence Report
+  app.get<{ Params: { repositoryId: string } }>(
+    "/:repositoryId/intelligence",
+    async (request, reply) => {
+      const { repositoryId } = request.params;
+
+      const repository = await prisma.repository.findUnique({
+        where: {
+          id: repositoryId,
+        },
+        select: {
+          id: true,
+          name: true,
+          fullName: true,
+          description: true,
+          language: true,
+          stars: true,
+          forks: true,
+          isTracked: true,
+          createdAt: true,
+          updatedAt: true,
+          architectureChanges: {
+            orderBy: {
+              createdAt: "desc",
+            },
+            select: {
+              id: true,
+              changeType: true,
+              detectedTechnology: true,
+              fileAffected: true,
+              summary: true,
+              repositoryTypes: true,
+              reasoningSignals: true,
+              architectureDomain: true,
+              evolutionSummary: true,
+              createdAt: true,
+            },
+          },
+        },
+      });
+
+      if (!repository || !repository.isTracked) {
+        return reply.status(404).send({
+          success: false,
+          message: "Tracked repository not found",
+        });
+      }
+
+      const repositoryTypes = Array.from(
+        new Set(
+          repository.architectureChanges
+            .flatMap((change) => change.repositoryTypes?.split(",") || [])
+            .map((type) => type.trim())
+            .filter(Boolean)
+        )
+      );
+
+      const technologies = Array.from(
+        new Set(
+          repository.architectureChanges
+            .map((change) => change.detectedTechnology)
+            .filter((technology): technology is string => Boolean(technology))
+        )
+      );
+
+      const architectureDomains = Array.from(
+        new Set(
+          repository.architectureChanges
+            .map((change) => change.architectureDomain)
+            .filter((domain): domain is string => Boolean(domain))
+        )
+      );
+
+      const reasoningSignals = Array.from(
+        new Set(
+          repository.architectureChanges
+            .flatMap((change) => change.reasoningSignals?.split(",") || [])
+            .map((signal) => signal.trim())
+            .filter(Boolean)
+        )
+      );
+
+      const engineeringSignals = reasoningSignals;
+
+      const fingerprint = detectTechnologyFingerprint(
+        repository.architectureChanges
+          .map((change) => change.fileAffected)
+          .filter((file): file is string => Boolean(file)),
+        repository.architectureChanges.map((change) => change.summary)
+      );
+
+      const repositoryIntelligence =
+        fingerprint.repositoryIntelligence;
+
+      const summary = {
+        primaryRepositoryType:
+          repositoryIntelligence.identity.repositoryTypes[0] || null,
+        persona: repositoryIntelligence.identity.repositoryPersona,
+        healthStatus:
+          repositoryIntelligence.assessment.repositoryHealth.status,
+        healthScore:
+          repositoryIntelligence.assessment.repositoryHealth.score,
+        maturityLevel:
+          repositoryIntelligence.assessment.repositoryMaturity.level,
+        maturityScore:
+          repositoryIntelligence.assessment.repositoryMaturity.score,
+        productionReadinessLevel:
+          repositoryIntelligence.assessment.productionReadiness.level,
+        productionReadinessScore:
+          repositoryIntelligence.assessment.productionReadiness.score,
+        engineeringQualityScore:
+          repositoryIntelligence.assessment.engineeringQuality.overallScore,
+      };
+
+      return {
+        success: true,
+        message: "Repository intelligence fetched successfully.",
+        data: {
+          repository: {
+            id: repository.id,
+            name: repository.name,
+            fullName: repository.fullName,
+            description: repository.description,
+            language: repository.language,
+            stars: repository.stars,
+            forks: repository.forks,
+            createdAt: repository.createdAt,
+            updatedAt: repository.updatedAt,
+          },
+
+          summary,
+
+          repositoryIntelligence,
+
+          legacy: {
+            repositoryTypes,
+            technologies,
+            architectureDomains,
+            engineeringSignals,
+            reasoningSignals,
+          },
+        },
+      };
+    }
+  );
+
   //detailed architecture analysis
   app.get<{ Params: { repositoryId: string } }>(
     "/:repositoryId/architecture",
@@ -2262,6 +2414,7 @@ ${architectureChanges
       };
     }
   );
+
 
   // comprehensive intelligence report
   app.get<{ Params: { repositoryId: string } }>(
