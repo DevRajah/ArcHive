@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { RefreshCcw, Sparkles } from "lucide-react";
+import { GitCompareArrows, RefreshCcw, Sparkles } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
 import { QUERY_KEYS } from "@/constants/query-keys";
 import { useReprocessAllRepositories } from "@/hooks/useRepositories";
+import Link from "next/link";
 
 export function DashboardIntelligenceActions() {
     const queryClient = useQueryClient();
@@ -96,32 +97,41 @@ export function DashboardIntelligenceActions() {
                     </div>
                 </div>
 
-                <Button
-                    onClick={refreshAllIntelligence}
-                    disabled={reprocessAllMutation.isPending}
-                >
-                    <RefreshCcw
-                        className={`mr-2 h-4 w-4 ${reprocessAllMutation.isPending ? "animate-spin" : ""
-                            }`}
-                    />
+                <div className="flex flex-wrap gap-3">
+                    <Button asChild variant="outline">
+                        <Link href="/compare">
+                            <GitCompareArrows className="mr-2 h-4 w-4" />
+                            Compare Repositories
+                        </Link>
+                    </Button>
 
-                    {reprocessAllMutation.isPending
-                        ? "Refreshing..."
-                        : "Refresh All Intelligence"}
-                </Button>
+                    <Button
+                        onClick={refreshAllIntelligence}
+                        disabled={reprocessAllMutation.isPending}
+                    >
+                        <RefreshCcw
+                            className={`mr-2 h-4 w-4 ${reprocessAllMutation.isPending ? "animate-spin" : ""
+                                }`}
+                        />
+
+                        {reprocessAllMutation.isPending
+                            ? "Refreshing..."
+                            : "Refresh All Intelligence"}
+                    </Button>
+                </div>
             </div>
 
             {feedback && (
                 <div
                     className={`mt-5 rounded-xl border p-4 ${feedback.type === "success"
-                            ? "border-emerald-500/30 bg-emerald-500/10"
-                            : "border-destructive/30 bg-destructive/10"
+                        ? "border-emerald-500/30 bg-emerald-500/10"
+                        : "border-destructive/30 bg-destructive/10"
                         }`}
                 >
                     <p
                         className={`text-sm font-medium ${feedback.type === "success"
-                                ? "text-emerald-500"
-                                : "text-destructive"
+                            ? "text-emerald-500"
+                            : "text-destructive"
                             }`}
                     >
                         {feedback.message}
