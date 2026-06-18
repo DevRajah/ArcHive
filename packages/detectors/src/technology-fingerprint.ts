@@ -91,6 +91,16 @@ import {
     buildArchitectureDriftReport,
 } from "./architecture-drift";
 
+import {
+    analyzeRepositoryEvolution,
+    EvolutionInsightsReport,
+} from "./repository-evolution";
+
+import {
+    buildRepositoryIntelligenceReport,
+    RepositoryIntelligenceReport,
+} from "./repository-intelligence";
+
 
 import { runTechnologyDetectors } from "./technologies";
 
@@ -113,6 +123,8 @@ export type TechnologyFingerprintResult = {
     recommendationReport: RecommendationReport;
     repositoryHealth: RepositoryHealth;
     architectureDrift: ArchitectureDriftReport;
+    evolutionInsights: EvolutionInsightsReport;
+    repositoryIntelligence: RepositoryIntelligenceReport;
     //repositoryIdentity: RepositoryIdentity;
 
     //rankedEvidence: RankedEvidence[];
@@ -909,11 +921,7 @@ export const detectTechnologyFingerprint = (
         technicalDebt,
     });
 
-    const recommendationReport = buildRecommendationReport({
-        weaknessReport,
-        technicalDebt,
-        productionReadiness,
-    });
+
 
     const repositoryHealth = buildRepositoryHealth({
         engineeringQuality,
@@ -922,7 +930,6 @@ export const detectTechnologyFingerprint = (
         technicalDebt,
         strengthReport,
         weaknessReport,
-        recommendationReport,
     });
 
     const architectureDrift = buildArchitectureDriftReport({
@@ -930,6 +937,56 @@ export const detectTechnologyFingerprint = (
         repositoryTypes: Array.from(repositoryTypes),
         technologies: Array.from(technologies),
         reasoningSignals,
+    });
+
+    const evolutionInsights = analyzeRepositoryEvolution({
+        architectureDomains: Array.from(architectureDomains),
+        repositoryTypes: Array.from(repositoryTypes),
+        technologies: Array.from(technologies),
+        reasoningSignals,
+        repositoryDNA,
+        engineeringQuality,
+        repositoryMaturity,
+        repositoryHealth,
+        architectureDrift,
+    });
+
+    const recommendationReport = buildRecommendationReport({
+        weaknessReport,
+        technicalDebt,
+        productionReadiness,
+        engineeringQuality,
+        repositoryMaturity,
+        repositoryHealth,
+        architectureDrift,
+        evolutionInsights,
+    });
+
+    const finalTechnologies = Array.from(technologies);
+    const finalArchitectureDomains = Array.from(architectureDomains);
+    const finalEngineeringSignals = Array.from(engineeringSignals);
+    const finalRepositoryTypes = Array.from(repositoryTypes);
+
+    const repositoryIntelligence = buildRepositoryIntelligenceReport({
+        technologies: finalTechnologies,
+        architectureDomains: finalArchitectureDomains,
+        engineeringSignals: finalEngineeringSignals,
+        reasoningSignals,
+        repositoryTypes: finalRepositoryTypes,
+        repositoryPersona,
+        repositoryDNA,
+        capabilities,
+        evidenceResults,
+        engineeringQuality,
+        productionReadiness,
+        repositoryMaturity,
+        repositoryHealth,
+        technicalDebt,
+        architectureDrift,
+        evolutionInsights,
+        strengthReport,
+        weaknessReport,
+        recommendationReport,
     });
 
 
@@ -953,6 +1010,8 @@ export const detectTechnologyFingerprint = (
         recommendationReport,
         repositoryHealth,
         architectureDrift,
+        evolutionInsights,
+        repositoryIntelligence,
         //repositoryIdentity,
         //rankedEvidence,
     };

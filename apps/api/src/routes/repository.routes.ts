@@ -22,6 +22,8 @@ import {
 
 } from "@archive/detectors";
 
+import { generateRepositoryIntelligence } from "../services/repository-intelligence.service"
+
 import { syncEngineeringRecommendations } from "../utils/sync-engineering-recommendations";
 
 type CreateRepositoryBody = {
@@ -880,6 +882,138 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
     };
   });
 
+
+  //Reprocess Single Repo
+  app.post("/:repositoryId/reprocess", async (request, reply) => {
+    const startedAt = Date.now();
+
+    const { repositoryId } = request.params as {
+      repositoryId: string;
+    };
+
+    const repository = await prisma.repository.findUnique({
+      where: {
+        id: repositoryId,
+      },
+      select: {
+        id: true,
+        name: true,
+        fullName: true,
+        isTracked: true,
+      },
+    });
+
+    if (!repository || !repository.isTracked) {
+      return reply.status(404).send({
+        success: false,
+        message: "Tracked repository not found",
+      });
+    }
+
+    try {
+      await generateRepositoryIntelligence({
+        repositoryId,
+      });
+
+      return {
+        success: true,
+        message: "Repository intelligence regenerated successfully.",
+        data: {
+          repository: {
+            id: repository.id,
+            name: repository.name,
+            fullName: repository.fullName,
+          },
+          status: "SUCCESS",
+          durationMs: Date.now() - startedAt,
+        },
+      };
+    } catch (error) {
+      return reply.status(500).send({
+        success: false,
+        message: "Repository intelligence regeneration failed.",
+        data: {
+          repository: {
+            id: repository.id,
+            name: repository.name,
+            fullName: repository.fullName,
+          },
+          status: "FAILED",
+          durationMs: Date.now() - startedAt,
+          error:
+            error instanceof Error
+              ? error.message
+              : "Unknown error",
+        },
+      });
+    }
+  });
+
+  //Reprocess All Repos
+  app.post("/reprocess-all", async (_request, reply) => {
+    const startedAt = Date.now();
+
+    const repositories = await prisma.repository.findMany({
+      where: {
+        isTracked: true,
+      },
+      select: {
+        id: true,
+        name: true,
+        fullName: true,
+      },
+    });
+
+    const results = [];
+
+    for (const repository of repositories) {
+      const repositoryStartedAt = Date.now();
+
+      try {
+        await generateRepositoryIntelligence({
+          repositoryId: repository.id,
+        });
+
+        results.push({
+          repositoryId: repository.id,
+          name: repository.name,
+          fullName: repository.fullName,
+          status: "SUCCESS",
+          durationMs: Date.now() - repositoryStartedAt,
+        });
+      } catch (error) {
+        results.push({
+          repositoryId: repository.id,
+          name: repository.name,
+          fullName: repository.fullName,
+          status: "FAILED",
+          durationMs: Date.now() - repositoryStartedAt,
+          error:
+            error instanceof Error
+              ? error.message
+              : "Unknown error",
+        });
+      }
+    }
+
+    const successful = results.filter((result) => result.status === "SUCCESS");
+    const failed = results.filter((result) => result.status === "FAILED");
+
+    return {
+      success: failed.length === 0,
+      message:
+        failed.length === 0
+          ? "Repository portfolio reprocessed successfully."
+          : "Repository portfolio reprocessed with some failures.",
+      data: {
+        totalRepositories: repositories.length,
+        successful: successful.length,
+        failed: failed.length,
+        durationMs: Date.now() - startedAt,
+        results,
+      },
+    };
+  });
 
   // semantic profile analysis
   app.get<{ Params: { repositoryId: string } }>(

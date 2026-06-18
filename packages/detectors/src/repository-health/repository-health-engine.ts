@@ -34,7 +34,6 @@ export const buildRepositoryHealth = ({
   technicalDebt,
   strengthReport,
   weaknessReport,
-  recommendationReport,
 }: {
   engineeringQuality: EngineeringQualityResult;
   productionReadiness: ProductionReadiness;
@@ -42,16 +41,10 @@ export const buildRepositoryHealth = ({
   technicalDebt: TechnicalDebtReport;
   strengthReport: StrengthReport;
   weaknessReport: WeaknessReport;
-  recommendationReport: RecommendationReport;
 }): RepositoryHealth => {
   const weaknessPenalty = Math.min(30, weaknessReport.weaknesses.length * 4);
   const debtPenalty = Math.min(30, technicalDebt.debtScore * 0.3);
-  const recommendationPenalty = Math.min(
-    20,
-    recommendationReport.recommendations.filter(
-      (recommendation) => recommendation.priority === "HIGH"
-    ).length * 5
-  );
+
 
   const rawScore =
     engineeringQuality.overallScore * 0.35 +
@@ -59,8 +52,7 @@ export const buildRepositoryHealth = ({
     repositoryMaturity.score * 0.25 +
     (100 - technicalDebt.debtScore) * 0.15 -
     weaknessPenalty -
-    debtPenalty -
-    recommendationPenalty;
+    debtPenalty;
 
   const score = Math.max(0, Math.min(100, Math.round(rawScore)));
   const status = getStatus(score);
