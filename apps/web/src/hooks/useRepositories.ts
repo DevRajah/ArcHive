@@ -208,7 +208,8 @@ export function useRepositoryIntelligenceDiff(repositoryId: string) {
   return useQuery({
     queryKey: QUERY_KEYS.REPOSITORY_INTELLIGENCE_DIFF(repositoryId),
     queryFn: () => repositoryService.getRepositoryIntelligenceDiff(repositoryId),
-    enabled: Boolean(repositoryId),
+    //enabled: Boolean(repositoryId),
+    enabled: false, // Backend endpoint is not available yet.
     retry: false,
   });
 }

@@ -23,4 +23,12 @@ export const architectureService = {
 
     return response.data.data;
   },
+
+   async getRepositoryArchitectureRadar(repositoryId: string) {
+    const response = await api.get(
+      `/repositories/${repositoryId}/architecture-radar`
+    );
+
+    return response.data.data;
+  },
 };

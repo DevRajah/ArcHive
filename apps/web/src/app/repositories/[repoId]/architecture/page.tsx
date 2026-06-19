@@ -11,19 +11,24 @@ import {
   Boxes,
   ServerCog,
   GitBranch,
-  GitGraph
+  GitGraph,
 } from "lucide-react";
 
 import { AppShell } from "@/components/layout/AppShell";
+import { PageContent } from "@/components/layout/PageContent";
 import { ActivityFilters } from "@/components/filters/ActivityFilters";
+import { RepositoryArchitectureRadar } from "@/components/repositories/RepositoryArchitectureRadar";
+import { RepositoryIntelligenceNav } from "@/components/repositories/RepositoryIntelligenceNav";
 import { RepositoryLiveStatus } from "@/components/repositories/RepositoryLiveStatus";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useRepositoryArchitecture } from "@/hooks/useArchitecture";
+import {
+  useRepositoryArchitecture,
+  useRepositoryArchitectureRadar,
+} from "@/hooks/useArchitecture";
 import { useRepositoryLiveStatus } from "@/hooks/useRepositoryLiveStatus";
 import { formatFilterLabel, matchesSearch } from "@/lib/filters";
-import { RepositoryIntelligenceNav } from "@/components/repositories/RepositoryIntelligenceNav";
 
 function formatLabel(value?: string | null) {
   if (!value || value === "UNKNOWN") return "Architecture Change";
@@ -83,6 +88,11 @@ export default function ArchitecturePage() {
     error,
   } = useRepositoryArchitecture(repoId);
 
+  const {
+    data: architectureRadar,
+    isLoading: isArchitectureRadarLoading,
+  } = useRepositoryArchitectureRadar(repoId);
+
   const liveStatus = useRepositoryLiveStatus(repoId);
   const totalChanges = architectureChanges?.length ?? 0;
 
@@ -121,15 +131,13 @@ export default function ArchitecturePage() {
 
   return (
     <AppShell>
-      <div className="space-y-6">
+      <PageContent>
         <Button asChild variant="ghost" className="px-0">
           <Link href={`/repositories/${repoId}`}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to repository overview
           </Link>
         </Button>
-
-
 
         <div className="rounded-xl border border-border bg-card p-6">
           <div className="flex flex-col justify-between gap-4 md:flex-row md:items-start">
@@ -152,8 +160,6 @@ export default function ArchitecturePage() {
               </div>
             </div>
 
-
-
             <div className="flex flex-wrap items-center gap-3">
               <Button asChild>
                 <Link href={`/repositories/${repoId}/architecture/evolution`}>
@@ -163,10 +169,17 @@ export default function ArchitecturePage() {
               </Button>
 
               <Badge variant="secondary">{totalChanges} changes</Badge>
-            </div>          </div>
+            </div>
+          </div>
         </div>
 
         <RepositoryIntelligenceNav repositoryId={repoId} />
+
+        <RepositoryArchitectureRadar
+          data={architectureRadar}
+          isLoading={isArchitectureRadarLoading}
+          repositoryId={repoId}
+        />
 
         {!isLoading &&
           !isError &&
@@ -299,7 +312,7 @@ export default function ArchitecturePage() {
               })}
             </div>
           )}
-      </div>
+      </PageContent>
     </AppShell>
   );
 }
