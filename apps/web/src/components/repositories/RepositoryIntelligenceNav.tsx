@@ -13,6 +13,7 @@ import {
     Network,
     Radar,
     ShieldCheck,
+    GitCompareArrows
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -87,6 +88,11 @@ const moreItems = [
         href: "related",
         icon: GitBranch,
     },
+    {
+        label: "Diff",
+        href: "intelligence/diff",
+        icon: GitCompareArrows,
+    },
 ];
 
 function getHref(repositoryId: string, href: string) {
@@ -108,67 +114,67 @@ export function RepositoryIntelligenceNav({
     });
 
     return (
-        <div className="w-full max-w-full overflow-hidden rounded-xl border border-border bg-card p-3">   
-           <div className="flex max-w-full flex-wrap items-center gap-2">
-            {primaryItems.map((item) => {
-                const Icon = item.icon;
-                const href = getHref(repositoryId, item.href);
-                const active = isItemActive(pathname, href);
+        <div className="w-full max-w-full overflow-hidden rounded-xl border border-border bg-card p-3">
+            <div className="flex max-w-full flex-wrap items-center gap-2">
+                {primaryItems.map((item) => {
+                    const Icon = item.icon;
+                    const href = getHref(repositoryId, item.href);
+                    const active = isItemActive(pathname, href);
 
-                return (
-                    <Link
-                        key={item.href || "overview"}
-                        href={href}
-                        className={cn(
-                            "flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted-foreground transition hover:bg-accent hover:text-foreground",
-                            active && "bg-primary/10 text-primary"
-                        )}
-                    >
-                        <Icon className="h-4 w-4" />
-                        {item.label}
-                    </Link>
-                );
-            })}
+                    return (
+                        <Link
+                            key={item.href || "overview"}
+                            href={href}
+                            className={cn(
+                                "flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted-foreground transition hover:bg-accent hover:text-foreground",
+                                active && "bg-primary/10 text-primary"
+                            )}
+                        >
+                            <Icon className="h-4 w-4" />
+                            {item.label}
+                        </Link>
+                    );
+                })}
 
-            <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                    <Button
-                        variant={moreIsActive ? "secondary" : "ghost"}
-                        size="sm"
-                        className={cn(
-                            "gap-2",
-                            moreIsActive && "bg-primary/10 text-primary hover:bg-primary/10"
-                        )}
-                    >
-                        More
-                        <ChevronDown className="h-4 w-4" />
-                    </Button>
-                </DropdownMenuTrigger>
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button
+                            variant={moreIsActive ? "secondary" : "ghost"}
+                            size="sm"
+                            className={cn(
+                                "gap-2",
+                                moreIsActive && "bg-primary/10 text-primary hover:bg-primary/10"
+                            )}
+                        >
+                            More
+                            <ChevronDown className="h-4 w-4" />
+                        </Button>
+                    </DropdownMenuTrigger>
 
-                <DropdownMenuContent align="end" className="w-56">
-                    {moreItems.map((item) => {
-                        const Icon = item.icon;
-                        const href = getHref(repositoryId, item.href);
-                        const active = pathname === href || pathname.startsWith(`${href}/`);
+                    <DropdownMenuContent align="end" className="w-56">
+                        {moreItems.map((item) => {
+                            const Icon = item.icon;
+                            const href = getHref(repositoryId, item.href);
+                            const active = pathname === href || pathname.startsWith(`${href}/`);
 
-                        return (
-                            <DropdownMenuItem key={item.href} asChild>
-                                <Link
-                                    href={href}
-                                    className={cn(
-                                        "flex cursor-pointer items-center gap-2",
-                                        active && "text-primary"
-                                    )}
-                                >
-                                    <Icon className="h-4 w-4" />
-                                    {item.label}
-                                </Link>
-                            </DropdownMenuItem>
-                        );
-                    })}
-                </DropdownMenuContent>
-            </DropdownMenu>
-        </div>
+                            return (
+                                <DropdownMenuItem key={item.href} asChild>
+                                    <Link
+                                        href={href}
+                                        className={cn(
+                                            "flex cursor-pointer items-center gap-2",
+                                            active && "text-primary"
+                                        )}
+                                    >
+                                        <Icon className="h-4 w-4" />
+                                        {item.label}
+                                    </Link>
+                                </DropdownMenuItem>
+                            );
+                        })}
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            </div>
         </div>
     );
 }

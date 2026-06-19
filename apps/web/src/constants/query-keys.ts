@@ -5,11 +5,11 @@ export const QUERY_KEYS = {
   INTELLIGENCE_OVERVIEW: ["intelligence-overview"],
 
   INTELLIGENCE_SEARCH: (params: {
-  query?: string;
-  repositoryType?: string;
-  domain?: string;
-  technology?: string;
-}) => ["intelligence-search", params],
+    query?: string;
+    repositoryType?: string;
+    domain?: string;
+    technology?: string;
+  }) => ["intelligence-search", params],
 
   REPOSITORIES: ["repositories"],
   GITHUB_REPOSITORIES: ["github-repositories"],
@@ -101,6 +101,11 @@ export const QUERY_KEYS = {
 
   REPOSITORY_INTELLIGENCE_MARKDOWN: (repositoryId: string) => [
     "repository-intelligence-markdown",
+    repositoryId,
+  ],
+  
+  REPOSITORY_INTELLIGENCE_DIFF: (repositoryId: string) => [
+    "repository-intelligence-diff",
     repositoryId,
   ],
 };

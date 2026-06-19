@@ -20,6 +20,7 @@ import {
   IntelligenceSearchParams,
   IntelligenceSearchResponse,
 } from "@/types/intelligence-search.types";
+import { RepositoryIntelligenceDiffResponse } from "@/types/repository-intelligence-diff.types";
 
 function requireUserId() {
   const userId = getUserId();
@@ -239,5 +240,15 @@ export const repositoryService = {
 
   async reprocessAllRepository(): Promise<void> {
     await api.post("/repositories/reprocess-all");
+  },
+
+  async getRepositoryIntelligenceDiff(
+    repositoryId: string
+  ): Promise<RepositoryIntelligenceDiffResponse> {
+    const response = await api.get<ApiResponse<RepositoryIntelligenceDiffResponse>>(
+      `/repositories/${repositoryId}/intelligence-diff`
+    );
+
+    return response.data.data;
   },
 };
