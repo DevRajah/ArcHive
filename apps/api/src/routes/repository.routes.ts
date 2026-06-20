@@ -1,7 +1,7 @@
 import { FastifyInstance } from "fastify";
 import { prisma } from "@archive/database";
 import axios from "axios";
-import { engineeringEventQueue } from "@archive/queue";
+import { engineeringEventQueue, repositoryReprocessQueue} from "@archive/queue";
 import {
   detectArchitectureStyle,
   generateRepositoryNarrative,
@@ -1035,137 +1035,127 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
   });
 
 
-  //Reprocess Single Repo
-  app.post("/:repositoryId/reprocess", async (request, reply) => {
-    const startedAt = Date.now();
+// Reprocess All Repos
+app.post("/reprocess-all", async (_request, reply) => {
+  const startedAt = Date.now();
 
-    const { repositoryId } = request.params as {
-      repositoryId: string;
-    };
+  const repositories = await prisma.repository.findMany({
+    where: { isTracked: true },
+    select: {
+      id: true,
+      name: true,
+      fullName: true,
+    },
+  });
 
-    const repository = await prisma.repository.findUnique({
-      where: {
-        id: repositoryId,
-      },
-      select: {
-        id: true,
-        name: true,
-        fullName: true,
-        isTracked: true,
-      },
-    });
+  const results = [];
 
-    if (!repository || !repository.isTracked) {
-      return reply.status(404).send({
-        success: false,
-        message: "Tracked repository not found",
-      });
-    }
+  for (const repository of repositories) {
+    const repositoryStartedAt = Date.now();
 
     try {
       await generateRepositoryIntelligence({
-        repositoryId,
+        repositoryId: repository.id,
       });
 
-      return {
-        success: true,
-        message: "Repository intelligence regenerated successfully.",
-        data: {
-          repository: {
-            id: repository.id,
-            name: repository.name,
-            fullName: repository.fullName,
-          },
-          status: "SUCCESS",
-          durationMs: Date.now() - startedAt,
-        },
-      };
+      results.push({
+        repositoryId: repository.id,
+        name: repository.name,
+        fullName: repository.fullName,
+        status: "SUCCESS",
+        durationMs: Date.now() - repositoryStartedAt,
+      });
     } catch (error) {
-      return reply.status(500).send({
-        success: false,
-        message: "Repository intelligence regeneration failed.",
-        data: {
-          repository: {
-            id: repository.id,
-            name: repository.name,
-            fullName: repository.fullName,
-          },
-          status: "FAILED",
-          durationMs: Date.now() - startedAt,
-          error:
-            error instanceof Error
-              ? error.message
-              : "Unknown error",
-        },
+      results.push({
+        repositoryId: repository.id,
+        name: repository.name,
+        fullName: repository.fullName,
+        status: "FAILED",
+        durationMs: Date.now() - repositoryStartedAt,
+        error: error instanceof Error ? error.message : "Unknown error",
       });
     }
+  }
+
+  const successful = results.filter((result) => result.status === "SUCCESS");
+  const failed = results.filter((result) => result.status === "FAILED");
+
+  return {
+    success: failed.length === 0,
+    message:
+      failed.length === 0
+        ? "Repository portfolio reprocessed successfully."
+        : "Repository portfolio reprocessed with some failures.",
+    data: {
+      totalRepositories: repositories.length,
+      successful: successful.length,
+      failed: failed.length,
+      durationMs: Date.now() - startedAt,
+      results,
+    },
+  };
+});
+
+// Reprocess Single Repo
+app.post("/:repositoryId/reprocess", async (request, reply) => {
+  const startedAt = Date.now();
+
+  const { repositoryId } = request.params as {
+    repositoryId: string;
+  };
+
+  const repository = await prisma.repository.findUnique({
+    where: { id: repositoryId },
+    select: {
+      id: true,
+      name: true,
+      fullName: true,
+      isTracked: true,
+    },
   });
 
-  //Reprocess All Repos
-  app.post("/reprocess-all", async (_request, reply) => {
-    const startedAt = Date.now();
+  if (!repository || !repository.isTracked) {
+    return reply.status(404).send({
+      success: false,
+      message: "Tracked repository not found",
+    });
+  }
 
-    const repositories = await prisma.repository.findMany({
-      where: {
-        isTracked: true,
-      },
-      select: {
-        id: true,
-        name: true,
-        fullName: true,
-      },
+  try {
+    await generateRepositoryIntelligence({
+      repositoryId,
     });
 
-    const results = [];
-
-    for (const repository of repositories) {
-      const repositoryStartedAt = Date.now();
-
-      try {
-        await generateRepositoryIntelligence({
-          repositoryId: repository.id,
-        });
-
-        results.push({
-          repositoryId: repository.id,
-          name: repository.name,
-          fullName: repository.fullName,
-          status: "SUCCESS",
-          durationMs: Date.now() - repositoryStartedAt,
-        });
-      } catch (error) {
-        results.push({
-          repositoryId: repository.id,
-          name: repository.name,
-          fullName: repository.fullName,
-          status: "FAILED",
-          durationMs: Date.now() - repositoryStartedAt,
-          error:
-            error instanceof Error
-              ? error.message
-              : "Unknown error",
-        });
-      }
-    }
-
-    const successful = results.filter((result) => result.status === "SUCCESS");
-    const failed = results.filter((result) => result.status === "FAILED");
-
     return {
-      success: failed.length === 0,
-      message:
-        failed.length === 0
-          ? "Repository portfolio reprocessed successfully."
-          : "Repository portfolio reprocessed with some failures.",
+      success: true,
+      message: "Repository intelligence regenerated successfully.",
       data: {
-        totalRepositories: repositories.length,
-        successful: successful.length,
-        failed: failed.length,
+        repository: {
+          id: repository.id,
+          name: repository.name,
+          fullName: repository.fullName,
+        },
+        status: "SUCCESS",
         durationMs: Date.now() - startedAt,
-        results,
       },
     };
-  });
+  } catch (error) {
+    return reply.status(500).send({
+      success: false,
+      message: "Repository intelligence regeneration failed.",
+      data: {
+        repository: {
+          id: repository.id,
+          name: repository.name,
+          fullName: repository.fullName,
+        },
+        status: "FAILED",
+        durationMs: Date.now() - startedAt,
+        error: error instanceof Error ? error.message : "Unknown error",
+      },
+    });
+  }
+});
 
   // semantic profile analysis
   app.get<{ Params: { repositoryId: string } }>(

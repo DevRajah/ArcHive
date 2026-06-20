@@ -19,3 +19,13 @@ export const engineeringEventQueue = new Queue<ProcessEngineeringEventJob>(
     connection: redisConnection as any,
   }
 );
+
+export const repositoryReprocessQueue = new Queue(
+  "repository-reprocess",
+  {
+    connection: {
+      host: process.env.REDIS_HOST || "localhost",
+      port: Number(process.env.REDIS_PORT || 6379),
+    },
+  }
+);

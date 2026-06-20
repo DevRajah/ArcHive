@@ -1,40 +1,49 @@
 import { EvidenceContext } from "../evidence-types";
-import { fileEqualsAny, fileEndsWithAny, fileMatchesAny, includesAny } from "../evidence-utils";
+import {
+  fileEqualsAny,
+  fileEndsWithAny,
+  fileMatchesAny,
+  includesAny,
+} from "../evidence-utils";
 
 export const detectMobileEvidence = (context: EvidenceContext) => {
   const { combinedText, filesChanged, addEvidence } = context;
 
+  const hasReactNativeDependency = includesAny(combinedText, [
+    "react-native",
+    "expo",
+    "expo-router",
+  ]);
+
+  const hasReactNativeConfig = fileMatchesAny(filesChanged, [
+    "react-native.config",
+    "metro.config",
+    "app.json",
+    "app.config",
+    "eas.json",
+  ]);
+
+  const hasNativeFolders = fileMatchesAny(filesChanged, ["android/", "ios/"]);
+
   const hasFlutterStructure =
     fileEqualsAny(filesChanged, ["pubspec.yaml"]) ||
-    fileEndsWithAny(filesChanged, [".dart"]) ||
-    fileMatchesAny(filesChanged, ["android/", "ios/"]) ||
-    includesAny(combinedText, ["flutter sdk"]);
+    fileEndsWithAny(filesChanged, [".dart"]);
 
-  if (hasFlutterStructure) {
-    addEvidence(
-      "MOBILE_APPLICATION",
-      "Detected Flutter/Dart or native mobile project structure",
-      60,
-      "FILE_STRUCTURE",
-      "STRONG"
-    );
+  const hasStrongMobileSignal =
+    hasFlutterStructure ||
+    (hasReactNativeDependency && (hasReactNativeConfig || hasNativeFolders));
+
+  if (!hasStrongMobileSignal) {
+    return;
   }
 
-  const hasReactNativeStructure =
-    fileMatchesAny(filesChanged, [
-      "react-native.config",
-      "metro.config",
-      "android/",
-      "ios/",
-    ]) || includesAny(combinedText, ["react-native", "expo"]);
-
-  if (hasReactNativeStructure) {
-    addEvidence(
-      "MOBILE_APPLICATION",
-      "Detected React Native or Expo mobile project structure",
-      60,
-      "FILE_STRUCTURE",
-      "STRONG"
-    );
-  }
+  addEvidence(
+    "MOBILE_APPLICATION",
+    hasFlutterStructure
+      ? "Detected Flutter/Dart mobile application structure"
+      : "Detected strong React Native or Expo mobile application structure",
+    70,
+    "FILE_STRUCTURE",
+    "STRONG"
+  );
 };
