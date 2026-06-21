@@ -13,6 +13,10 @@ import { IntelligenceOverview } from "@/components/dashboard/IntelligenceOvervie
 import { IntelligenceSearch } from "@/components/dashboard/IntelligenceSearch";
 import { useIntelligenceOverview } from "@/hooks/useRepositories";
 import { DashboardIntelligenceActions } from "@/components/dashboard/DashboardIntelligenceActions";
+import { PortfolioHealthOverview } from "@/components/dashboard/PortfolioHealthOverview";
+import { RepositoryRanking } from "@/components/dashboard/RepositoryRanking";
+import { TechnologyAdoption } from "@/components/dashboard/TechnologyAdoption";
+import { EngineeringTrendCard } from "@/components/dashboard/EngineeringTrendCard";
 
 export default function DashboardPage() {
   const { data: summary, isLoading, isError, error } = useDashboardSummary();
@@ -34,6 +38,37 @@ export default function DashboardPage() {
             Monitor repository intelligence, architecture evolution, queue
             processing, and engineering activity across your tracked systems.
           </p>
+
+          <PortfolioHealthOverview
+            summary={dashboardSummary?.portfolioSummary}
+          />
+
+          <div className="grid gap-6 xl:grid-cols-2">
+            <RepositoryRanking
+              repositories={dashboardSummary?.repositories}
+            />
+
+            <TechnologyAdoption
+              technologies={dashboardSummary?.technologies}
+            />
+          </div>
+
+          <div className="grid gap-6 md:grid-cols-3">
+            <EngineeringTrendCard
+              title="Top Repository"
+              value={dashboardSummary?.topRepository ?? "N/A"}
+            />
+
+            <EngineeringTrendCard
+              title="Most Mature"
+              value={dashboardSummary?.mostMatureRepository ?? "N/A"}
+            />
+
+            <EngineeringTrendCard
+              title="Fastest Improving"
+              value={dashboardSummary?.fastestImprovingRepository ?? "N/A"}
+            />
+          </div>
 
           <div className="mt-4">
             <LiveActivityIndicator />
