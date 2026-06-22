@@ -18,6 +18,14 @@ import { RepositoryRanking } from "@/components/dashboard/RepositoryRanking";
 import { TechnologyAdoption } from "@/components/dashboard/TechnologyAdoption";
 import { EngineeringTrendCard } from "@/components/dashboard/EngineeringTrendCard";
 
+type PortfolioRepository = {
+  repositoryId?: string;
+  id?: string;
+  name?: string;
+  healthScore?: number;
+  detectedTechnologies?: string[];
+};
+
 export default function DashboardPage() {
   const { data: summary, isLoading, isError, error } = useDashboardSummary();
 
@@ -25,6 +33,42 @@ export default function DashboardPage() {
     data: intelligenceOverview,
     isLoading: isIntelligenceOverviewLoading,
   } = useIntelligenceOverview();
+
+  const portfolioRepositories =
+    (summary?.repositoryIntelligence || []) as PortfolioRepository[];
+
+  const averageHealthScore = Math.round(
+    portfolioRepositories.reduce(
+      (total, repo) => total + (repo.healthScore || 0),
+      0
+    ) / (portfolioRepositories.length || 1)
+  );
+
+  const portfolioSummary = {
+    repositoriesAnalyzed: portfolioRepositories.length,
+    overallEngineeringScore: averageHealthScore,
+    averageHealthScore,
+    averageMaturityScore: 0,
+    averageQualityScore: 0,
+  };
+
+  const portfolioTechnologies = Array.from(
+    new Set(
+      portfolioRepositories.flatMap((repo) => repo.detectedTechnologies || [])
+    )
+  );
+
+  const portfolioRankingRepositories = portfolioRepositories.map((repo) => ({
+    id: repo.repositoryId || repo.id || repo.name || "unknown-repository",
+    name: repo.name || "Unknown repository",
+    engineeringScore: repo.healthScore || 0,
+  }));
+
+  const portfolioTopRepository =
+    portfolioRepositories
+      .slice()
+      .sort((a, b) => (b.healthScore || 0) - (a.healthScore || 0))[0]?.name ||
+    "N/A";
 
   return (
     <AppShell>
@@ -38,37 +82,6 @@ export default function DashboardPage() {
             Monitor repository intelligence, architecture evolution, queue
             processing, and engineering activity across your tracked systems.
           </p>
-
-          <PortfolioHealthOverview
-            summary={dashboardSummary?.portfolioSummary}
-          />
-
-          <div className="grid gap-6 xl:grid-cols-2">
-            <RepositoryRanking
-              repositories={dashboardSummary?.repositories}
-            />
-
-            <TechnologyAdoption
-              technologies={dashboardSummary?.technologies}
-            />
-          </div>
-
-          <div className="grid gap-6 md:grid-cols-3">
-            <EngineeringTrendCard
-              title="Top Repository"
-              value={dashboardSummary?.topRepository ?? "N/A"}
-            />
-
-            <EngineeringTrendCard
-              title="Most Mature"
-              value={dashboardSummary?.mostMatureRepository ?? "N/A"}
-            />
-
-            <EngineeringTrendCard
-              title="Fastest Improving"
-              value={dashboardSummary?.fastestImprovingRepository ?? "N/A"}
-            />
-          </div>
 
           <div className="mt-4">
             <LiveActivityIndicator />
@@ -97,9 +110,35 @@ export default function DashboardPage() {
           </div>
         )}
 
-        <DashboardIntelligenceActions />
+        {!isLoading && !isError && (
+          <>
+            <PortfolioHealthOverview summary={portfolioSummary} />
 
-        {!isLoading && !isError && <DashboardStats summary={summary} />}
+            <div className="grid gap-6 xl:grid-cols-2">
+              <RepositoryRanking repositories={portfolioRankingRepositories} />
+
+              <TechnologyAdoption technologies={portfolioTechnologies} />
+            </div>
+
+            <div className="grid gap-6 md:grid-cols-3">
+              <EngineeringTrendCard
+                title="Top Repository"
+                value={portfolioTopRepository}
+              />
+
+              <EngineeringTrendCard title="Most Mature" value="Pending" />
+
+              <EngineeringTrendCard
+                title="Fastest Improving"
+                value="Pending"
+              />
+            </div>
+
+            <DashboardStats summary={summary} />
+          </>
+        )}
+
+        <DashboardIntelligenceActions />
 
         <IntelligenceOverview
           data={intelligenceOverview}
@@ -111,7 +150,9 @@ export default function DashboardPage() {
         <div className="grid min-w-0 gap-6 xl:grid-cols-[1.4fr_1fr]">
           <RepositoryHealthChart
             repositories={summary?.repositoryIntelligence}
-          />          <RecentActivity events={summary?.recentEngineeringEvents} />
+          />
+
+          <RecentActivity events={summary?.recentEngineeringEvents} />
         </div>
 
         <div className="grid min-w-0 gap-6 xl:grid-cols-[1fr_1fr]">
