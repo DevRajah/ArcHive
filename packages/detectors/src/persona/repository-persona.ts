@@ -60,6 +60,16 @@ export const inferRepositoryPersona = (
     ) {
         return "RESEARCH_PROJECT";
     }
+    if (
+        repositoryTypes.includes("DEVTOOL_PLATFORM") ||
+        repositoryTypes.includes("DEVELOPER_PLATFORM")
+    ) {
+        return "DEVELOPER_TOOLCHAIN";
+    }
+
+    if (repositoryTypes.includes("ENGINEERING_INTELLIGENCE_PLATFORM")) {
+        return "ENGINEERING_INTELLIGENCE_PLATFORM";
+    }
 
     return "PRODUCT_SAAS";
 };

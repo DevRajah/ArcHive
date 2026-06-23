@@ -141,32 +141,35 @@ const add = (set: Set<string>, values: string[]) => {
 };
 
 const repositoryTypePriority = [
-  "ENGINEERING_INTELLIGENCE_PLATFORM",
-  "FINTECH_PLATFORM",
-  "DEVTOOL_PLATFORM",
-  "DEVELOPER_PLATFORM",
-  "SECURITY_PLATFORM",
-  "AI_ML_PROJECT",
-  "DATA_ENGINEERING_PROJECT",
-  "SMART_TRANSPORT_PLATFORM",
-  "ENERGY_PLATFORM",
-  "HEALTHCARE_PLATFORM",
-  "ECOMMERCE_PLATFORM",
-  "EDUCATION_PLATFORM",
-  "COLLABORATION_PLATFORM",
-  "MOBILE_APPLICATION",
-  "BACKEND_SERVICE",
-  "FRONTEND_APPLICATION",
-  "JAVASCRIPT_TYPESCRIPT_PROJECT",
+    "ENGINEERING_INTELLIGENCE_PLATFORM",
+    "DEVTOOL_PLATFORM",
+    "FINTECH_PLATFORM",
+    "OBSERVABILITY_PLATFORM",
+    "SECURITY_PLATFORM",
+    "AI_ML_PROJECT",
+    "DEVELOPER_PLATFORM",
+    "DATA_ENGINEERING_PROJECT",
+    "SMART_TRANSPORT_PLATFORM",
+    "ENERGY_PLATFORM",
+    "HEALTHCARE_PLATFORM",
+    "ECOMMERCE_PLATFORM",
+    "EDUCATION_PLATFORM",
+    "COLLABORATION_PLATFORM",
+    "INFRASTRUCTURE_PLATFORM",
+    "MOBILE_APPLICATION",
+    "BACKEND_SERVICE",
+    "FRONTEND_APPLICATION",
+    "JAVASCRIPT_TYPESCRIPT_PROJECT",
+    "GENERAL_ENGINEERING_PROJECT",
 ];
 
 const sortRepositoryTypesByPurpose = (types: string[]) => {
-  return [...types].sort((a, b) => {
-    const aIndex = repositoryTypePriority.indexOf(a);
-    const bIndex = repositoryTypePriority.indexOf(b);
+    return [...types].sort((a, b) => {
+        const aIndex = repositoryTypePriority.indexOf(a);
+        const bIndex = repositoryTypePriority.indexOf(b);
 
-    return (aIndex === -1 ? 999 : aIndex) - (bIndex === -1 ? 999 : bIndex);
-  });
+        return (aIndex === -1 ? 999 : aIndex) - (bIndex === -1 ? 999 : bIndex);
+    });
 };
 
 export const detectTechnologyFingerprint = (
@@ -991,13 +994,49 @@ export const detectTechnologyFingerprint = (
         evolutionInsights,
     });
 
+    const combinedPurposeText = [
+        ...filesChanged,
+        ...commitMessages,
+        ...reasoningSignals,
+        ...Array.from(technologies),
+        ...Array.from(architectureDomains),
+        ...Array.from(repositoryTypes),
+    ].join(" ").toLowerCase();
+
+    if (
+        combinedPurposeText.includes("repository intelligence") ||
+        combinedPurposeText.includes("engineering intelligence") ||
+        combinedPurposeText.includes("architecture evolution") ||
+        combinedPurposeText.includes("architecture change") ||
+        combinedPurposeText.includes("repository fingerprint") ||
+        combinedPurposeText.includes("github webhook") ||
+        combinedPurposeText.includes("github oauth") ||
+        combinedPurposeText.includes("repository import")
+    ) {
+        repositoryTypes.add("ENGINEERING_INTELLIGENCE_PLATFORM");
+    }
+
+    if (
+        combinedPurposeText.includes("scaffold") ||
+        combinedPurposeText.includes("scaffolding") ||
+        combinedPurposeText.includes("code generation") ||
+        combinedPurposeText.includes("codegen") ||
+        combinedPurposeText.includes("cli") ||
+        combinedPurposeText.includes("commander") ||
+        combinedPurposeText.includes("inquirer") ||
+        combinedPurposeText.includes("boilerplate") ||
+        combinedPurposeText.includes("create-app")
+    ) {
+        repositoryTypes.add("DEVTOOL_PLATFORM");
+    }
+
     const finalTechnologies = Array.from(technologies);
     const finalArchitectureDomains = Array.from(architectureDomains);
     const finalEngineeringSignals = Array.from(engineeringSignals);
     const finalRepositoryTypes = sortRepositoryTypesByPurpose(
         Array.from(repositoryTypes)
     );
-   
+
 
     const repositoryIntelligence = buildRepositoryIntelligenceReport({
         technologies: finalTechnologies,
