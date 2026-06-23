@@ -9,7 +9,6 @@ import { AppShell } from "@/components/layout/AppShell";
 import { PageContent } from "@/components/layout/PageContent";
 import { RepositoryIntelligenceNav } from "@/components/repositories/RepositoryIntelligenceNav";
 import { BadgeGroup } from "@/components/intelligence-v2/BadgeGroup";
-import { InsightList } from "@/components/intelligence-v2/InsightList";
 import { IntelligenceSection } from "@/components/intelligence-v2/IntelligenceSection";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,8 +18,8 @@ import { useRepositoryIntelligenceReport } from "@/hooks/useRepositories";
 import { formatFilterLabel } from "@/lib/filters";
 import {
   getPrimaryRepositoryType,
-  getPurposeDescription,
-  getPurposeTitle,
+  getPurposeDetails,
+  normalizeReasoningSignals,
 } from "@/lib/repository-purpose";
 
 type RepositoryPurposeReport = {
@@ -28,6 +27,10 @@ type RepositoryPurposeReport = {
     id?: string;
     name?: string;
     fullName?: string;
+  };
+
+  summary?: {
+    primaryRepositoryType?: string | null;
   };
 
   repositoryIntelligence?: {
@@ -38,8 +41,6 @@ type RepositoryPurposeReport = {
       repositoryDNA?: {
         engineeringProfile?: string;
         strongestCapabilities?: string[];
-        dominantTechnologies?: string[];
-        dominantArchitecture?: string[];
       };
     };
 
@@ -47,8 +48,12 @@ type RepositoryPurposeReport = {
       technologies?: string[];
       architectureDomains?: string[];
       engineeringSignals?: string[];
-      reasoningSignals?: string[];
+      reasoningSignals?: unknown;
     };
+  };
+
+  legacy?: {
+    repositoryTypes?: string[];
   };
 };
 
@@ -65,20 +70,43 @@ export default function RepositoryPurposePage() {
   const identity = report?.repositoryIntelligence?.identity;
   const signals = report?.repositoryIntelligence?.signals;
 
-  const primaryRepositoryType = getPrimaryRepositoryType(identity);
-  const repositoryTypes = identity?.repositoryTypes || [];
-  const reasoningSignals = signals?.reasoningSignals || [];
+  const primaryRepositoryType = getPrimaryRepositoryType(report);
+  const purpose = getPurposeDetails(primaryRepositoryType);
+
+  const repositoryTypes =
+    identity?.repositoryTypes?.length
+      ? identity.repositoryTypes
+      : report?.legacy?.repositoryTypes || [];
+
+  const reasoningSignals = normalizeReasoningSignals(signals?.reasoningSignals);
 
   useEffect(() => {
     if (process.env.NODE_ENV !== "development") return;
 
-    console.log(identity?.primaryRepositoryType);
-    console.log(identity?.repositoryTypes);
-    console.log(signals?.reasoningSignals);
+    console.log("RAW_INTELLIGENCE_RESPONSE", data);
+    console.log("summary.primaryRepositoryType", report?.summary?.primaryRepositoryType);
+    console.log(
+      "repositoryIntelligence.identity.primaryRepositoryType",
+      identity?.primaryRepositoryType
+    );
+    console.log(
+      "repositoryIntelligence.identity.repositoryTypes",
+      identity?.repositoryTypes
+    );
+    console.log("legacy.repositoryTypes", report?.legacy?.repositoryTypes);
+    console.log(
+      "repositoryIntelligence.signals.reasoningSignals",
+      signals?.reasoningSignals
+    );
+    console.log("FRONTEND_SELECTED_PRIMARY_TYPE", primaryRepositoryType);
   }, [
+    data,
+    report?.summary?.primaryRepositoryType,
     identity?.primaryRepositoryType,
     identity?.repositoryTypes,
+    report?.legacy?.repositoryTypes,
     signals?.reasoningSignals,
+    primaryRepositoryType,
   ]);
 
   return (
@@ -109,8 +137,8 @@ export default function RepositoryPurposePage() {
               </div>
 
               <p className="mt-2 max-w-3xl text-muted-foreground">
-                ArcHive explains what this repository fundamentally is using the
-                backend canonical repository intelligence classification.
+                ArcHive explains what this repository fundamentally is using
+                backend-ranked repository intelligence.
               </p>
             </div>
           </div>
@@ -152,26 +180,28 @@ export default function RepositoryPurposePage() {
                     Primary Repository Purpose
                   </p>
 
-                  <h2 className="mt-2 text-3xl font-bold">
-                    {getPurposeTitle(primaryRepositoryType)}
-                  </h2>
+                  <h2 className="mt-2 text-3xl font-bold">{purpose.title}</h2>
+
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <Badge>{purpose.category}</Badge>
+
+                    {primaryRepositoryType && (
+                      <Badge variant="secondary">
+                        {formatFilterLabel(primaryRepositoryType)}
+                      </Badge>
+                    )}
+                  </div>
 
                   <p className="mt-4 max-w-4xl text-sm leading-7 text-muted-foreground">
-                    {getPurposeDescription(primaryRepositoryType)}
+                    {purpose.description}
                   </p>
-
-                  {primaryRepositoryType && (
-                    <Badge className="mt-4">
-                      {formatFilterLabel(primaryRepositoryType)}
-                    </Badge>
-                  )}
                 </div>
               </div>
             </div>
 
             <IntelligenceSection
               title="Repository Types"
-              description="Ordered by backend importance. The first type is treated as the strongest purpose signal when primaryRepositoryType is unavailable."
+              description="Rendered directly from repositoryIntelligence.identity.repositoryTypes. Backend order is preserved."
             >
               {repositoryTypes.length > 0 ? (
                 <BadgeGroup items={repositoryTypes} />
@@ -182,7 +212,7 @@ export default function RepositoryPurposePage() {
 
             <IntelligenceSection
               title="Repository Identity"
-              description="Persona and DNA signals attached to the backend repository intelligence wrapper."
+              description="Persona and DNA signals from the canonical repository intelligence wrapper."
             >
               <div className="grid gap-6 lg:grid-cols-[1fr_0.8fr]">
                 <div className="rounded-xl border border-border bg-background p-5">
@@ -223,18 +253,29 @@ export default function RepositoryPurposePage() {
 
             <IntelligenceSection
               title="Why ArcHive Classified It This Way"
-              description="These reasoning signals come directly from repositoryIntelligence.signals.reasoningSignals."
+              description="Each signal is normalized and rendered separately from repositoryIntelligence.signals.reasoningSignals."
             >
-              <InsightList
-                items={reasoningSignals}
-                empty="No reasoning signals available yet."
-                limit={20}
-              />
+              {reasoningSignals.length > 0 ? (
+                <ul className="space-y-2">
+                  {reasoningSignals.map((signal, index) => (
+                    <li
+                      key={`${signal}-${index}`}
+                      className="rounded-lg border border-border bg-background p-3 text-sm leading-6 text-muted-foreground"
+                    >
+                      {signal}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  No reasoning signals available yet.
+                </p>
+              )}
             </IntelligenceSection>
 
             <IntelligenceSection
               title="Supporting Signals"
-              description="Secondary evidence only. These do not override the primary repository purpose."
+              description="Technologies and architecture domains are supporting evidence only. They do not override the backend primary repository purpose."
             >
               <div className="grid gap-6 lg:grid-cols-3">
                 <div className="rounded-xl border border-border bg-background p-5">
