@@ -1,7 +1,7 @@
 import { FastifyInstance } from "fastify";
 import { prisma } from "@archive/database";
 import axios from "axios";
-import { engineeringEventQueue, repositoryReprocessQueue} from "@archive/queue";
+import { engineeringEventQueue, repositoryReprocessQueue } from "@archive/queue";
 import {
   detectArchitectureStyle,
   generateRepositoryNarrative,
@@ -1035,127 +1035,127 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
   });
 
 
-// Reprocess All Repos
-app.post("/reprocess-all", async (_request, reply) => {
-  const startedAt = Date.now();
+  // Reprocess All Repos
+  app.post("/reprocess-all", async (_request, reply) => {
+    const startedAt = Date.now();
 
-  const repositories = await prisma.repository.findMany({
-    where: { isTracked: true },
-    select: {
-      id: true,
-      name: true,
-      fullName: true,
-    },
+    const repositories = await prisma.repository.findMany({
+      where: { isTracked: true },
+      select: {
+        id: true,
+        name: true,
+        fullName: true,
+      },
+    });
+
+    const results = [];
+
+    for (const repository of repositories) {
+      const repositoryStartedAt = Date.now();
+
+      try {
+        await generateRepositoryIntelligence({
+          repositoryId: repository.id,
+        });
+
+        results.push({
+          repositoryId: repository.id,
+          name: repository.name,
+          fullName: repository.fullName,
+          status: "SUCCESS",
+          durationMs: Date.now() - repositoryStartedAt,
+        });
+      } catch (error) {
+        results.push({
+          repositoryId: repository.id,
+          name: repository.name,
+          fullName: repository.fullName,
+          status: "FAILED",
+          durationMs: Date.now() - repositoryStartedAt,
+          error: error instanceof Error ? error.message : "Unknown error",
+        });
+      }
+    }
+
+    const successful = results.filter((result) => result.status === "SUCCESS");
+    const failed = results.filter((result) => result.status === "FAILED");
+
+    return {
+      success: failed.length === 0,
+      message:
+        failed.length === 0
+          ? "Repository portfolio reprocessed successfully."
+          : "Repository portfolio reprocessed with some failures.",
+      data: {
+        totalRepositories: repositories.length,
+        successful: successful.length,
+        failed: failed.length,
+        durationMs: Date.now() - startedAt,
+        results,
+      },
+    };
   });
 
-  const results = [];
+  // Reprocess Single Repo
+  app.post("/:repositoryId/reprocess", async (request, reply) => {
+    const startedAt = Date.now();
 
-  for (const repository of repositories) {
-    const repositoryStartedAt = Date.now();
+    const { repositoryId } = request.params as {
+      repositoryId: string;
+    };
+
+    const repository = await prisma.repository.findUnique({
+      where: { id: repositoryId },
+      select: {
+        id: true,
+        name: true,
+        fullName: true,
+        isTracked: true,
+      },
+    });
+
+    if (!repository || !repository.isTracked) {
+      return reply.status(404).send({
+        success: false,
+        message: "Tracked repository not found",
+      });
+    }
 
     try {
       await generateRepositoryIntelligence({
-        repositoryId: repository.id,
+        repositoryId,
       });
 
-      results.push({
-        repositoryId: repository.id,
-        name: repository.name,
-        fullName: repository.fullName,
-        status: "SUCCESS",
-        durationMs: Date.now() - repositoryStartedAt,
-      });
+      return {
+        success: true,
+        message: "Repository intelligence regenerated successfully.",
+        data: {
+          repository: {
+            id: repository.id,
+            name: repository.name,
+            fullName: repository.fullName,
+          },
+          status: "SUCCESS",
+          durationMs: Date.now() - startedAt,
+        },
+      };
     } catch (error) {
-      results.push({
-        repositoryId: repository.id,
-        name: repository.name,
-        fullName: repository.fullName,
-        status: "FAILED",
-        durationMs: Date.now() - repositoryStartedAt,
-        error: error instanceof Error ? error.message : "Unknown error",
+      return reply.status(500).send({
+        success: false,
+        message: "Repository intelligence regeneration failed.",
+        data: {
+          repository: {
+            id: repository.id,
+            name: repository.name,
+            fullName: repository.fullName,
+          },
+          status: "FAILED",
+          durationMs: Date.now() - startedAt,
+          error: error instanceof Error ? error.message : "Unknown error",
+        },
       });
     }
-  }
-
-  const successful = results.filter((result) => result.status === "SUCCESS");
-  const failed = results.filter((result) => result.status === "FAILED");
-
-  return {
-    success: failed.length === 0,
-    message:
-      failed.length === 0
-        ? "Repository portfolio reprocessed successfully."
-        : "Repository portfolio reprocessed with some failures.",
-    data: {
-      totalRepositories: repositories.length,
-      successful: successful.length,
-      failed: failed.length,
-      durationMs: Date.now() - startedAt,
-      results,
-    },
-  };
-});
-
-// Reprocess Single Repo
-app.post("/:repositoryId/reprocess", async (request, reply) => {
-  const startedAt = Date.now();
-
-  const { repositoryId } = request.params as {
-    repositoryId: string;
-  };
-
-  const repository = await prisma.repository.findUnique({
-    where: { id: repositoryId },
-    select: {
-      id: true,
-      name: true,
-      fullName: true,
-      isTracked: true,
-    },
   });
-
-  if (!repository || !repository.isTracked) {
-    return reply.status(404).send({
-      success: false,
-      message: "Tracked repository not found",
-    });
-  }
-
-  try {
-    await generateRepositoryIntelligence({
-      repositoryId,
-    });
-
-    return {
-      success: true,
-      message: "Repository intelligence regenerated successfully.",
-      data: {
-        repository: {
-          id: repository.id,
-          name: repository.name,
-          fullName: repository.fullName,
-        },
-        status: "SUCCESS",
-        durationMs: Date.now() - startedAt,
-      },
-    };
-  } catch (error) {
-    return reply.status(500).send({
-      success: false,
-      message: "Repository intelligence regeneration failed.",
-      data: {
-        repository: {
-          id: repository.id,
-          name: repository.name,
-          fullName: repository.fullName,
-        },
-        status: "FAILED",
-        durationMs: Date.now() - startedAt,
-        error: error instanceof Error ? error.message : "Unknown error",
-      },
-    });
-  }
-});
 
   // semantic profile analysis
   app.get<{ Params: { repositoryId: string } }>(
@@ -2218,6 +2218,8 @@ app.post("/:repositoryId/reprocess", async (request, reply) => {
         },
       });
 
+
+
       const domains = Array.from(
         new Set(
           architectureChanges
@@ -2420,7 +2422,28 @@ ${architectureChanges
           fullName: true,
           description: true,
           language: true,
+          stars: true,
+          forks: true,
+          createdAt: true,
+          updatedAt: true,
           userId: true,
+          architectureChanges: {
+            orderBy: {
+              createdAt: "desc",
+            },
+            select: {
+              id: true,
+              changeType: true,
+              detectedTechnology: true,
+              fileAffected: true,
+              summary: true,
+              repositoryTypes: true,
+              reasoningSignals: true,
+              architectureDomain: true,
+              evolutionSummary: true,
+              createdAt: true,
+            },
+          },
         },
       });
 
@@ -2444,6 +2467,61 @@ ${architectureChanges
           createdAt: true,
         },
       });
+
+      const fingerprint = detectTechnologyFingerprint(
+        repository.architectureChanges
+          .map((change) => change.fileAffected)
+          .filter((file): file is string => Boolean(file)),
+        [
+          repository.name,
+          repository.fullName,
+          repository.description || "",
+          repository.language || "",
+          ...repository.architectureChanges.map((change) =>
+            [
+              change.changeType,
+              change.detectedTechnology || "",
+              change.summary,
+              change.repositoryTypes || "",
+              change.reasoningSignals || "",
+              change.architectureDomain || "",
+              change.evolutionSummary || "",
+            ].join(" ")
+          ),
+        ]
+      );
+
+      const repositoryIntelligence = fingerprint.repositoryIntelligence;
+
+      const summary = {
+        primaryRepositoryType:
+          repositoryIntelligence.identity.primaryRepositoryType ||
+          repositoryIntelligence.identity.repositoryTypes[0] ||
+          null,
+
+        persona: repositoryIntelligence.identity.repositoryPersona,
+
+        healthStatus:
+          repositoryIntelligence.assessment.repositoryHealth.status,
+
+        healthScore:
+          repositoryIntelligence.assessment.repositoryHealth.score,
+
+        maturityLevel:
+          repositoryIntelligence.assessment.repositoryMaturity.level,
+
+        maturityScore:
+          repositoryIntelligence.assessment.repositoryMaturity.score,
+
+        productionReadinessLevel:
+          repositoryIntelligence.assessment.productionReadiness.level,
+
+        productionReadinessScore:
+          repositoryIntelligence.assessment.productionReadiness.score,
+
+        engineeringQualityScore:
+          repositoryIntelligence.assessment.engineeringQuality.overallScore,
+      };
 
       const intelligenceTimeline = buildIntelligenceTimeline(architectureChanges);
 
@@ -2578,46 +2656,41 @@ ${architectureChanges
         success: true,
         message: "Repository intelligence report fetched successfully",
         data: {
-          repository,
-
-          report: {
-            generatedAt: new Date().toISOString(),
-            headline: narrative.headline,
-            summary: narrative.summary,
+          repository: {
+            id: repository.id,
+            name: repository.name,
+            fullName: repository.fullName,
+            description: repository.description,
+            language: repository.language,
+            stars: repository.stars,
+            forks: repository.forks,
+            createdAt: repository.createdAt,
+            updatedAt: repository.updatedAt,
           },
 
-          semanticProfile,
-          narrative,
-          confidence,
-          audit,
-          evolutionDirection,
-          engineeringReasoning,
-          intelligenceTimeline,
+          summary,
+          repositoryIntelligence,
 
-          recommendations: {
-            active: activeRecommendations,
-            resolved: resolvedRecommendations,
-            total: syncedRecommendations.length,
+          // legacy: {
+          //   report,
+          //   audit,
+          //   confidence,
+          //   engineeringReasoning,
+          //   evidence,
+          //   evolutionDirection,
+          //   intelligence,
+          //   knowledgeGraph,
+          //   narrative,
+          //   recommendations,
+          // },
+          legacy: {
+            audit,
+            confidence,
+            engineeringReasoning,
+            evolutionDirection,
+            knowledgeGraph,
+            narrative,
           },
-
-          intelligence: {
-            repositoryTypes,
-            domains,
-            technologies,
-            architectureStyles,
-            reasoningSignals,
-            capabilities,
-          },
-
-          knowledgeGraph,
-
-          evidence: architectureChanges.slice(0, 10).map((change) => ({
-            summary: change.summary,
-            evolutionSummary: change.evolutionSummary,
-            architectureDomain: change.architectureDomain,
-            detectedTechnology: change.detectedTechnology,
-            createdAt: change.createdAt,
-          })),
         },
       };
     }
