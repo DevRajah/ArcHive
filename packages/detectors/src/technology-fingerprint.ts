@@ -965,7 +965,37 @@ export const detectTechnologyFingerprint = (
     const finalTechnologies = Array.from(technologies);
     const finalArchitectureDomains = Array.from(architectureDomains);
     const finalEngineeringSignals = Array.from(engineeringSignals);
-    const finalRepositoryTypes = Array.from(repositoryTypes);
+    const finalRepositoryTypes = sortRepositoryTypesByPurpose(
+        Array.from(repositoryTypes)
+    );
+    const repositoryTypePriority = [
+        "ENGINEERING_INTELLIGENCE_PLATFORM",
+        "FINTECH_PLATFORM",
+        "DEVTOOL_PLATFORM",
+        "DEVELOPER_PLATFORM",
+        "SECURITY_PLATFORM",
+        "AI_ML_PROJECT",
+        "DATA_ENGINEERING_PROJECT",
+        "SMART_TRANSPORT_PLATFORM",
+        "ENERGY_PLATFORM",
+        "HEALTHCARE_PLATFORM",
+        "ECOMMERCE_PLATFORM",
+        "EDUCATION_PLATFORM",
+        "COLLABORATION_PLATFORM",
+        "MOBILE_APPLICATION",
+        "BACKEND_SERVICE",
+        "FRONTEND_APPLICATION",
+        "JAVASCRIPT_TYPESCRIPT_PROJECT",
+    ];
+
+    const sortRepositoryTypesByPurpose = (types: string[]) => {
+        return [...types].sort((a, b) => {
+            const aIndex = repositoryTypePriority.indexOf(a);
+            const bIndex = repositoryTypePriority.indexOf(b);
+
+            return (aIndex === -1 ? 999 : aIndex) - (bIndex === -1 ? 999 : bIndex);
+        });
+    };
 
     const repositoryIntelligence = buildRepositoryIntelligenceReport({
         technologies: finalTechnologies,

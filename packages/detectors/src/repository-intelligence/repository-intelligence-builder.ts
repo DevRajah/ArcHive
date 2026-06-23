@@ -43,6 +43,7 @@ export const buildRepositoryIntelligenceReport = ({
 }): RepositoryIntelligenceReport => {
   return {
     identity: {
+      primaryRepositoryType: repositoryTypes[0] || null,
       repositoryTypes,
       repositoryPersona,
       repositoryDNA,

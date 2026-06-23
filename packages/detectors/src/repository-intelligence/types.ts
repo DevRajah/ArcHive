@@ -15,6 +15,7 @@ import { EvidenceResult } from "../evidence";
 
 export type RepositoryIntelligenceReport = {
   identity: {
+    primaryRepositoryType: string | null;
     repositoryTypes: string[];
     repositoryPersona: RepositoryPersona;
     repositoryDNA: RepositoryDNA;
