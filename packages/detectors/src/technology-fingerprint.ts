@@ -22,7 +22,9 @@ import {
     detectEducationEvidence,
     detectEnergyEvidence,
     detectEcommerceEvidence,
-    detectCollaborationEvidence
+    detectCollaborationEvidence,
+    detectEngineeringIntelligenceEvidence,
+
 } from "./evidence";
 
 import {
@@ -215,7 +217,7 @@ export const detectTechnologyFingerprint = (
             strength
         );
     };
-
+    detectEngineeringIntelligenceEvidence(evidenceContext);
     detectFintechEvidence(evidenceContext);
     detectDeveloperToolEvidence(evidenceContext);
     detectDeveloperPlatformEvidence(evidenceContext);

@@ -71,5 +71,12 @@ export const inferRepositoryPersona = (
         return "ENGINEERING_INTELLIGENCE_PLATFORM";
     }
 
+    if (
+  repositoryTypes.includes("DEVTOOL_PLATFORM") ||
+  repositoryTypes.includes("DEVELOPER_PLATFORM")
+) {
+  return "DEVELOPER_TOOLCHAIN";
+}
+
     return "PRODUCT_SAAS";
 };

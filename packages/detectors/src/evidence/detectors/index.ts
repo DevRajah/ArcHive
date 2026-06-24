@@ -19,3 +19,4 @@ export * from "./healthcare-evidence";
 export * from "./ecommerce-evidence";
 export * from "./energy-evidence";
 export * from "./collaboration-evidence"
+export * from "./engineering-intelligence-evidence";
