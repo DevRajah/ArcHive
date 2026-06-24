@@ -17,6 +17,8 @@ import { detectTechnologyFingerprint } from "@archive/detectors";
  |--------------------------------------------------------------------------
  */
 
+const GENERATED_CHANGE_TYPE = "REPOSITORY_INTELLIGENCE_REPROCESSED";
+
 export const generateRepositoryIntelligence = async ({
   repositoryId,
 }: {
@@ -37,16 +39,21 @@ export const generateRepositoryIntelligence = async ({
     throw new Error("Repository not found");
   }
 
-  const filesChanged = repository.architectureChanges
+  const realArchitectureChanges = repository.architectureChanges.filter(
+    (change) => change.changeType !== GENERATED_CHANGE_TYPE
+  );
+
+  const filesChanged = realArchitectureChanges
     .map((change) => change.fileAffected)
     .filter((file): file is string => Boolean(file));
 
-  const commitMessages = [
+  const repositoryContext = [
     repository.name,
     repository.fullName,
     repository.description || "",
     repository.language || "",
-    ...repository.architectureChanges.map((change) =>
+
+    ...realArchitectureChanges.map((change) =>
       [
         change.changeType,
         change.detectedTechnology || "",
@@ -57,13 +64,35 @@ export const generateRepositoryIntelligence = async ({
         change.evolutionSummary || "",
       ].join(" ")
     ),
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  const commitMessages = [
+    repository.name,
+    repository.fullName,
+    repository.description || "",
+    repository.language || "",
+
+    ...realArchitectureChanges.map((change) =>
+      [
+        change.changeType,
+        change.detectedTechnology || "",
+        change.summary,
+      ].join(" ")
+    ),
   ].filter(Boolean);
 
-  const fingerprint = detectTechnologyFingerprint(filesChanged, commitMessages);
+  const fingerprint = detectTechnologyFingerprint(
+    filesChanged,
+    commitMessages,
+    repositoryContext
+  );
 
   const repositoryIntelligence = fingerprint.repositoryIntelligence;
 
   const primaryRepositoryType =
+    repositoryIntelligence.identity.primaryRepositoryType ||
     repositoryIntelligence.identity.repositoryTypes[0] ||
     fingerprint.repositoryTypes[0] ||
     "GENERAL_ENGINEERING_PROJECT";
@@ -84,18 +113,17 @@ export const generateRepositoryIntelligence = async ({
       : fingerprint.reasoningSignals;
 
   await prisma.$transaction(async (tx) => {
-    // I clear the old generated architecture intelligence so stale classifications
-    // like "ArcHive is a mobile app" do not keep appearing after reprocessing.
     await tx.architectureChange.deleteMany({
       where: {
         repositoryId,
+        changeType: GENERATED_CHANGE_TYPE,
       },
     });
 
     await tx.architectureChange.create({
       data: {
         repositoryId,
-        changeType: "REPOSITORY_INTELLIGENCE_REPROCESSED",
+        changeType: GENERATED_CHANGE_TYPE,
         detectedTechnology: primaryTechnology,
         fileAffected: "repository-intelligence.service.ts",
         architectureDomain: primaryArchitectureDomain,

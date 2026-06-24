@@ -176,7 +176,8 @@ const sortRepositoryTypesByPurpose = (types: string[]) => {
 
 export const detectTechnologyFingerprint = (
     filesChanged: string[],
-    commitMessages: string[]
+    commitMessages: string[],
+    repositoryContext = ""
 ): TechnologyFingerprintResult => {
     const joinedFiles = filesChanged.join(" ").toLowerCase();
     const joinedCommits = commitMessages.join(" ").toLowerCase();
@@ -197,7 +198,7 @@ export const detectTechnologyFingerprint = (
     const evidenceContext = createEvidenceContext({
         filesChanged,
         commitMessages,
-        repositoryContext: combinedText,
+        repositoryContext,
     });
 
     runTechnologyDetectors(evidenceContext);

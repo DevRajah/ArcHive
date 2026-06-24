@@ -2468,27 +2468,30 @@ ${architectureChanges
         },
       });
 
+      const repositoryContext = [
+        repository.name,
+        repository.fullName,
+        repository.description || "",
+        repository.language || "",
+        ...repository.architectureChanges.map((change) =>
+          [
+            change.changeType,
+            change.detectedTechnology || "",
+            change.summary,
+            change.repositoryTypes || "",
+            change.reasoningSignals || "",
+            change.architectureDomain || "",
+            change.evolutionSummary || "",
+          ].join(" ")
+        ),
+      ].join(" ");
+
       const fingerprint = detectTechnologyFingerprint(
         repository.architectureChanges
           .map((change) => change.fileAffected)
           .filter((file): file is string => Boolean(file)),
-        [
-          repository.name,
-          repository.fullName,
-          repository.description || "",
-          repository.language || "",
-          ...repository.architectureChanges.map((change) =>
-            [
-              change.changeType,
-              change.detectedTechnology || "",
-              change.summary,
-              change.repositoryTypes || "",
-              change.reasoningSignals || "",
-              change.architectureDomain || "",
-              change.evolutionSummary || "",
-            ].join(" ")
-          ),
-        ]
+        repository.architectureChanges.map((change) => change.summary),
+        repositoryContext
       );
 
       const repositoryIntelligence = fingerprint.repositoryIntelligence;
