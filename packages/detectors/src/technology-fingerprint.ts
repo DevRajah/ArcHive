@@ -1063,6 +1063,12 @@ export const detectTechnologyFingerprint = (
         recommendationReport,
     });
 
+    console.log("=== FINGERPRINT DEBUG ===");
+    console.log("Repository Types:", Array.from(repositoryTypes));
+    console.log("Evidence Results:", evidenceResults);
+    console.log("Reasoning:", reasoningSignals);
+    console.log("=========================");
+
 
 
     return {

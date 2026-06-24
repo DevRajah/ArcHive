@@ -1,3 +1,4 @@
+import axios from "axios";
 import { prisma } from "@archive/database";
 import { detectTechnologyFingerprint } from "@archive/detectors";
 
@@ -19,6 +20,64 @@ import { detectTechnologyFingerprint } from "@archive/detectors";
 
 const GENERATED_CHANGE_TYPE = "REPOSITORY_INTELLIGENCE_REPROCESSED";
 
+const getGitHubHeaders = (token?: string | null) => ({
+  Accept: "application/vnd.github+json",
+  ...(token ? { Authorization: `Bearer ${token}` } : {}),
+});
+
+const fetchRepositoryTree = async ({
+  fullName,
+  defaultBranch,
+  githubAccessToken,
+}: {
+  fullName: string;
+  defaultBranch: string;
+  githubAccessToken?: string | null;
+}) => {
+  try {
+    const response = await axios.get(
+      `https://api.github.com/repos/${fullName}/git/trees/${defaultBranch}`,
+      {
+        headers: getGitHubHeaders(githubAccessToken),
+        params: {
+          recursive: "1",
+        },
+      }
+    );
+
+    return (response.data.tree || [])
+      .map((item: { path?: string; type?: string }) => item.path)
+      .filter((path: string | undefined): path is string => Boolean(path));
+  } catch {
+    return [];
+  }
+};
+
+const fetchRepositoryReadme = async ({
+  fullName,
+  githubAccessToken,
+}: {
+  fullName: string;
+  githubAccessToken?: string | null;
+}) => {
+  try {
+    const response = await axios.get(
+      `https://api.github.com/repos/${fullName}/readme`,
+      {
+        headers: getGitHubHeaders(githubAccessToken),
+      }
+    );
+
+    if (!response.data.content) {
+      return "";
+    }
+
+    return Buffer.from(response.data.content, "base64").toString("utf-8");
+  } catch {
+    return "";
+  }
+};
+
 export const generateRepositoryIntelligence = async ({
   repositoryId,
 }: {
@@ -27,6 +86,11 @@ export const generateRepositoryIntelligence = async ({
   const repository = await prisma.repository.findUnique({
     where: { id: repositoryId },
     include: {
+      user: {
+        select: {
+          githubAccessToken: true,
+        },
+      },
       architectureChanges: {
         orderBy: {
           createdAt: "desc",
@@ -43,15 +107,35 @@ export const generateRepositoryIntelligence = async ({
     (change) => change.changeType !== GENERATED_CHANGE_TYPE
   );
 
-  const filesChanged = realArchitectureChanges
-    .map((change) => change.fileAffected)
-    .filter((file): file is string => Boolean(file));
+  const githubAccessToken = repository.user?.githubAccessToken || null;
+
+  const githubFilePaths = await fetchRepositoryTree({
+    fullName: repository.fullName,
+    defaultBranch: repository.defaultBranch,
+    githubAccessToken,
+  });
+
+  const readmeContent = await fetchRepositoryReadme({
+    fullName: repository.fullName,
+    githubAccessToken,
+  });
+
+  const filesChanged = Array.from(
+    new Set([
+      ...githubFilePaths,
+      ...realArchitectureChanges
+        .map((change) => change.fileAffected)
+        .filter((file): file is string => Boolean(file)),
+    ])
+  );
 
   const repositoryContext = [
     repository.name,
     repository.fullName,
     repository.description || "",
     repository.language || "",
+    readmeContent,
+    githubFilePaths.join(" "),
 
     ...realArchitectureChanges.map((change) =>
       [
@@ -73,6 +157,7 @@ export const generateRepositoryIntelligence = async ({
     repository.fullName,
     repository.description || "",
     repository.language || "",
+    readmeContent,
 
     ...realArchitectureChanges.map((change) =>
       [
