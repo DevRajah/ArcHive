@@ -48,16 +48,38 @@ export const detectDeveloperToolEvidence = (context: EvidenceContext) => {
     );
   }
 
-  if (
-    includesAny(combinedText, ["boilerplate", "template"]) &&
-    includesAny(combinedText, ["generator", "scaffold", "cli", "codegen"])
-  ) {
+  const hasDeveloperToolSignal =
+    combinedText.includes("backend-forge") ||
+    (
+      combinedText.includes("scaffold") &&
+      combinedText.includes("cli")
+    ) ||
+    (
+      combinedText.includes("generator") &&
+      combinedText.includes("cli")
+    ) ||
+    combinedText.includes("generate module") ||
+    combinedText.includes("module generator") ||
+    combinedText.includes("backend generator");
+
+  if (hasDeveloperToolSignal) {
     addEvidence(
       "DEVTOOL_PLATFORM",
-      "Detected boilerplate/template usage with generator or CLI evidence",
-      20,
+      "Detected CLI, scaffolding, or backend generation tooling patterns",
+      85,
       "DOMAIN_LANGUAGE",
-      "MEDIUM"
+      "STRONG"
     );
   }
+
+  console.log("===== DEVTOOL DETECTOR =====");
+  console.log({
+    scaffold: combinedText.includes("scaffold"),
+    generator: combinedText.includes("generator"),
+    cli: combinedText.includes("cli"),
+    commander: combinedText.includes("commander"),
+    inquirer: combinedText.includes("inquirer"),
+    backendForge: combinedText.includes("backend-forge"),
+    generateModule: combinedText.includes("generate module"),
+  });
 };
