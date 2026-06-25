@@ -2959,8 +2959,24 @@ ${architectureChanges
           id: true,
           name: true,
           fullName: true,
+          description: true,
           language: true,
           userId: true,
+          architectureChanges: {
+            orderBy: {
+              createdAt: "desc",
+            },
+            select: {
+              changeType: true,
+              detectedTechnology: true,
+              fileAffected: true,
+              summary: true,
+              repositoryTypes: true,
+              reasoningSignals: true,
+              architectureDomain: true,
+              evolutionSummary: true,
+            },
+          },
         },
       });
 
@@ -2971,23 +2987,41 @@ ${architectureChanges
         });
       }
 
-      const architectureChanges = await prisma.architectureChange.findMany({
-        where: { repositoryId },
-        select: {
-          architectureDomain: true,
-          detectedTechnology: true,
-          changeType: true,
-        },
-      });
+      const repositoryContext = [
+        repository.name,
+        repository.fullName,
+        repository.description || "",
+        repository.language || "",
+        ...repository.architectureChanges.map((change) =>
+          [
+            change.changeType,
+            change.detectedTechnology || "",
+            change.summary,
+            change.repositoryTypes || "",
+            change.reasoningSignals || "",
+            change.architectureDomain || "",
+            change.evolutionSummary || "",
+          ].join(" ")
+        ),
+      ].join(" ");
 
-      const domainCounts = architectureChanges.reduce<Record<string, number>>(
-        (acc, change) => {
-          const domain = change.architectureDomain || "GENERAL_ARCHITECTURE";
-          acc[domain] = (acc[domain] || 0) + 1;
-          return acc;
-        },
-        {}
+      const fingerprint = detectTechnologyFingerprint(
+        repository.architectureChanges
+          .map((change) => change.fileAffected)
+          .filter((file): file is string => Boolean(file)),
+        repository.architectureChanges.map((change) => change.summary),
+        repositoryContext
       );
+
+      const domains =
+        fingerprint.repositoryIntelligence.signals.architectureDomains.length > 0
+          ? fingerprint.repositoryIntelligence.signals.architectureDomains
+          : fingerprint.architectureDomains;
+
+      const domainCounts = domains.reduce<Record<string, number>>((acc, domain) => {
+        acc[domain] = (acc[domain] || 0) + 1;
+        return acc;
+      }, {});
 
       const maxCount = Math.max(...Object.values(domainCounts), 1);
 
@@ -3010,8 +3044,15 @@ ${architectureChanges
         success: true,
         message: "Repository architecture radar fetched successfully",
         data: {
-          repository,
+          repository: {
+            id: repository.id,
+            name: repository.name,
+            fullName: repository.fullName,
+            language: repository.language,
+            userId: repository.userId,
+          },
           radar,
+          repositoryIntelligence: fingerprint.repositoryIntelligence,
         },
       };
     }
