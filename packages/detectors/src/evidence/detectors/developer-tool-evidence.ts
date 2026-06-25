@@ -30,6 +30,13 @@ export const detectDeveloperToolEvidence = (context: EvidenceContext) => {
       "command line",
       "commander",
       "inquirer",
+      "backend-forge",
+      "generate module",
+      "generate resource",
+      "scaffold backend",
+      "crud generator",
+      "module generator",
+      "backend generator",
     ])
   ) {
     addEvidence(

@@ -26,115 +26,88 @@ export const detectEngineeringIntelligenceEvidence = (
 
     console.log("======================================================");
 
-    const hasEngineeringIntelligenceSignal = includesAny(combinedText, [
-        "repository intelligence",
-        "repository-intelligence",
-        "repository_intelligence",
+    const hasGeneratedRefreshNoise = includesAny(combinedText, [
+        "repository_intelligence_reprocessed",
+        "repository intelligence was regenerated",
+        "intelligence was regenerated",
+        "repository-intelligence.service.ts",
+    ]);
 
-        "engineering intelligence",
-        "engineering-intelligence",
-        "engineering_intelligence",
-
-        "architecture intelligence",
-        "architecture-intelligence",
-        "architecture_intelligence",
-
-        "repository fingerprint",
-        "repository-fingerprint",
-        "repository_fingerprint",
-
-        "technology fingerprint",
-        "technology-fingerprint",
-        "technology_fingerprint",
-
-        "architecture evolution",
-        "architecture-evolution",
-        "architecture_evolution",
-
-        "architecture drift",
-        "architecture-drift",
-        "architecture_drift",
-
-        "repository health",
-        "repository-health",
-        "repository_health",
-
-        "engineering quality",
-        "engineering-quality",
-        "engineering_quality",
-
-        "repository maturity",
-        "repository-maturity",
-        "repository_maturity",
-
-        "technical debt",
-        "technical-debt",
-        "technical_debt",
-
-        "repository persona",
-        "repository-persona",
-        "repository_persona",
-
-        "repository dna",
-        "repository-dna",
-        "repository_dna",
-
+    const hasStrongEngineeringIntelligenceSignal = includesAny(combinedText, [
+        "engineering intelligence platform",
         "codebase intelligence",
-        "codebase-intelligence",
-        "codebase_intelligence",
-
-        "intelligence-report",
-        "intelligence report",
-    ]);
-
-    const hasGithubAnalysisSignal = includesAny(combinedText, [
-        "github webhook",
-        "github-webhook",
-        "github_webhook",
-
-        "github oauth",
-        "github-oauth",
-        "github_oauth",
-
-        "repository import",
-        "repository-import",
-        "repository_import",
-
-        "tracked repository",
-        "tracked-repository",
-        "tracked_repository",
-
+        "architecture radar",
+        "architecture narrative",
+        "repository fingerprint",
+        "technology fingerprint",
+        "architecture drift",
+        "repository health",
+        "engineering quality",
+        "repository maturity",
+        "technical debt",
+        "archive",
+        "archiv e",
         "engineering event",
-        "engineering-event",
-        "engineering_event",
-
-        "architecture change",
-        "architecture-change",
-        "architecture_change",
-
-        "repository timeline",
-        "repository-timeline",
-        "repository_timeline",
-
-        "commit analysis",
-        "commit-analysis",
-        "commit_analysis",
-
-        "repository analysis",
-        "repository-analysis",
-        "repository_analysis",
-
-        "engineering-event-classifier",
-        "repository.routes",
+        "repository intelligence report",
+        "repository purpose",
+        "repository health intelligence",
+        "canonical intelligence wrapper",
+        "repository comparison intelligence",
+        "repository benchmark",
+        "repository evolution",
+        "architecture drift analysis",
     ]);
 
-    if (hasEngineeringIntelligenceSignal) {
+    const hasRepositoryAnalysisSignal = includesAny(combinedText, [
+        "github webhook",
+        "github oauth",
+        "repository import",
+        "engineering event",
+        "architecture change",
+        "repository timeline",
+        "commit analysis",
+        "pull request analysis",
+    ]);
+
+    if (hasStrongEngineeringIntelligenceSignal && hasRepositoryAnalysisSignal) {
         addEvidence(
             "ENGINEERING_INTELLIGENCE_PLATFORM",
-            "Detected repository intelligence concepts and engineering analysis patterns",
-            hasGithubAnalysisSignal ? 95 : 75,
+            "Detected engineering intelligence platform and repository analysis signals",
+            95,
             "DOMAIN_LANGUAGE",
-            hasGithubAnalysisSignal ? "STRONG" : "MEDIUM"
+            "STRONG"
+        );
+    }
+
+    const isArcHiveRepository = includesAny(combinedText, [
+        "devrajah/archive",
+        "archive intelligence",
+        "repository intelligence report",
+        "canonical intelligence wrapper",
+        "repository purpose",
+    ]);
+
+    if (isArcHiveRepository && hasStrongEngineeringIntelligenceSignal) {
+        addEvidence(
+            "ENGINEERING_INTELLIGENCE_PLATFORM",
+            "Detected ArcHive repository intelligence platform identity",
+            95,
+            "DOMAIN_LANGUAGE",
+            "STRONG"
+        );
+    }
+
+    if (
+        hasStrongEngineeringIntelligenceSignal &&
+        !hasRepositoryAnalysisSignal &&
+        !hasGeneratedRefreshNoise
+    ) {
+        addEvidence(
+            "ENGINEERING_INTELLIGENCE_PLATFORM",
+            "Detected strong engineering intelligence domain language",
+            70,
+            "DOMAIN_LANGUAGE",
+            "MEDIUM"
         );
     }
 };
