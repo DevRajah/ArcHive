@@ -2833,120 +2833,171 @@ ${architectureChanges
 
   //repository narrative synthesis
   app.get<{ Params: { repositoryId: string } }>(
-    "/:repositoryId/narrative",
-    async (request, reply) => {
-      const { repositoryId } = request.params;
+  "/:repositoryId/narrative",
+  async (request, reply) => {
+    const { repositoryId } = request.params;
 
-      const repository = await prisma.repository.findUnique({
-        where: { id: repositoryId },
-        select: {
-          id: true,
-          name: true,
-          fullName: true,
-          language: true,
-          userId: true,
+    const repository = await prisma.repository.findUnique({
+      where: { id: repositoryId },
+      select: {
+        id: true,
+        name: true,
+        fullName: true,
+        description: true,
+        language: true,
+        userId: true,
+        architectureChanges: {
+          orderBy: {
+            createdAt: "desc",
+          },
+          select: {
+            changeType: true,
+            detectedTechnology: true,
+            fileAffected: true,
+            summary: true,
+            repositoryTypes: true,
+            reasoningSignals: true,
+            architectureDomain: true,
+            evolutionSummary: true,
+          },
         },
+      },
+    });
+
+    if (!repository) {
+      return reply.status(404).send({
+        success: false,
+        message: "Repository not found",
       });
-
-      if (!repository) {
-        return reply.status(404).send({
-          success: false,
-          message: "Repository not found",
-        });
-      }
-
-      const architectureChanges = await prisma.architectureChange.findMany({
-        where: { repositoryId },
-        select: {
-          architectureDomain: true,
-          detectedTechnology: true,
-          repositoryTypes: true,
-          reasoningSignals: true,
-        },
-      });
-
-      const domains = Array.from(
-        new Set(
-          architectureChanges
-            .map((change) => change.architectureDomain)
-            .filter((domain): domain is string => Boolean(domain))
-        )
-      );
-
-      const technologies = Array.from(
-        new Set(
-          architectureChanges
-            .map((change) => change.detectedTechnology)
-            .filter((technology): technology is string => Boolean(technology))
-        )
-      );
-
-      const repositoryTypes = Array.from(
-        new Set(
-          architectureChanges
-            .flatMap((change) => change.repositoryTypes?.split(",") || [])
-            .filter(Boolean)
-        )
-      );
-
-      const repositoryPurpose = inferRepositoryPurpose(repositoryTypes);
-
-      const reasoningSignals = Array.from(
-        new Set(
-          architectureChanges
-            .flatMap((change) => change.reasoningSignals?.split(" | ") || [])
-            .map((signal) => signal.trim())
-            .filter(Boolean)
-        )
-      );
-
-      const capabilities = {
-        frontendArchitecture: domains.includes("FRONTEND_ARCHITECTURE"),
-        apiLayer: domains.includes("API_LAYER"),
-        authentication: domains.includes("AUTHENTICATION"),
-        realtimeSystems: domains.includes("REALTIME_SYSTEMS"),
-        queueInfrastructure: domains.includes("QUEUE_INFRASTRUCTURE"),
-        databaseLayer: domains.includes("DATABASE_LAYER"),
-        architectureIntelligence: domains.includes("ARCHITECTURE_INTELLIGENCE"),
-      };
-
-      const architectureStyles = detectArchitectureStyle({
-        domains,
-        technologies,
-        signals: [],
-        repositoryTypes,
-      });
-
-      const narrative = generateRepositoryNarrative({
-        repositoryName: repository.name,
-        repositoryTypes,
-        technologies,
-        domains,
-        capabilities,
-        architectureStyles,
-        architectureChangeCount: architectureChanges.length,
-      });
-
-      const confidence = calculateIntelligenceConfidence({
-        repositoryTypes,
-        domains,
-        technologies,
-        reasoningSignals,
-      });
-
-      return {
-        success: true,
-        message: "Repository narrative generated successfully",
-        data: {
-          repository,
-          narrative,
-          confidence,
-          reasoningSignals,
-          repositoryPurpose,
-        },
-      };
     }
-  );
+
+    const repositoryContext = [
+      repository.name,
+      repository.fullName,
+      repository.description || "",
+      repository.language || "",
+      ...repository.architectureChanges.map((change) =>
+        [
+          change.changeType,
+          change.detectedTechnology || "",
+          change.summary,
+          change.repositoryTypes || "",
+          change.reasoningSignals || "",
+          change.architectureDomain || "",
+          change.evolutionSummary || "",
+        ].join(" ")
+      ),
+    ].join(" ");
+
+    const fingerprint = detectTechnologyFingerprint(
+      repository.architectureChanges
+        .map((change) => change.fileAffected)
+        .filter((file): file is string => Boolean(file)),
+      repository.architectureChanges.map((change) => change.summary),
+      repositoryContext
+    );
+
+    const repositoryIntelligence = fingerprint.repositoryIntelligence;
+
+    const repositoryTypes =
+      repositoryIntelligence.identity.repositoryTypes.length > 0
+        ? repositoryIntelligence.identity.repositoryTypes
+        : fingerprint.repositoryTypes;
+
+    const domains =
+      repositoryIntelligence.signals.architectureDomains.length > 0
+        ? repositoryIntelligence.signals.architectureDomains
+        : fingerprint.architectureDomains;
+
+    const technologies =
+      repositoryIntelligence.signals.technologies.length > 0
+        ? repositoryIntelligence.signals.technologies
+        : fingerprint.technologies;
+
+    const reasoningSignals =
+      repositoryIntelligence.signals.reasoningSignals.length > 0
+        ? repositoryIntelligence.signals.reasoningSignals
+        : fingerprint.reasoningSignals;
+
+    const repositoryPurpose = inferRepositoryPurpose(repositoryTypes);
+
+    const capabilities = {
+      frontendArchitecture: domains.includes("FRONTEND_ARCHITECTURE"),
+      apiLayer:
+        domains.includes("API_LAYER") ||
+        domains.includes("BACKEND_SYSTEMS"),
+      authentication:
+        domains.includes("AUTHENTICATION") ||
+        repositoryIntelligence.signals.capabilities.some(
+          (capability) => capability.key === "AUTHENTICATION"
+        ),
+      realtimeSystems:
+        domains.includes("REALTIME_SYSTEMS") ||
+        repositoryIntelligence.signals.capabilities.some(
+          (capability) => capability.key === "REALTIME_SYSTEMS"
+        ),
+      queueInfrastructure:
+        domains.includes("QUEUE_INFRASTRUCTURE") ||
+        repositoryIntelligence.signals.capabilities.some(
+          (capability) => capability.key === "QUEUE_INFRASTRUCTURE"
+        ),
+      databaseLayer:
+        domains.includes("DATABASE_LAYER") ||
+        repositoryIntelligence.signals.capabilities.some(
+          (capability) => capability.key === "DATABASE_LAYER"
+        ),
+      architectureIntelligence:
+        repositoryTypes.includes("ENGINEERING_INTELLIGENCE_PLATFORM") ||
+        domains.includes("ENGINEERING_INTELLIGENCE"),
+    };
+
+    const architectureStyles = detectArchitectureStyle({
+      domains,
+      technologies,
+      signals: repositoryIntelligence.signals.engineeringSignals,
+      repositoryTypes,
+    });
+
+    const narrative = generateRepositoryNarrative({
+      repositoryName: repository.name,
+      repositoryTypes,
+      technologies,
+      domains,
+      capabilities,
+      architectureStyles,
+      architectureChangeCount: Math.max(
+        repository.architectureChanges.length,
+        domains.length
+      ),
+    });
+
+    const confidence = calculateIntelligenceConfidence({
+      repositoryTypes,
+      domains,
+      technologies,
+      reasoningSignals,
+    });
+
+    return {
+      success: true,
+      message: "Repository narrative generated successfully",
+      data: {
+        repository: {
+          id: repository.id,
+          name: repository.name,
+          fullName: repository.fullName,
+          language: repository.language,
+          userId: repository.userId,
+        },
+        narrative,
+        confidence,
+        reasoningSignals,
+        repositoryPurpose,
+        repositoryIntelligence,
+      },
+    };
+  }
+);
 
   // Architecture radar data for visualization
   app.get<{ Params: { repositoryId: string } }>(
