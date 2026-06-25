@@ -5,6 +5,7 @@ import { engineeringEventQueue, repositoryReprocessQueue } from "@archive/queue"
 import {
   detectArchitectureStyle,
   generateRepositoryNarrative,
+  buildArchitectureIntelligence,
   detectTechnologyFingerprint,
   calculateIntelligenceConfidence,
   inferRepositoryPurpose,
@@ -3025,19 +3026,8 @@ ${architectureChanges
 
       const maxCount = Math.max(...Object.values(domainCounts), 1);
 
-      const radar = Object.entries(domainCounts).map(([domain, count]) => {
-        const score = Math.round((count / maxCount) * 100);
-
-        return {
-          domain,
-          label: domain
-            .toLowerCase()
-            .split("_")
-            .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-            .join(" "),
-          score,
-          changeCount: count,
-        };
+      const architectureIntelligence = buildArchitectureIntelligence({
+        repositoryIntelligence: fingerprint.repositoryIntelligence,
       });
 
       return {
@@ -3051,8 +3041,10 @@ ${architectureChanges
             language: repository.language,
             userId: repository.userId,
           },
-          radar,
+          radar: architectureIntelligence.radar,
+          strongestDomain: architectureIntelligence.strongestDomain,
           repositoryIntelligence: fingerprint.repositoryIntelligence,
+          architectureIntelligence,
         },
       };
     }

@@ -38,6 +38,7 @@ export * from "./architecture-drift";
 export * from "./repository-evolution";
 export * from "./repository-benchmark";
 export * from "./repository-intelligence";
+export * from "./architecture-intelligence";
 
 export type ArchitectureDetectionInput = {
   eventType: string;
