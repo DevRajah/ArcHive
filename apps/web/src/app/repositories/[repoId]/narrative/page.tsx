@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 
 import { AppShell } from "@/components/layout/AppShell";
+import { PageContent } from "@/components/layout/PageContent";
 import { RepositoryNarrative } from "@/components/repositories/RepositoryNarrative";
 import { RepositoryPurposeCard } from "@/components/repositories/RepositoryPurposeCard";
 import { RepositoryLiveStatus } from "@/components/repositories/RepositoryLiveStatus";
@@ -12,8 +13,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+  useRepositoryIntelligenceReport,
   useRepositoryNarrative,
-  useRepositoryPurpose,
 } from "@/hooks/useRepositories";
 import { useRepositoryOverview } from "@/hooks/useRepositoryOverview";
 import { useRepositoryLiveStatus } from "@/hooks/useRepositoryLiveStatus";
@@ -36,13 +37,13 @@ export default function RepositoryNarrativePage() {
   } = useRepositoryNarrative(repoId);
 
   const {
-    data: purpose,
+    data: intelligenceReport,
     isLoading: isPurposeLoading,
-  } = useRepositoryPurpose(repoId);
+  } = useRepositoryIntelligenceReport(repoId);
 
   return (
     <AppShell>
-      <div className="space-y-6">
+      <PageContent>
         <Button asChild variant="ghost" className="px-0">
           <Link href={`/repositories/${repoId}`}>
             <ArrowLeft className="mr-2 h-4 w-4" />
@@ -104,10 +105,10 @@ export default function RepositoryNarrativePage() {
           </div>
         )}
 
-        {!isNarrativeLoading && !isNarrativeError && (
+        {!isNarrativeLoading && !isNarrativeError && !isPurposeLoading && (
           <>
             <RepositoryPurposeCard
-              data={purpose}
+              data={intelligenceReport}
               isLoading={isPurposeLoading}
             />
 
@@ -120,7 +121,8 @@ export default function RepositoryNarrativePage() {
               links={[
                 {
                   label: "Capability Intelligence",
-                  description: "Inspect maturity, complexity, technologies, and detected repository types.",
+                  description:
+                    "Inspect maturity, complexity, technologies, and detected repository types.",
                   href: `/repositories/${repoId}/capabilities`,
                 },
                 {
@@ -130,14 +132,15 @@ export default function RepositoryNarrativePage() {
                 },
                 {
                   label: "Knowledge Graph",
-                  description: "Explore relationships between technologies and architecture domains.",
+                  description:
+                    "Explore relationships between technologies and architecture domains.",
                   href: `/repositories/${repoId}/knowledge-graph`,
                 },
               ]}
             />
           </>
         )}
-      </div>
+      </PageContent>
     </AppShell>
   );
 }

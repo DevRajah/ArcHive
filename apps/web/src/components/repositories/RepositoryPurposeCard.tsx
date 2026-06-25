@@ -1,12 +1,48 @@
 "use client";
 
 import { Compass, Layers3 } from "lucide-react";
+
 import { Badge } from "@/components/ui/badge";
-import { RepositoryPurposeResponse } from "@/types/repository-purpose.types";
 import { formatFilterLabel } from "@/lib/filters";
+import {
+  getPrimaryRepositoryType,
+  getPurposeDetails,
+  normalizeReasoningSignals,
+} from "@/lib/repository-purpose";
+
+type RepositoryPurposeCardData = {
+  repositoryPurpose?: {
+    purposeType?: string;
+    label?: string;
+    description?: string;
+  };
+
+  repositoryTypes?: string[];
+
+  reasoningSignals?: unknown;
+
+  summary?: {
+    primaryRepositoryType?: string | null;
+  };
+
+  repositoryIntelligence?: {
+    identity?: {
+      primaryRepositoryType?: string | null;
+      repositoryTypes?: string[];
+    };
+
+    signals?: {
+      reasoningSignals?: unknown;
+    };
+  };
+
+  legacy?: {
+    repositoryTypes?: string[];
+  };
+};
 
 interface RepositoryPurposeCardProps {
-  data?: RepositoryPurposeResponse;
+  data?: unknown;
   isLoading?: boolean;
 }
 
@@ -14,6 +50,7 @@ export function RepositoryPurposeCard({
   data,
   isLoading,
 }: RepositoryPurposeCardProps) {
+    const report = data as RepositoryPurposeCardData | undefined;
   if (isLoading) {
     return (
       <div className="rounded-xl border border-border bg-card p-6">
@@ -24,7 +61,39 @@ export function RepositoryPurposeCard({
     );
   }
 
-  if (!data?.repositoryPurpose) {
+  const canonicalPrimaryRepositoryType = getPrimaryRepositoryType(report);
+  const legacyPurposeType = report?.repositoryPurpose?.purposeType;
+
+  const primaryRepositoryType =
+    canonicalPrimaryRepositoryType || legacyPurposeType || null;
+
+  const purpose = primaryRepositoryType
+    ? getPurposeDetails(primaryRepositoryType)
+    : report?.repositoryPurpose
+      ? {
+          title: report.repositoryPurpose.label || "Repository Purpose",
+          category: report.repositoryPurpose.purposeType
+            ? formatFilterLabel(report.repositoryPurpose.purposeType)
+            : "Repository Intelligence",
+          description:
+            report.repositoryPurpose.description ||
+            "Repository purpose was classified by ArcHive using backend intelligence signals.",
+        }
+      : null;
+
+  const repositoryTypes =
+  report?.repositoryIntelligence?.identity?.repositoryTypes?.length
+      ? report.repositoryIntelligence.identity.repositoryTypes
+      : report?.repositoryTypes?.length
+        ? report.repositoryTypes
+        : report?.legacy?.repositoryTypes || [];
+
+  const reasoningSignals = normalizeReasoningSignals(
+    report?.repositoryIntelligence?.signals?.reasoningSignals ||
+      report?.reasoningSignals
+  );
+
+  if (!purpose) {
     return (
       <div className="rounded-xl border border-border bg-card p-6">
         <h2 className="text-lg font-semibold">Repository Purpose</h2>
@@ -34,8 +103,6 @@ export function RepositoryPurposeCard({
       </div>
     );
   }
-
-  const purpose = data.repositoryPurpose;
 
   return (
     <div className="rounded-xl border border-border bg-card p-6">
@@ -48,18 +115,16 @@ export function RepositoryPurposeCard({
           <div className="flex flex-wrap items-center gap-3">
             <h2 className="text-lg font-semibold">Repository Purpose</h2>
 
-            <Badge variant="secondary">
-              {formatFilterLabel(purpose.purposeType)}
-            </Badge>
+            <Badge variant="secondary">{purpose.category}</Badge>
           </div>
 
-          <h3 className="mt-4 text-2xl font-bold">{purpose.label}</h3>
+          <h3 className="mt-4 text-2xl font-bold">{purpose.title}</h3>
 
           <p className="mt-3 max-w-4xl text-sm leading-6 text-muted-foreground">
             {purpose.description}
           </p>
 
-          {data.repositoryTypes && data.repositoryTypes.length > 0 && (
+          {repositoryTypes.length > 0 && (
             <div className="mt-5">
               <div className="flex items-center gap-2">
                 <Layers3 className="h-4 w-4 text-primary" />
@@ -67,8 +132,8 @@ export function RepositoryPurposeCard({
               </div>
 
               <div className="mt-3 flex flex-wrap gap-2">
-                {data.repositoryTypes.map((type) => (
-                  <Badge key={type} variant="outline">
+                {repositoryTypes.map((type, index) => (
+                  <Badge key={`${type}-${index}`} variant="outline">
                     {formatFilterLabel(type)}
                   </Badge>
                 ))}
@@ -76,15 +141,15 @@ export function RepositoryPurposeCard({
             </div>
           )}
 
-          {data.reasoningSignals && data.reasoningSignals.length > 0 && (
+          {reasoningSignals.length > 0 && (
             <div className="mt-5 rounded-xl border border-border bg-background p-4">
               <p className="text-sm font-medium">
                 Why ArcHive classified it this way
               </p>
 
               <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
-                {data.reasoningSignals.map((signal) => (
-                  <li key={signal}>• {signal}</li>
+                {reasoningSignals.map((signal, index) => (
+                  <li key={`${signal}-${index}`}>• {signal}</li>
                 ))}
               </ul>
             </div>
