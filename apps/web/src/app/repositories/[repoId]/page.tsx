@@ -13,27 +13,24 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 import { RepositoryArchitecturePreview } from "@/components/repositories/RepositoryArchitecturePreview";
 import { RepositoryArchitectureRadar } from "@/components/repositories/RepositoryArchitectureRadar";
-import { RepositoryCapabilityMatrix } from "@/components/repositories/RepositoryCapabilityMatrix";
 import { RepositoryDetailNav } from "@/components/repositories/RepositoryDetailNav";
+import { RepositoryIntelligenceCards } from "@/components/repositories/RepositoryIntelligenceCards";
 import { RepositoryIntelligenceSummary } from "@/components/repositories/RepositoryIntelligenceSummary";
 import { RepositoryLiveStatus } from "@/components/repositories/RepositoryLiveStatus";
 import { RepositoryMetricCards } from "@/components/repositories/RepositoryMetricCards";
-import { RepositoryNarrative } from "@/components/repositories/RepositoryNarrative";
+import { RepositoryPurposeCard } from "@/components/repositories/RepositoryPurposeCard";
 import { RepositoryRecentEvents } from "@/components/repositories/RepositoryRecentEvents";
 import { RepositoryTimelinePreview } from "@/components/repositories/RepositoryTimelinePreview";
 import { RepositoryTrackingStatus } from "@/components/repositories/RepositoryTrackingStatus";
-import { RepositoryPurposeCard } from "@/components/repositories/RepositoryPurposeCard";
-import { useRepositoryPurpose } from "@/hooks/useRepositories";
+
 import { useRepositoryOverview } from "@/hooks/useRepositoryOverview";
 import { useRepositoryLiveStatus } from "@/hooks/useRepositoryLiveStatus";
 import {
   useRepositoryArchitectureRadar,
-  useRepositoryCapabilities,
+  useRepositoryIntelligenceReport,
   useRepositoryIntelligenceSummary,
-  //useRepositoryNarrative,
   useUntrackRepository,
 } from "@/hooks/useRepositories";
-import { RepositoryIntelligenceCards } from "@/components/repositories/RepositoryIntelligenceCards";
 
 export default function RepositoryDetailPage() {
   const params = useParams<{ repoId: string }>();
@@ -56,20 +53,11 @@ export default function RepositoryDetailPage() {
     data: architectureRadar,
     isLoading: isArchitectureRadarLoading,
   } = useRepositoryArchitectureRadar(repoId);
+
   const {
-    data: purpose,
-    isLoading: isPurposeLoading,
-  } = useRepositoryPurpose(repoId);
-
-  // const {
-  //   data: capabilities,
-  //   isLoading: isCapabilitiesLoading,
-  // } = useRepositoryCapabilities(repoId);
-
-  // const {
-  //   data: narrative,
-  //   isLoading: isNarrativeLoading,
-  // } = useRepositoryNarrative(repoId);
+    data: intelligenceReport,
+    isLoading: isIntelligenceReportLoading,
+  } = useRepositoryIntelligenceReport(repoId);
 
   const {
     data: intelligenceSummary,
@@ -247,8 +235,8 @@ export default function RepositoryDetailPage() {
             <RepositoryIntelligenceCards repositoryId={repoId} />
 
             <RepositoryPurposeCard
-              data={purpose}
-              isLoading={isPurposeLoading}
+              data={intelligenceReport}
+              isLoading={isIntelligenceReportLoading}
             />
 
             <div id="intelligence-summary">
@@ -260,22 +248,11 @@ export default function RepositoryDetailPage() {
               />
             </div>
 
-            {/* <RepositoryNarrative
-              data={narrative}
-              isLoading={isNarrativeLoading}
-            /> */}
-
-            {/* <div id="capabilities">
-              <RepositoryCapabilityMatrix
-                data={capabilities}
-                isLoading={isCapabilitiesLoading}
-              />
-            </div> */}
-
             <div id="architecture-radar">
               <RepositoryArchitectureRadar
                 data={architectureRadar}
                 isLoading={isArchitectureRadarLoading}
+                repositoryId={repoId}
               />
             </div>
 
