@@ -1,5 +1,6 @@
 import { Badge } from "@/components/ui/badge";
-import { formatFilterLabel } from "@/lib/filters";
+//import { formatFilterLabel } from "@/lib/filters";
+import { formatIntelligenceLabel } from "@/lib/intelligence-labels";
 
 interface BadgeGroupProps {
   items?: unknown[];
@@ -71,7 +72,7 @@ export function BadgeGroup({
     <div className="flex flex-wrap gap-2">
       {visibleItems.map((item, index) => (
         <Badge key={`${item}-${index}`} variant={variant}>
-          {humanize ? formatFilterLabel(String(item)) : item}
+          {humanize ? formatIntelligenceLabel(item) : item}
         </Badge>
       ))}
 

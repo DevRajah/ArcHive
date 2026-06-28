@@ -9,6 +9,7 @@ import {
   getPurposeDetails,
   normalizeReasoningSignals,
 } from "@/lib/repository-purpose";
+import { formatIntelligenceLabel } from "@/lib/intelligence-labels";
 
 type RepositoryPurposeCardData = {
   repositoryPurpose?: {
@@ -115,7 +116,7 @@ export function RepositoryPurposeCard({
           <div className="flex flex-wrap items-center gap-3">
             <h2 className="text-lg font-semibold">Repository Purpose</h2>
 
-            <Badge variant="secondary">{purpose.category}</Badge>
+            <Badge variant="secondary">{formatIntelligenceLabel(purpose.category)}</Badge>
           </div>
 
           <h3 className="mt-4 text-2xl font-bold">{purpose.title}</h3>
@@ -134,7 +135,7 @@ export function RepositoryPurposeCard({
               <div className="mt-3 flex flex-wrap gap-2">
                 {repositoryTypes.map((type, index) => (
                   <Badge key={`${type}-${index}`} variant="outline">
-                    {formatFilterLabel(type)}
+                    {formatIntelligenceLabel(type)}
                   </Badge>
                 ))}
               </div>

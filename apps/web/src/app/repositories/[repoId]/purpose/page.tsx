@@ -21,6 +21,7 @@ import {
   getPurposeDetails,
   normalizeReasoningSignals,
 } from "@/lib/repository-purpose";
+import { formatIntelligenceLabel } from "@/lib/intelligence-labels";
 
 type RepositoryPurposeReport = {
   repository?: {
@@ -187,7 +188,7 @@ export default function RepositoryPurposePage() {
 
                     {primaryRepositoryType && (
                       <Badge variant="secondary">
-                        {formatFilterLabel(primaryRepositoryType)}
+                        {formatIntelligenceLabel(primaryRepositoryType)}
                       </Badge>
                     )}
                   </div>
@@ -227,12 +228,12 @@ export default function RepositoryPurposePage() {
                       </p>
 
                       <h3 className="mt-2 text-xl font-bold">
-                        {identity?.repositoryPersona ||
+                        {formatIntelligenceLabel(identity?.repositoryPersona) ||
                           "Repository persona pending"}
                       </h3>
 
                       <p className="mt-3 text-sm leading-6 text-muted-foreground">
-                        {identity?.repositoryDNA?.engineeringProfile ||
+                        {formatIntelligenceLabel(identity?.repositoryDNA?.engineeringProfile) ||
                           "ArcHive has not generated a detailed engineering profile for this repository yet."}
                       </p>
                     </div>

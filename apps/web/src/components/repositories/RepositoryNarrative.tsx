@@ -10,6 +10,7 @@ import {
   getPrimaryRepositoryType,
   getPurposeDetails,
 } from "@/lib/repository-purpose";
+import { formatIntelligenceLabel } from "@/lib/intelligence-labels";
 
 interface RepositoryNarrativeProps {
   data?: RepositoryNarrativeResponse;
@@ -45,7 +46,7 @@ function renderBadges(items?: string[]) {
     <div className="mt-3 flex flex-wrap gap-2">
       {items.map((item, index) => (
         <Badge key={`${item}-${index}`} variant="secondary">
-          {formatFilterLabel(item)}
+          {formatIntelligenceLabel(item)}
         </Badge>
       ))}
     </div>
