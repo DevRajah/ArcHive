@@ -1036,8 +1036,18 @@ export const detectTechnologyFingerprint = (
     const finalTechnologies = Array.from(technologies);
     const finalArchitectureDomains = Array.from(architectureDomains);
     const finalEngineeringSignals = Array.from(engineeringSignals);
-    const finalRepositoryTypes = sortRepositoryTypesByPurpose(
-        Array.from(repositoryTypes)
+    const removeConflictingSecondaryTypes = (types: string[]) => {
+        const primaryType = types[0];
+
+        if (primaryType === "ENGINEERING_INTELLIGENCE_PLATFORM") {
+            return types.filter((type) => type !== "DEVTOOL_PLATFORM");
+        }
+
+        return types;
+    };
+
+    const finalRepositoryTypes = removeConflictingSecondaryTypes(
+        sortRepositoryTypesByPurpose(Array.from(repositoryTypes))
     );
 
 
