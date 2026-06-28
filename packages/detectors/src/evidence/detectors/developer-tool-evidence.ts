@@ -4,6 +4,26 @@ import { includesAny } from "../evidence-utils";
 export const detectDeveloperToolEvidence = (context: EvidenceContext) => {
   const { combinedText, addEvidence } = context;
 
+  const isEngineeringIntelligenceRepository = includesAny(combinedText, [
+  "engineering intelligence",
+  "engineering-intelligence",
+  "repository intelligence",
+  "repository-intelligence",
+  "architecture intelligence",
+  "architecture-intelligence",
+  "repository fingerprint",
+  "technology fingerprint",
+  "architecture drift",
+  "repository health",
+  "repository maturity",
+  "repository purpose",
+  "canonical intelligence wrapper",
+]);
+
+if (isEngineeringIntelligenceRepository) {
+  return;
+}
+
   if (includesAny(combinedText, ["scaffold", "scaffolding"])) {
     addEvidence(
       "DEVTOOL_PLATFORM",
@@ -71,6 +91,8 @@ export const detectDeveloperToolEvidence = (context: EvidenceContext) => {
       "STRONG"
     );
   }
+
+  
 
   console.log("===== DEVTOOL DETECTOR =====");
   console.log({
