@@ -114,6 +114,7 @@ export default function RepositoryNarrativePage() {
 
             <RepositoryNarrative
               data={narrative}
+              intelligenceReport={intelligenceReport}
               isLoading={isNarrativeLoading}
             />
 

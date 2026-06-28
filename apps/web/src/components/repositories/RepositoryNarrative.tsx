@@ -6,19 +6,45 @@ import { Badge } from "@/components/ui/badge";
 import { RepositoryNarrativeResponse } from "@/types/repository-narrative.types";
 import { RepositoryConfidencePanel } from "@/components/repositories/RepositoryConfidencePanel";
 import { formatFilterLabel } from "@/lib/filters";
+import {
+  getPrimaryRepositoryType,
+  getPurposeDetails,
+} from "@/lib/repository-purpose";
 
 interface RepositoryNarrativeProps {
   data?: RepositoryNarrativeResponse;
+  intelligenceReport?: unknown;
   isLoading?: boolean;
 }
+
+type CanonicalIntelligenceReport = {
+  summary?: {
+    primaryRepositoryType?: string | null;
+  };
+
+  repositoryIntelligence?: {
+    identity?: {
+      primaryRepositoryType?: string | null;
+      repositoryTypes?: string[];
+      repositoryPersona?: string;
+      repositoryDNA?: {
+        engineeringProfile?: string;
+      };
+    };
+  };
+
+  legacy?: {
+    repositoryTypes?: string[];
+  };
+};
 
 function renderBadges(items?: string[]) {
   if (!items || items.length === 0) return null;
 
   return (
     <div className="mt-3 flex flex-wrap gap-2">
-      {items.map((item) => (
-        <Badge key={item} variant="secondary">
+      {items.map((item, index) => (
+        <Badge key={`${item}-${index}`} variant="secondary">
           {formatFilterLabel(item)}
         </Badge>
       ))}
@@ -28,6 +54,7 @@ function renderBadges(items?: string[]) {
 
 export function RepositoryNarrative({
   data,
+  intelligenceReport,
   isLoading,
 }: RepositoryNarrativeProps) {
   if (isLoading) {
@@ -51,7 +78,28 @@ export function RepositoryNarrative({
     );
   }
 
+  const report = intelligenceReport as CanonicalIntelligenceReport | undefined;
+
+  const primaryRepositoryType = getPrimaryRepositoryType(report);
+  const purpose = getPurposeDetails(primaryRepositoryType);
+
+  const canonicalEngineeringProfile =
+    report?.repositoryIntelligence?.identity?.repositoryDNA?.engineeringProfile;
+
   const narrative = data.narrative;
+
+  const headline =
+    primaryRepositoryType && primaryRepositoryType !== "GENERAL_ENGINEERING_PROJECT"
+      ? `${purpose.title} engineering narrative`
+      : narrative.headline || "Engineering system profile";
+
+  const summary =
+    primaryRepositoryType && primaryRepositoryType !== "GENERAL_ENGINEERING_PROJECT"
+      ? `ArcHive is classified as a ${purpose.title.toLowerCase()}. ${purpose.description}`
+      : narrative.summary;
+
+  const engineeringProfile =
+    canonicalEngineeringProfile || narrative.engineeringProfile;
 
   return (
     <div className="rounded-xl border border-border bg-card p-6">
@@ -68,23 +116,27 @@ export function RepositoryNarrative({
               <Sparkles className="mr-1 h-3 w-3" />
               Engineering Summary
             </Badge>
+
+            {primaryRepositoryType && (
+              <Badge variant="secondary">
+                {formatFilterLabel(primaryRepositoryType)}
+              </Badge>
+            )}
           </div>
 
-          <h3 className="mt-4 text-2xl font-bold">
-            {narrative.headline || "Engineering system profile"}
-          </h3>
+          <h3 className="mt-4 text-2xl font-bold">{headline}</h3>
 
-          {narrative.summary && (
+          {summary && (
             <p className="mt-3 max-w-4xl text-sm leading-6 text-muted-foreground">
-              {narrative.summary}
+              {summary}
             </p>
           )}
 
-          {narrative.engineeringProfile && (
+          {engineeringProfile && (
             <div className="mt-5 rounded-xl border border-border bg-background p-4">
               <p className="text-sm font-medium">Engineering Profile</p>
               <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                {narrative.engineeringProfile}
+                {engineeringProfile}
               </p>
             </div>
           )}
