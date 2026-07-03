@@ -998,3 +998,389 @@ Fingerprint
 This fingerprint becomes the primary input for the next stage of the intelligence pipeline.
 
 Rather than analysing repository evidence again, subsequent engines consume the fingerprint and progressively enrich repository understanding.
+
+# 7. Repository Identity
+
+Once the Technology Fingerprint has been generated, ArcHive proceeds to determine the repository's engineering identity.
+
+Repository Identity represents the first major engineering decision made by the intelligence pipeline.
+
+Unlike earlier stages, which focus on collecting evidence and detecting technologies, Repository Identity answers a much more fundamental question:
+
+> **What is this repository?**
+
+This distinction is important because a repository can contain hundreds of technologies while still representing a single engineering product.
+
+For example, ArcHive contains:
+
+- Next.js
+- Fastify
+- BullMQ
+- PostgreSQL
+- Prisma
+- Redis
+- Server-Sent Events
+- Docker
+
+However, none of these technologies individually describe what ArcHive actually is.
+
+Instead, they collectively support a much higher-level conclusion:
+
+```text
+Engineering Intelligence Platform
+```
+
+Repository Identity is responsible for making this transition from implementation details to engineering purpose.
+
+---
+
+# 7.1 Identity Before Implementation
+
+One of the core design decisions behind ArcHive is that repository identity should be determined before implementation details are considered.
+
+Traditional repository analysis often produces results such as:
+
+```text
+TypeScript Project
+
+React Application
+
+Node.js Project
+```
+
+While technically correct, these labels provide very little information about the actual engineering purpose of the software.
+
+Consider the following repositories.
+
+Repository A:
+
+```text
+React
+Next.js
+Redis
+PostgreSQL
+```
+
+Repository B:
+
+```text
+React
+Next.js
+Redis
+PostgreSQL
+```
+
+Although both repositories share the same implementation stack, they may represent entirely different products.
+
+For example:
+
+Repository A:
+
+```text
+Engineering Intelligence Platform
+```
+
+Repository B:
+
+```text
+Financial Infrastructure
+```
+
+Repository C:
+
+```text
+Developer Tooling Platform
+```
+
+Repository D:
+
+```text
+Healthcare Platform
+```
+
+The implementation stack remains similar.
+
+The engineering purpose does not.
+
+Repository Identity therefore focuses on understanding engineering intent rather than programming language.
+
+---
+
+# 7.2 Repository Purpose
+
+Repository Purpose represents the primary engineering role performed by a repository.
+
+Current purpose classifications include:
+
+- Engineering Intelligence Platform
+- Developer Tooling Platform
+- FinTech Platform
+- Observability Platform
+- Security Platform
+- AI / Machine Learning Project
+- Data Engineering Project
+- Smart Transport Platform
+- Energy Platform
+- Healthcare Platform
+- Collaboration Platform
+- Education Platform
+- E-Commerce Platform
+
+Purpose classifications are intentionally broad enough to describe engineering domains rather than individual technologies.
+
+For example:
+
+```text
+Engineering Intelligence Platform
+```
+
+communicates significantly more engineering value than:
+
+```text
+Fastify + Next.js + PostgreSQL
+```
+
+---
+
+# 7.3 Repository Type Hierarchy
+
+ArcHive distinguishes between three different levels of repository classification.
+
+## Level 1 — Repository Purpose
+
+Purpose describes the engineering domain solved by the repository.
+
+Examples include:
+
+```text
+Engineering Intelligence Platform
+
+Developer Tooling Platform
+
+Financial Infrastructure
+
+Observability Platform
+```
+
+This level answers:
+
+> Why does this repository exist?
+
+---
+
+## Level 2 — Implementation
+
+Implementation describes how the repository is built.
+
+Examples include:
+
+```text
+Frontend Application
+
+Backend Service
+
+CLI Application
+
+Mobile Application
+```
+
+This level answers:
+
+> How is the software implemented?
+
+---
+
+## Level 3 — Technology
+
+Technology describes individual implementation components.
+
+Examples include:
+
+```text
+Next.js
+
+Fastify
+
+BullMQ
+
+Redis
+
+Prisma
+
+PostgreSQL
+```
+
+This level answers:
+
+> Which engineering technologies are used?
+
+The three layers intentionally answer different engineering questions.
+
+---
+
+# 7.4 Identity Ranking
+
+Repository Identity frequently receives multiple candidate classifications from the Technology Fingerprint engine.
+
+For example:
+
+```text
+ENGINEERING_INTELLIGENCE_PLATFORM
+
+FRONTEND_APPLICATION
+
+JAVASCRIPT_TYPESCRIPT_PROJECT
+```
+
+Rather than exposing these in arbitrary order, ArcHive ranks them according to engineering significance.
+
+Conceptually, the ranking follows:
+
+```text
+Repository Purpose
+
+↓
+
+Implementation
+
+↓
+
+Programming Language
+```
+
+As a result:
+
+```text
+ENGINEERING_INTELLIGENCE_PLATFORM
+```
+
+always outranks
+
+```text
+FRONTEND_APPLICATION
+```
+
+which in turn outranks
+
+```text
+JAVASCRIPT_TYPESCRIPT_PROJECT
+```
+
+This produces classifications that are far more meaningful to developers.
+
+---
+
+# 7.5 Identity Conflict Resolution
+
+Engineering repositories often satisfy multiple detector rules simultaneously.
+
+For example, ArcHive contains:
+
+- React
+- Next.js
+- Fastify
+- BullMQ
+- Repository Analysis
+- Engineering Intelligence
+- Developer Tooling Concepts
+
+Without conflict resolution, this could incorrectly produce:
+
+```text
+Developer Tooling Platform
+
+Engineering Intelligence Platform
+```
+
+as equal classifications.
+
+Repository Identity therefore applies conflict resolution rules before selecting a primary identity.
+
+Examples include:
+
+- Purpose classifications override implementation classifications.
+- Strong engineering domain evidence overrides generic technology evidence.
+- Specific repository purposes override broader engineering categories.
+- Conflicting secondary classifications may be removed if they contradict the dominant repository purpose.
+
+This process significantly reduces false positives.
+
+---
+
+# 7.6 Explainable Repository Identity
+
+ArcHive never treats repository identity as a black-box decision.
+
+Every identity is accompanied by reasoning signals explaining why the classification was selected.
+
+For example:
+
+```text
+Detected repository intelligence concepts and engineering analysis patterns.
+
+Detected architecture fingerprint terminology.
+
+Detected repository health analysis.
+
+Detected engineering quality assessment.
+
+Detected architecture intelligence components.
+```
+
+These observations become part of the Repository Intelligence report.
+
+Developers can therefore understand the reasoning behind every engineering conclusion.
+
+---
+
+# 7.7 Repository Persona
+
+Although Repository Identity determines what a repository is, Repository Persona attempts to describe how the repository behaves within an engineering portfolio.
+
+For example:
+
+Repository Identity:
+
+```text
+Engineering Intelligence Platform
+```
+
+Repository Persona:
+
+```text
+Product SaaS
+```
+
+or
+
+```text
+Developer Platform
+```
+
+Persona therefore represents a higher-level engineering description that complements repository identity rather than replacing it.
+
+---
+
+# 7.8 Repository Identity Output
+
+Once identity resolution has completed, ArcHive produces a structured Repository Identity model.
+
+Conceptually, it contains:
+
+```text
+Repository Identity
+
+├── Primary Repository Type
+├── Secondary Repository Types
+├── Repository Purpose
+├── Repository Persona
+├── Repository DNA Reference
+└── Classification Confidence
+```
+
+This identity becomes the foundation for every remaining intelligence engine.
+
+Subsequent stages no longer need to determine what the repository represents.
+
+Instead, they build upon Repository Identity to assess engineering quality, architectural characteristics, technical debt, repository maturity and engineering recommendations.
+
