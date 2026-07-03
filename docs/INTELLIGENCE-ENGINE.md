@@ -252,3 +252,367 @@ This layered design reduces coupling between components while ensuring that each
 The result is a scalable architecture where new detectors, engineering assessments and intelligence modules can be introduced with minimal impact on the rest of the system.
 
 Subsequent sections of this document examine each stage of the pipeline in detail, beginning with the Evidence Engine that forms the foundation of ArcHive's engineering intelligence system.
+
+# 5. Evidence Engine
+
+The Evidence Engine is the foundation of the ArcHive Intelligence Engine. Every engineering conclusion produced by the platform begins with evidence collection.
+
+Rather than attempting to classify a repository using a single technology or keyword, ArcHive first gathers evidence from multiple independent sources before making any engineering decisions.
+
+This approach is inspired by how experienced software engineers review unfamiliar codebases. Instead of jumping to conclusions after opening a single file, engineers gradually build confidence by observing repository structure, dependencies, architecture, naming conventions and engineering patterns.
+
+ArcHive follows the same philosophy.
+
+The purpose of the Evidence Engine is therefore not to classify repositories directly. Instead, it transforms raw repository information into structured engineering evidence that can be consumed by later stages of the intelligence pipeline.
+
+---
+
+## 5.1 Responsibilities
+
+The Evidence Engine is responsible for:
+
+- collecting repository evidence
+- categorising engineering signals
+- assigning confidence weights
+- removing duplicate evidence
+- producing explainable engineering observations
+- providing a structured input for downstream intelligence engines
+
+Every later intelligence engine depends on the quality of the evidence generated at this stage.
+
+---
+
+## 5.2 Evidence Sources
+
+ArcHive collects engineering evidence from multiple repository artefacts.
+
+Current evidence sources include:
+
+### Repository Metadata
+
+Basic repository information often contains valuable engineering context.
+
+Examples include:
+
+- repository name
+- repository description
+- programming language
+- topics
+- repository owner
+
+For example:
+
+```text
+ledgerflow
+payment
+reconciliation
+audit
+```
+
+strongly suggests financial infrastructure.
+
+Likewise:
+
+```text
+repository intelligence
+architecture
+engineering
+analysis
+```
+
+suggests an engineering intelligence platform.
+
+---
+
+### Repository History
+
+Historical architecture changes provide insight into how a repository evolves over time.
+
+Examples include:
+
+- architecture updates
+- technology additions
+- infrastructure migrations
+- engineering milestones
+
+Unlike static analysis, historical evidence helps ArcHive understand engineering direction rather than simply current implementation.
+
+---
+
+### Engineering Events
+
+GitHub events provide additional behavioural signals.
+
+Examples include:
+
+- repository imports
+- webhook events
+- engineering timeline updates
+- processing events
+
+These events enrich repository understanding and contribute to later engineering assessments.
+
+---
+
+### Technology Detection
+
+Detected technologies become another evidence source.
+
+Examples include:
+
+- React
+- Next.js
+- Fastify
+- BullMQ
+- Redis
+- PostgreSQL
+- Docker
+- Prisma
+
+Technologies themselves are not considered repository purpose.
+
+Instead, they provide supporting engineering evidence.
+
+---
+
+### Domain Language
+
+Domain terminology often provides stronger signals than implementation technologies.
+
+Examples include:
+
+```text
+ledger
+payment
+invoice
+transaction
+```
+
+Financial Infrastructure
+
+```text
+repository
+architecture
+engineering
+fingerprint
+intelligence
+```
+
+Engineering Intelligence Platform
+
+```text
+scaffold
+generator
+cli
+template
+module
+```
+
+Developer Tooling Platform
+
+Domain language is therefore assigned a relatively high confidence because it often reflects the actual engineering problem being solved.
+
+---
+
+### Architecture Patterns
+
+Repository architecture contributes another layer of evidence.
+
+Examples include:
+
+- Clean Architecture
+- Layered Architecture
+- Event-Driven Architecture
+- Queue Processing
+- Realtime Systems
+- CQRS
+- Repository Pattern
+
+Architecture patterns are particularly valuable because they describe engineering design decisions rather than implementation syntax.
+
+---
+
+# 5.3 Evidence Categories
+
+To improve explainability, ArcHive organises evidence into well-defined categories.
+
+Current categories include:
+
+| Category | Purpose |
+|----------|---------|
+| Repository Metadata | Repository identity and metadata |
+| File Structure | Repository organisation |
+| Dependency | External packages and frameworks |
+| Code Pattern | Engineering implementation patterns |
+| Domain Language | Business and engineering terminology |
+| Architecture Pattern | Architectural characteristics |
+
+Categorising evidence makes it easier to explain why a repository received a particular classification.
+
+---
+
+# 5.4 Evidence Weighting
+
+Not all engineering evidence should influence classification equally.
+
+For example, detecting:
+
+```text
+TypeScript
+```
+
+does not necessarily indicate what the repository actually does.
+
+Conversely, detecting:
+
+```text
+repository intelligence
+architecture fingerprint
+repository health
+```
+
+strongly indicates an Engineering Intelligence Platform.
+
+For this reason, ArcHive assigns different confidence weights to different evidence sources.
+
+Typical weighting philosophy is:
+
+| Evidence Type | Typical Influence |
+|---------------|------------------|
+| Repository Purpose Language | Very High |
+| Architecture Patterns | High |
+| Engineering Capabilities | High |
+| Technology Stack | Medium |
+| Dependencies | Medium |
+| Repository Metadata | Medium |
+| Generic Programming Languages | Low |
+
+This weighting system prevents generic technologies from dominating repository classification.
+
+---
+
+# 5.5 Strong vs Weak Evidence
+
+ArcHive distinguishes between weak engineering signals and strong engineering evidence.
+
+Weak evidence may suggest several possible repository purposes.
+
+For example:
+
+```text
+Node.js
+TypeScript
+Express
+```
+
+These technologies are extremely common and therefore provide relatively little information about repository purpose.
+
+Strong evidence is significantly more specific.
+
+Examples include:
+
+```text
+repository intelligence
+technology fingerprint
+architecture drift
+repository maturity
+engineering quality
+```
+
+These terms are rarely found outside engineering intelligence systems and therefore contribute much more heavily to classification confidence.
+
+Similarly:
+
+```text
+ledger
+double-entry
+payment reconciliation
+audit trail
+```
+
+strongly indicate financial infrastructure.
+
+---
+
+# 5.6 Evidence Aggregation
+
+Individual evidence items are rarely sufficient to determine repository purpose.
+
+Instead, ArcHive aggregates evidence across the repository before making engineering decisions.
+
+For example:
+
+```text
+Repository Name
++
+Repository Description
++
+Architecture Changes
++
+Detected Technologies
++
+Engineering Signals
++
+Domain Language
+```
+
+↓
+
+```text
+Repository Evidence Graph
+```
+
+↓
+
+```text
+Repository Identity
+```
+
+This aggregation process significantly improves classification accuracy while reducing false positives.
+
+---
+
+# 5.7 Explainable Engineering Evidence
+
+One of the primary goals of the Evidence Engine is explainability.
+
+Rather than returning opaque classifications, ArcHive records the evidence responsible for each engineering conclusion.
+
+For example:
+
+```text
+Detected repository intelligence concepts and engineering analysis patterns.
+
+Detected Clean Architecture layering.
+
+Detected Server-Sent Events.
+
+Detected BullMQ queue infrastructure.
+
+Detected PostgreSQL persistence layer.
+```
+
+These observations become reasoning signals that are later displayed throughout the platform.
+
+This enables developers to understand why ArcHive reached a particular conclusion instead of treating classifications as black-box predictions.
+
+---
+
+# 5.8 Output of the Evidence Engine
+
+The Evidence Engine does not classify repositories directly.
+
+Instead, it produces structured engineering evidence that becomes the input for the Technology Fingerprint engine.
+
+Its outputs include:
+
+- weighted evidence items
+- detected technologies
+- engineering observations
+- reasoning signals
+- evidence confidence
+- engineering context
+
+Subsequent intelligence engines build upon this structured evidence to progressively develop a richer understanding of the repository.
+
+The next stage in the intelligence pipeline is the **Technology Fingerprint**, which converts accumulated evidence into structured engineering signals and repository characteristics.
