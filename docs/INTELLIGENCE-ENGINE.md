@@ -615,4 +615,386 @@ Its outputs include:
 
 Subsequent intelligence engines build upon this structured evidence to progressively develop a richer understanding of the repository.
 
-The next stage in the intelligence pipeline is the **Technology Fingerprint**, which converts accumulated evidence into structured engineering signals and repository characteristics.
+
+# 6. Technology Fingerprint
+
+Following evidence collection, ArcHive enters the second major stage of the intelligence pipeline: **Technology Fingerprint**.
+
+While the Evidence Engine is responsible for collecting engineering observations, the Technology Fingerprint engine is responsible for transforming those observations into structured engineering characteristics.
+
+Rather than asking *"What files exist?"*, this stage asks:
+
+- What engineering technologies are present?
+- Which architecture domains are represented?
+- Which capabilities can be inferred?
+- Which repository types are supported by the available evidence?
+
+Technology Fingerprint therefore acts as the bridge between raw engineering evidence and higher-level repository intelligence.
+
+---
+
+# 6.1 Why Technology Fingerprinting?
+
+Most repository analysis tools simply list technologies.
+
+For example:
+
+```text
+Node.js
+TypeScript
+Redis
+PostgreSQL
+React
+```
+
+Although useful, this information alone provides very little engineering context.
+
+Two completely different repositories may both use the exact same technology stack while solving unrelated engineering problems.
+
+For example:
+
+```text
+Repository A
+
+React
+Next.js
+PostgreSQL
+Redis
+```
+
+may represent an Engineering Intelligence Platform.
+
+Meanwhile:
+
+```text
+Repository B
+
+React
+Next.js
+PostgreSQL
+Redis
+```
+
+may instead represent an E-Commerce Platform.
+
+Technology alone therefore cannot determine repository purpose.
+
+The goal of the Technology Fingerprint engine is not simply to detect technologies, but to understand how those technologies contribute to repository identity.
+
+---
+
+# 6.2 Engineering Signal Extraction
+
+After evidence has been collected, the fingerprint engine begins extracting structured engineering signals.
+
+Current signal categories include:
+
+- Technologies
+- Repository Types
+- Architecture Domains
+- Engineering Signals
+- Reasoning Signals
+- Capabilities
+
+These signals are consumed by every later intelligence engine.
+
+For example:
+
+```text
+BullMQ
+Redis
+Queue Processing
+```
+
+↓
+
+```text
+QUEUE_INFRASTRUCTURE
+```
+
+↓
+
+```text
+Background Processing Capability
+```
+
+↓
+
+```text
+Repository DNA
+```
+
+↓
+
+```text
+Architecture Intelligence
+```
+
+↓
+
+```text
+Repository Health
+```
+
+Each stage builds upon the previous one.
+
+---
+
+# 6.3 Technology Detection
+
+Technology detection identifies engineering frameworks, libraries and infrastructure components that define repository implementation.
+
+Current examples include:
+
+### Backend Technologies
+
+- Node.js
+- Fastify
+- Express
+- NestJS
+- Spring Boot
+- Laravel
+
+### Frontend Technologies
+
+- React
+- Next.js
+- Tailwind CSS
+- React Native
+
+### Persistence
+
+- PostgreSQL
+- MongoDB
+- Prisma
+- Redis
+
+### Infrastructure
+
+- Docker
+- BullMQ
+- GitHub Actions
+- OAuth
+- Server-Sent Events
+- Socket.IO
+
+Rather than being presented independently, these technologies become supporting evidence for later engineering analysis.
+
+---
+
+# 6.4 Repository Type Detection
+
+Technology Fingerprint also proposes repository types.
+
+Repository types describe the engineering role performed by the repository.
+
+Examples include:
+
+```text
+ENGINEERING_INTELLIGENCE_PLATFORM
+```
+
+```text
+DEVTOOL_PLATFORM
+```
+
+```text
+FINTECH_PLATFORM
+```
+
+```text
+OBSERVABILITY_PLATFORM
+```
+
+```text
+SECURITY_PLATFORM
+```
+
+Implementation classifications are also generated where appropriate.
+
+Examples include:
+
+```text
+FRONTEND_APPLICATION
+```
+
+```text
+BACKEND_SERVICE
+```
+
+```text
+JAVASCRIPT_TYPESCRIPT_PROJECT
+```
+
+These implementation classifications are intentionally treated as secondary to repository purpose.
+
+---
+
+# 6.5 Architecture Domain Detection
+
+Technology Fingerprint identifies architectural disciplines represented within the repository.
+
+Current architecture domains include:
+
+- Backend Systems
+- Frontend Architecture
+- Database Layer
+- Queue Infrastructure
+- Engineering Intelligence
+- Realtime Systems
+- API Layer
+- Authentication
+- Developer Infrastructure
+
+Unlike repository types, architecture domains describe engineering structure rather than product purpose.
+
+Multiple domains may coexist within a single repository.
+
+For example:
+
+```text
+Engineering Intelligence
+
+Backend Systems
+
+Queue Infrastructure
+
+Database Layer
+```
+
+These domains later contribute to Architecture Radar generation.
+
+---
+
+# 6.6 Capability Detection
+
+Capabilities represent engineering features that a repository appears capable of supporting.
+
+Examples include:
+
+- Authentication
+- Queue Infrastructure
+- API Layer
+- Realtime Systems
+- Repository Analysis
+- Engineering Intelligence
+- Code Generation
+
+Capabilities differ from technologies.
+
+For example:
+
+```text
+BullMQ
+```
+
+is a technology.
+
+Whereas:
+
+```text
+Queue Infrastructure
+```
+
+is an engineering capability.
+
+This distinction allows ArcHive to describe what a repository can do rather than simply what packages it uses.
+
+---
+
+# 6.7 Reasoning Signals
+
+One of the defining characteristics of ArcHive is explainability.
+
+Every repository classification is supported by reasoning signals.
+
+Examples include:
+
+```text
+Detected repository intelligence concepts and engineering analysis patterns.
+```
+
+```text
+Detected financial reconciliation terminology.
+```
+
+```text
+Detected background job and queue processing patterns.
+```
+
+```text
+Detected Clean Architecture layering.
+```
+
+Rather than exposing only a final classification, ArcHive surfaces these observations throughout the dashboard so developers can understand why engineering conclusions were reached.
+
+---
+
+# 6.8 Repository Type Ranking
+
+Not every detected repository type has equal importance.
+
+ArcHive therefore applies a ranking strategy before selecting the primary repository type.
+
+Conceptually, the ranking follows this order:
+
+```text
+Purpose
+
+↓
+
+Architecture
+
+↓
+
+Implementation
+```
+
+For example:
+
+```text
+ENGINEERING_INTELLIGENCE_PLATFORM
+FRONTEND_APPLICATION
+JAVASCRIPT_TYPESCRIPT_PROJECT
+```
+
+The resulting repository identity becomes:
+
+Primary:
+
+```text
+Engineering Intelligence Platform
+```
+
+Secondary:
+
+```text
+Frontend Application
+JavaScript / TypeScript Project
+```
+
+This prevents generic implementation technologies from overriding repository purpose.
+
+---
+
+# 6.9 Technology Fingerprint Output
+
+The final output of the Technology Fingerprint engine is a structured engineering fingerprint.
+
+Conceptually it contains:
+
+```text
+Fingerprint
+
+├── Technologies
+├── Repository Types
+├── Architecture Domains
+├── Engineering Signals
+├── Reasoning Signals
+├── Capabilities
+└── Evidence Results
+```
+
+This fingerprint becomes the primary input for the next stage of the intelligence pipeline.
+
+Rather than analysing repository evidence again, subsequent engines consume the fingerprint and progressively enrich repository understanding.
