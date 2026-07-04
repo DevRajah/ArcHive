@@ -1384,3 +1384,303 @@ Subsequent stages no longer need to determine what the repository represents.
 
 Instead, they build upon Repository Identity to assess engineering quality, architectural characteristics, technical debt, repository maturity and engineering recommendations.
 
+# 8. Repository DNA
+
+Once Repository Identity has been established, ArcHive generates a compact engineering profile known as **Repository DNA**.
+
+Repository DNA represents the engineering characteristics that define how a repository behaves from a software engineering perspective.
+
+Where Repository Identity answers the question:
+
+> **What is this repository?**
+
+Repository DNA answers:
+
+> **What kind of engineering system is this?**
+
+Rather than focusing on implementation details, Repository DNA summarises the dominant engineering characteristics discovered throughout the intelligence pipeline.
+
+This provides developers with an immediate understanding of the repository without requiring them to inspect thousands of files.
+
+---
+
+# 8.1 Purpose of Repository DNA
+
+Modern software repositories often contain hundreds or even thousands of source files.
+
+Understanding a repository typically requires reading:
+
+- source code
+- architecture
+- documentation
+- dependencies
+- configuration
+- infrastructure
+- historical changes
+
+Repository DNA reduces this complexity by producing a concise engineering summary that captures the repository's most important characteristics.
+
+Instead of manually inspecting every engineering component, developers can quickly understand:
+
+- the repository's engineering profile
+- dominant technologies
+- architectural focus
+- strongest capabilities
+- engineering maturity
+- engineering complexity
+- confidence of the intelligence analysis
+
+Repository DNA therefore acts as an engineering "identity card" for the repository.
+
+---
+
+# 8.2 Engineering Profile
+
+The Engineering Profile represents the dominant engineering discipline identified by ArcHive.
+
+Examples include:
+
+```text
+Engineering Intelligence Platform
+```
+
+```text
+Developer Tooling Platform
+```
+
+```text
+Financial Infrastructure
+```
+
+```text
+Observability Platform
+```
+
+Unlike implementation technologies, the Engineering Profile describes the primary engineering role performed by the repository.
+
+It is intentionally selected using repository purpose rather than generic implementation classifications.
+
+For example:
+
+```text
+Repository Types
+
+ENGINEERING_INTELLIGENCE_PLATFORM
+
+FRONTEND_APPLICATION
+
+JAVASCRIPT_TYPESCRIPT_PROJECT
+```
+
+The Engineering Profile becomes:
+
+```text
+Engineering Intelligence Platform
+```
+
+because repository purpose has higher engineering significance than implementation details.
+
+---
+
+# 8.3 Dominant Technologies
+
+Repository DNA records the technologies that most strongly influence repository implementation.
+
+Examples include:
+
+- Fastify
+- Next.js
+- PostgreSQL
+- Prisma
+- Redis
+- BullMQ
+- Docker
+- Server-Sent Events
+
+These technologies are presented as implementation characteristics rather than repository purpose.
+
+Developers can therefore distinguish between **what a repository does** and **how it is implemented**.
+
+---
+
+# 8.4 Dominant Architecture
+
+Repositories frequently contain multiple architectural disciplines.
+
+Repository DNA identifies those that contribute most significantly to the engineering design.
+
+Examples include:
+
+- Backend Systems
+- Frontend Architecture
+- Queue Infrastructure
+- Database Layer
+- API Layer
+- Engineering Intelligence
+- Authentication
+- Realtime Systems
+
+Rather than displaying every detected architecture component equally, Repository DNA highlights those that dominate repository behaviour.
+
+This provides a clearer understanding of engineering priorities.
+
+---
+
+# 8.5 Strongest Capabilities
+
+Capabilities describe the engineering functionality that the repository appears capable of providing.
+
+Unlike technologies, capabilities represent engineering behaviour.
+
+Examples include:
+
+```text
+Queue Infrastructure
+```
+
+rather than
+
+```text
+BullMQ
+```
+
+or
+
+```text
+Repository Analysis
+```
+
+rather than
+
+```text
+Fastify
+```
+
+Current capability examples include:
+
+- API Layer
+- Queue Infrastructure
+- Authentication
+- Realtime Systems
+- Repository Analysis
+- Engineering Intelligence
+- Code Generation
+- Background Processing
+
+Each capability is accompanied by a confidence score representing the strength of the supporting engineering evidence.
+
+---
+
+# 8.6 Engineering Focus
+
+Engineering Focus summarises the architectural disciplines that receive the greatest emphasis within the repository.
+
+Examples include:
+
+```text
+Engineering Intelligence
+
+Backend Systems
+
+Queue Infrastructure
+```
+
+or
+
+```text
+Financial Systems
+
+Event Processing
+
+Database Layer
+```
+
+Engineering Focus provides an additional abstraction over Architecture Domains by highlighting the engineering areas that define the repository.
+
+---
+
+# 8.7 Repository Maturity
+
+Repository DNA contributes to repository maturity by measuring engineering breadth.
+
+Several factors influence maturity, including:
+
+- architecture diversity
+- technology diversity
+- engineering capabilities
+- infrastructure complexity
+- repository organisation
+
+A repository demonstrating multiple mature engineering disciplines generally receives a higher maturity score than a repository implementing only basic functionality.
+
+Repository DNA therefore acts as one of several inputs into the Repository Maturity engine.
+
+---
+
+# 8.8 Complexity Score
+
+Complexity represents the breadth of engineering concerns handled by the repository.
+
+Examples of factors contributing to complexity include:
+
+- multiple architecture domains
+- diverse technologies
+- infrastructure components
+- asynchronous processing
+- distributed communication
+- engineering capabilities
+
+Higher complexity does not necessarily indicate better engineering.
+
+Instead, it reflects the scope of engineering problems addressed by the repository.
+
+This metric assists benchmarking by allowing repositories of similar engineering scope to be compared fairly.
+
+---
+
+# 8.9 Confidence Score
+
+Repository DNA also records an overall confidence score.
+
+Confidence reflects the amount and quality of engineering evidence supporting the generated profile.
+
+Factors contributing to confidence include:
+
+- quantity of evidence
+- evidence diversity
+- reasoning signals
+- detected capabilities
+- repository purpose confidence
+- engineering observations
+
+A repository with extensive engineering evidence receives a significantly higher confidence score than one containing only generic implementation details.
+
+Confidence allows downstream intelligence engines to understand how strongly they should rely upon the Repository DNA profile.
+
+---
+
+# 8.10 Repository DNA Output
+
+The Repository DNA engine produces a structured engineering profile.
+
+Conceptually, it contains:
+
+```text
+Repository DNA
+
+├── Engineering Profile
+├── Dominant Technologies
+├── Dominant Architecture
+├── Strongest Capabilities
+├── Engineering Focus
+├── Repository Types
+├── Maturity Score
+├── Complexity Score
+└── Confidence Score
+```
+
+This compact engineering summary becomes a foundational input for the remaining intelligence engines.
+
+Architecture Intelligence consumes Repository DNA to understand architectural emphasis, while Engineering Quality, Repository Health, Technical Debt and Benchmarking engines use the same profile to produce increasingly sophisticated engineering assessments.
+
+
