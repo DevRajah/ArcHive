@@ -437,3 +437,297 @@ collection, repository understanding, engineering assessment and
 presentation into independent components, making the platform
 maintainable, extensible and suitable for analysing repositories at
 scale.
+
+# 9. Repository Persona
+
+While Repository Identity determines **what a repository is**, Repository Persona attempts to describe **how the repository behaves** within an engineering portfolio.
+
+This distinction is subtle but important.
+
+Two repositories may share the same primary identity while exhibiting completely different engineering characteristics.
+
+For example:
+
+```text
+Repository A
+
+Identity
+Engineering Intelligence Platform
+
+Persona
+Product SaaS
+```
+
+```text
+Repository B
+
+Identity
+Engineering Intelligence Platform
+
+Persona
+Developer Platform
+```
+
+Both repositories belong to the same engineering domain, yet they serve different audiences and fulfil different roles.
+
+Repository Persona captures this higher-level behavioural description.
+
+---
+
+# 9.1 Why Repository Persona Exists
+
+During development it became apparent that repository purpose alone could not fully describe every software system.
+
+For example, consider the following repositories:
+
+Repository A
+
+```text
+Developer Tooling Platform
+```
+
+Repository B
+
+```text
+Developer Tooling Platform
+```
+
+Although both repositories share the same purpose, one may be:
+
+- a command-line application
+
+while another may be:
+
+- a cloud-hosted Software-as-a-Service platform.
+
+Likewise, two FinTech repositories may differ significantly.
+
+One may be:
+
+```text
+Payment Infrastructure
+```
+
+while another represents:
+
+```text
+Financial Analytics Platform
+```
+
+Repository Persona therefore provides an additional abstraction that helps describe how software fits into a broader engineering landscape.
+
+---
+
+# 9.2 Identity vs Persona
+
+Repository Identity and Repository Persona answer different engineering questions.
+
+Repository Identity answers:
+
+> What engineering problem does this repository solve?
+
+Repository Persona answers:
+
+> What type of engineering product is this?
+
+For example:
+
+```text
+Repository Identity
+
+Engineering Intelligence Platform
+```
+
+Repository Persona
+
+```text
+Product SaaS
+```
+
+or
+
+```text
+Developer Platform
+```
+
+Similarly:
+
+Repository Identity
+
+```text
+Developer Tooling Platform
+```
+
+Repository Persona
+
+```text
+CLI Tool
+```
+
+Identity describes engineering purpose.
+
+Persona describes engineering behaviour.
+
+---
+
+# 9.3 Persona Detection
+
+Repository Persona is inferred from accumulated engineering evidence generated throughout the intelligence pipeline.
+
+Signals contributing to persona include:
+
+- repository purpose
+- architecture domains
+- technologies
+- deployment characteristics
+- infrastructure
+- engineering capabilities
+- repository organisation
+
+Unlike Repository Identity, Persona does not rely on a single detector.
+
+Instead, it combines multiple engineering observations before selecting the most appropriate behavioural description.
+
+---
+
+# 9.4 Current Persona Categories
+
+Current repository personas include:
+
+- Product SaaS
+- Developer Platform
+- CLI Tool
+- Engineering Platform
+- Infrastructure Service
+- Backend Platform
+- Frontend Experience
+- Internal Engineering Tool
+
+Additional personas can be introduced as ArcHive evolves.
+
+The modular detector architecture allows new personas to be added without affecting existing repository classifications.
+
+---
+
+# 9.5 Persona Confidence
+
+Repository Persona is accompanied by a confidence level derived from the supporting engineering evidence.
+
+Confidence increases when multiple evidence sources independently support the same behavioural interpretation.
+
+For example:
+
+```text
+Repository Purpose
+
+Engineering Intelligence Platform
+```
+
+combined with
+
+```text
+Engineering Intelligence
+
+Repository Analysis
+
+Architecture Intelligence
+
+Repository Health
+
+Engineering Quality
+```
+
+produces significantly stronger confidence than relying on repository metadata alone.
+
+This confidence information is preserved throughout later intelligence stages.
+
+---
+
+# 9.6 Why Persona Matters
+
+Repository Persona improves engineering communication.
+
+Rather than describing ArcHive only as:
+
+```text
+Engineering Intelligence Platform
+```
+
+the platform can also communicate that it behaves as:
+
+```text
+Engineering Platform
+
+Product SaaS
+```
+
+Similarly:
+
+Backend Forge becomes:
+
+```text
+Developer Tooling Platform
+
+CLI Tool
+```
+
+LedgerFlow becomes:
+
+```text
+Financial Infrastructure
+
+Backend Platform
+```
+
+This richer description provides significantly more engineering context than repository purpose alone.
+
+---
+
+# 9.7 Persona and Engineering Intelligence
+
+Repository Persona is intentionally separated from Repository Identity because engineering products often evolve.
+
+For example, a repository may begin life as:
+
+```text
+CLI Tool
+```
+
+before later evolving into:
+
+```text
+Cloud Platform
+```
+
+or
+
+```text
+Product SaaS
+```
+
+Its engineering purpose may remain unchanged, while its behavioural characteristics evolve considerably.
+
+Separating Persona from Identity allows ArcHive to represent these changes more accurately.
+
+---
+
+# 9.8 Repository Persona Output
+
+The Repository Persona engine produces a concise behavioural profile.
+
+Conceptually, its output contains:
+
+```text
+Repository Persona
+
+├── Primary Persona
+├── Persona Confidence
+├── Supporting Signals
+├── Behavioural Characteristics
+└── Engineering Context
+```
+
+This profile complements Repository Identity rather than replacing it.
+
+Together, Repository Identity, Repository DNA and Repository Persona provide a comprehensive understanding of what a repository is, how it is engineered and how it behaves within a broader software ecosystem.
+
