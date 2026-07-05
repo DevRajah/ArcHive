@@ -1062,4 +1062,256 @@ This output becomes a critical input for the remaining stages of the intelligenc
 
 Engineering Quality, Repository Health, Repository Maturity and Technical Debt all consume Architecture Intelligence to assess the structural quality of a repository rather than relying solely on implementation technologies.
 
+# 11. Engineering Assessment Engines
+
+Once ArcHive has established a repository's identity, DNA, persona and architectural characteristics, it enters the Engineering Assessment stage.
+
+Unlike previous stages, which focus on understanding what a repository is and how it has been engineered, the Engineering Assessment Engines attempt to answer a different question:
+
+> **How good is the engineering quality of this repository?**
+
+This stage combines the outputs of every previous intelligence engine to evaluate the overall condition of the repository from multiple engineering perspectives.
+
+Rather than producing a single quality score, ArcHive separates engineering assessment into several specialised engines, each responsible for evaluating a distinct aspect of software quality.
+
+This modular approach makes the assessment process more transparent, easier to extend and significantly more informative than a single aggregate score.
+
+---
+
+# 11.1 Why Multiple Assessment Engines?
+
+Engineering quality is multidimensional.
+
+A repository may demonstrate excellent architecture while suffering from poor documentation.
+
+Another repository may be highly mature but contain significant technical debt.
+
+Likewise, a repository may be technically sophisticated but not yet suitable for production deployment.
+
+Representing all of these characteristics with a single score would hide valuable engineering insight.
+
+ArcHive therefore evaluates repositories through multiple specialised assessment engines.
+
+Current assessment areas include:
+
+- Engineering Quality
+- Repository Health
+- Repository Maturity
+- Production Readiness
+- Technical Debt
+- Strength Analysis
+- Weakness Analysis
+
+Each engine analyses a different aspect of repository quality before contributing its findings to the canonical intelligence report.
+
+---
+
+# 11.2 Engineering Quality Engine
+
+The Engineering Quality Engine evaluates the overall quality of engineering practices demonstrated within the repository.
+
+Rather than relying on static code metrics, the engine considers accumulated engineering intelligence gathered throughout the analysis pipeline.
+
+Examples of engineering characteristics include:
+
+- architectural organisation
+- modularity
+- engineering capabilities
+- infrastructure diversity
+- engineering consistency
+- implementation completeness
+
+Repositories demonstrating clear engineering structure, reusable components and well-defined architectural boundaries typically achieve higher engineering quality scores.
+
+The Engineering Quality Engine is designed to measure engineering excellence rather than project popularity.
+
+---
+
+# 11.3 Repository Health Engine
+
+Repository Health provides a high-level summary of the overall condition of the repository.
+
+Rather than representing a single metric, repository health combines multiple engineering signals into an overall health assessment.
+
+Examples of contributing factors include:
+
+- engineering quality
+- architecture quality
+- repository maturity
+- technical debt
+- engineering confidence
+- infrastructure completeness
+
+Health therefore reflects the overall engineering state of a repository rather than individual implementation details.
+
+A repository with excellent architecture but significant technical debt may receive a lower health score than a balanced repository demonstrating consistent engineering practices across multiple areas.
+
+---
+
+# 11.4 Repository Maturity Engine
+
+Repository Maturity evaluates how developed a repository appears from an engineering perspective.
+
+This assessment is based on engineering breadth rather than repository age.
+
+Typical maturity indicators include:
+
+- architectural diversity
+- engineering capabilities
+- infrastructure components
+- repository organisation
+- engineering complexity
+- engineering consistency
+
+Conceptually, repository maturity progresses through stages such as:
+
+```text
+Prototype
+
+↓
+
+Early Development
+
+↓
+
+Growing Project
+
+↓
+
+Production Ready
+
+↓
+
+Enterprise Grade
+```
+
+These maturity stages help developers understand where a repository currently sits within its engineering lifecycle.
+
+---
+
+# 11.5 Production Readiness Engine
+
+Production Readiness evaluates whether a repository appears capable of supporting production deployment.
+
+Unlike Repository Maturity, which measures engineering evolution, Production Readiness focuses on operational suitability.
+
+Assessment factors include:
+
+- architecture quality
+- infrastructure support
+- engineering completeness
+- authentication
+- background processing
+- persistence
+- scalability characteristics
+
+A repository may demonstrate advanced engineering techniques while still lacking sufficient operational characteristics for production deployment.
+
+Separating Production Readiness from Repository Maturity provides a more accurate engineering assessment.
+
+---
+
+# 11.6 Technical Debt Engine
+
+Technical Debt represents engineering areas likely to require future improvement.
+
+Rather than detecting source code issues directly, ArcHive infers technical debt from engineering intelligence.
+
+Potential indicators include:
+
+- missing engineering capabilities
+- architectural imbalance
+- incomplete infrastructure
+- weak engineering evidence
+- low repository confidence
+- limited architectural diversity
+
+The objective is not to criticise repositories, but to identify engineering opportunities that could improve long-term maintainability.
+
+Technical Debt therefore acts as an advisory intelligence engine rather than a static code analysis tool.
+
+---
+
+# 11.7 Strength Analysis
+
+Every repository contains engineering strengths.
+
+Rather than focusing solely on weaknesses, ArcHive explicitly identifies engineering areas that demonstrate strong implementation.
+
+Examples include:
+
+- modular architecture
+- asynchronous processing
+- engineering intelligence
+- authentication
+- queue infrastructure
+- scalable backend design
+- repository organisation
+
+Highlighting engineering strengths provides a balanced assessment and helps engineering teams understand which practices should be preserved during future development.
+
+---
+
+# 11.8 Weakness Analysis
+
+Weakness Analysis identifies engineering areas where repository improvements may be beneficial.
+
+Examples include:
+
+- limited architecture diversity
+- missing engineering capabilities
+- insufficient operational infrastructure
+- incomplete engineering evidence
+- low confidence classifications
+
+Weaknesses are intentionally presented alongside strengths so that repositories receive balanced engineering feedback rather than purely negative assessments.
+
+---
+
+# 11.9 Assessment Integration
+
+Although each assessment engine operates independently, their outputs are combined before being exposed through the Repository Intelligence model.
+
+Conceptually, the Engineering Assessment stage produces:
+
+```text
+Engineering Assessment
+
+├── Engineering Quality
+├── Repository Health
+├── Repository Maturity
+├── Production Readiness
+├── Technical Debt
+├── Strength Report
+└── Weakness Report
+```
+
+This modular architecture ensures that improvements to one assessment engine do not affect unrelated engineering evaluations.
+
+For example, future enhancements to the Technical Debt engine can be introduced without modifying Repository Health or Repository Maturity.
+
+---
+
+# 11.10 Benefits of Modular Assessment
+
+Separating engineering assessment into specialised engines provides several advantages.
+
+First, it improves explainability by allowing each engineering score to be understood independently.
+
+Second, it simplifies future maintenance by reducing coupling between assessment modules.
+
+Third, it allows new engineering assessments to be introduced without redesigning the overall intelligence pipeline.
+
+Examples of future assessment engines include:
+
+- Security Assessment
+- Maintainability Assessment
+- Documentation Quality
+- Test Coverage Assessment
+- Observability Assessment
+- DevOps Readiness
+
+Each can become another independent contributor to the canonical Repository Intelligence model.
+
+
 
