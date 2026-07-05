@@ -2275,6 +2275,488 @@ This approach significantly improves maintainability, simplifies frontend develo
 
 With the canonical model in place, ArcHive is able to evolve its internal intelligence capabilities while maintaining a consistent developer experience across APIs, dashboards and future platform integrations.
 
+# 15. Confidence Scoring Engine
+
+Repository intelligence is only valuable if users can trust the conclusions that are produced.
+
+For this reason, ArcHive does not simply classify repositories. It also evaluates **how confident** it is in every engineering conclusion.
+
+The Confidence Scoring Engine measures the strength, consistency and diversity of engineering evidence collected throughout the intelligence pipeline.
+
+Rather than treating every repository classification equally, ArcHive explicitly communicates the confidence associated with its engineering decisions.
+
+This enables developers to distinguish between highly reliable classifications and preliminary observations that may require additional engineering evidence.
+
+---
+
+# 15.1 Why Confidence Matters
+
+Consider two repositories.
+
+Repository A contains:
+
+- repository intelligence
+- engineering quality
+- repository health
+- architecture intelligence
+- technology fingerprint
+- engineering assessment
+- repository DNA
+
+Repository B contains only:
+
+- TypeScript
+- React
+- Next.js
+
+Although both repositories use similar technologies, Repository A provides considerably stronger engineering evidence.
+
+Without confidence scoring, both repositories might receive similar classifications despite one being supported by significantly richer evidence.
+
+Confidence scoring prevents this situation.
+
+---
+
+# 15.2 Confidence Sources
+
+Confidence is influenced by several independent factors.
+
+Current contributors include:
+
+- evidence quantity
+- evidence diversity
+- repository purpose confidence
+- engineering capabilities
+- reasoning signals
+- architecture domains
+- technology detection
+- repository metadata
+
+Each contributes to the final engineering confidence score.
+
+No single factor determines confidence independently.
+
+---
+
+# 15.3 Evidence Diversity
+
+Repositories containing multiple independent evidence sources generally receive higher confidence.
+
+For example:
+
+```text
+Repository Description
+
++
+
+Repository Name
+
++
+
+Architecture Changes
+
++
+
+Engineering Signals
+
++
+
+Detected Technologies
+
++
+
+Reasoning Signals
+```
+
+↓
+
+```text
+High Confidence
+```
+
+Conversely:
+
+```text
+Repository Name
+
++
+
+Programming Language
+```
+
+↓
+
+```text
+Low Confidence
+```
+
+Evidence diversity reduces false positives while improving engineering reliability.
+
+---
+
+# 15.4 Strong vs Weak Evidence
+
+The Confidence Engine distinguishes between weak engineering observations and strong engineering evidence.
+
+Weak evidence includes:
+
+```text
+Node.js
+
+TypeScript
+
+Express
+```
+
+These technologies are extremely common and therefore contribute relatively little confidence.
+
+Strong evidence includes:
+
+```text
+Repository Intelligence
+
+Technology Fingerprint
+
+Repository Health
+
+Architecture Drift
+
+Repository DNA
+
+Engineering Quality
+```
+
+These terms strongly indicate a specialised engineering domain and therefore contribute significantly more confidence.
+
+---
+
+# 15.5 Confidence Calculation Philosophy
+
+ArcHive intentionally avoids treating confidence as a simple percentage based on detector matches.
+
+Instead, confidence reflects the overall quality of engineering evidence supporting repository intelligence.
+
+Conceptually:
+
+```text
+Confidence
+
+=
+
+Evidence Strength
+
++
+
+Evidence Diversity
+
++
+
+Engineering Consistency
+
++
+
+Repository Context
+```
+
+This produces engineering confidence rather than statistical probability.
+
+---
+
+# 15.6 Benefits of Confidence
+
+Confidence scoring provides several engineering advantages.
+
+It allows:
+
+- engineering reports to indicate reliability
+- recommendations to reflect evidence quality
+- benchmarking to consider classification confidence
+- developers to identify repositories requiring further analysis
+
+Confidence therefore becomes another engineering signal consumed throughout the intelligence pipeline.
+
+---
+
+# 16. Detector Architecture
+
+The detector architecture is one of the defining design decisions behind ArcHive.
+
+Rather than implementing repository classification within a single monolithic algorithm, ArcHive separates repository understanding into dozens of independent detectors.
+
+Each detector focuses on a single engineering concern.
+
+Examples include:
+
+- Engineering Intelligence Detector
+- FinTech Detector
+- Developer Tooling Detector
+- Security Detector
+- Observability Detector
+- Mobile Detector
+- Healthcare Detector
+- Education Detector
+- Collaboration Detector
+
+This modular design allows repository understanding to evolve without increasing system complexity.
+
+---
+
+# 16.1 Why Independent Detectors?
+
+A monolithic classifier quickly becomes difficult to maintain.
+
+As new repository domains emerge, additional engineering logic would continuously increase complexity.
+
+ArcHive instead adopts independent detectors.
+
+Each detector is responsible for:
+
+- identifying engineering evidence
+- assigning evidence weights
+- recording reasoning signals
+- contributing repository types
+
+No detector performs complete repository classification.
+
+Instead, all detectors collaborate through the Evidence Engine.
+
+---
+
+# 16.2 Detector Execution
+
+Conceptually, detector execution follows this process.
+
+```text
+Repository Evidence
+
+↓
+
+Engineering Intelligence Detector
+
+↓
+
+Developer Tooling Detector
+
+↓
+
+FinTech Detector
+
+↓
+
+Security Detector
+
+↓
+
+Observability Detector
+
+↓
+
+Healthcare Detector
+
+↓
+
+Education Detector
+
+↓
+
+...
+
+↓
+
+Evidence Aggregation
+```
+
+Each detector contributes engineering observations independently.
+
+The Evidence Engine later combines these observations into a unified engineering profile.
+
+---
+
+# 16.3 Benefits of Modular Detection
+
+The detector architecture provides several advantages.
+
+It improves:
+
+- maintainability
+- extensibility
+- readability
+- testing
+- explainability
+
+Adding support for a new repository domain typically requires introducing a new detector rather than modifying unrelated engineering logic.
+
+This greatly reduces coupling throughout the platform.
+
+---
+
+# 17. Extending the Intelligence Engine
+
+ArcHive has been designed as an extensible engineering platform.
+
+Every major intelligence component can be expanded independently.
+
+Examples include:
+
+- new repository types
+- new architecture domains
+- new engineering capabilities
+- new recommendation engines
+- new benchmarking metrics
+- new assessment engines
+
+This allows the intelligence engine to evolve without requiring major architectural redesign.
+
+---
+
+# 17.1 Adding a New Repository Type
+
+Supporting a new repository type generally follows these steps.
+
+```text
+Create Detector
+
+↓
+
+Register Detector
+
+↓
+
+Add Repository Type
+
+↓
+
+Update Ranking
+
+↓
+
+Update Display Labels
+
+↓
+
+Reprocess Repository Intelligence
+```
+
+Because repository types are independent of frontend presentation, new classifications automatically become available throughout the platform.
+
+---
+
+# 17.2 Adding New Assessment Engines
+
+Future assessment engines can be introduced in exactly the same manner.
+
+Examples include:
+
+- Security Assessment
+- Sustainability Assessment
+- Documentation Quality
+- DevOps Readiness
+- AI Readiness
+
+Each engine contributes another section to the canonical intelligence wrapper without affecting existing consumers.
+
+---
+
+# 18. Engineering Trade-Offs
+
+Every architectural decision within ArcHive represents a trade-off.
+
+Several key decisions shaped the Intelligence Engine.
+
+---
+
+## Purpose Before Implementation
+
+Trade-off:
+
+Purpose classifications require more engineering evidence than technology detection.
+
+Benefit:
+
+Repositories receive significantly more meaningful identities.
+
+---
+
+## Weighted Evidence
+
+Trade-off:
+
+Weighted evidence is more complex than keyword matching.
+
+Benefit:
+
+Engineering conclusions become considerably more reliable.
+
+---
+
+## Modular Intelligence Engines
+
+Trade-off:
+
+More components must be maintained.
+
+Benefit:
+
+Each intelligence concern remains isolated, easier to test and easier to extend.
+
+---
+
+## Canonical Intelligence Wrapper
+
+Trade-off:
+
+Additional backend aggregation logic.
+
+Benefit:
+
+Simpler frontend development and a stable API contract.
+
+---
+
+## Background Processing
+
+Trade-off:
+
+Additional queue infrastructure.
+
+Benefit:
+
+Repository analysis scales without blocking API requests.
+
+---
+
+# 19. Future Evolution
+
+The current Intelligence Engine establishes a strong foundation for future engineering capabilities.
+
+Planned areas of evolution include:
+
+- AI-assisted repository summaries
+- Repository similarity graphs
+- Engineering trend analysis
+- Architecture drift prediction
+- Engineering risk prediction
+- Organisation-wide portfolio analytics
+- Intelligent engineering copilots
+- Cross-organisation benchmarking
+- Automated architecture documentation
+- Engineering decision history
+
+These enhancements will build upon the existing modular architecture without requiring significant redesign.
+
+---
+
+# 20. Conclusion
+
+The ArcHive Intelligence Engine represents the core of the platform.
+
+Rather than analysing repositories using isolated heuristics or simple technology detection, the engine combines evidence collection, technology fingerprinting, repository identity, repository DNA, architecture intelligence and engineering assessment into a unified intelligence pipeline.
+
+Each intelligence engine performs a specialised responsibility while contributing to a canonical repository intelligence model that serves as the single source of truth for frontend applications and external consumers.
+
+This modular architecture enables ArcHive to produce explainable, extensible and engineering-focused repository intelligence while remaining maintainable as new repository domains, engineering disciplines and analysis engines are introduced.
+
+As the platform continues to evolve, the Intelligence Engine provides the architectural foundation upon which future AI-assisted engineering analysis, predictive repository assessment and organisation-wide engineering intelligence can be built.
 
 
 
