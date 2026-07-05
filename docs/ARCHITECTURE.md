@@ -1603,5 +1603,310 @@ By combining Repository Identity, Repository DNA, Architecture Intelligence and 
 
 The next stage of the intelligence pipeline is the **Benchmarking Engine**, where repositories are compared against one another using consistent engineering metrics to identify relative strengths, maturity and engineering quality across an entire portfolio.
 
+# 13. Benchmarking Engine
+
+The Benchmarking Engine is responsible for placing repositories into context.
+
+While the previous intelligence engines analyse a repository in isolation, the Benchmarking Engine compares repositories against one another using a common set of engineering metrics.
+
+This enables developers and engineering teams to answer questions such as:
+
+- Which repository is the most mature?
+- Which repository demonstrates the strongest engineering quality?
+- Which repositories are architecturally similar?
+- Which engineering capabilities are unique?
+- Which repositories require the greatest engineering investment?
+
+Rather than simply producing standalone reports, benchmarking allows engineering intelligence to become comparative.
+
+---
+
+# 13.1 Purpose of Benchmarking
+
+Engineering metrics become significantly more valuable when viewed relative to comparable repositories.
+
+For example, a complexity score of:
+
+```text
+78
+```
+
+has limited meaning by itself.
+
+However, when compared with other repositories:
+
+```text
+ArcHive
+Complexity: 91
+
+LedgerFlow
+Complexity: 84
+
+Backend Forge
+Complexity: 68
+```
+
+developers immediately gain useful engineering context.
+
+Benchmarking therefore transforms isolated engineering measurements into portfolio-wide engineering insights.
+
+---
+
+# 13.2 Benchmarking Philosophy
+
+ArcHive deliberately benchmarks repositories using engineering characteristics rather than popularity metrics.
+
+Traditional repository comparison platforms often emphasise:
+
+- GitHub stars
+- forks
+- contributors
+- commit count
+
+While these metrics are useful for measuring community engagement, they provide little information about engineering quality.
+
+ArcHive instead benchmarks repositories using intelligence generated throughout the analysis pipeline.
+
+This allows repositories to be compared according to software engineering characteristics rather than public popularity.
+
+---
+
+# 13.3 Benchmarking Dimensions
+
+Repositories are compared across multiple engineering dimensions.
+
+Current benchmarking dimensions include:
+
+- Engineering Quality
+- Repository Health
+- Repository Maturity
+- Engineering Complexity
+- Repository Confidence
+- Architecture Diversity
+- Engineering Capabilities
+- Technology Diversity
+
+Each dimension represents a different aspect of software engineering.
+
+Using multiple dimensions produces more balanced comparisons than relying on a single overall score.
+
+---
+
+# 13.4 Engineering Quality Benchmark
+
+Engineering Quality benchmarking compares repositories according to overall engineering practices.
+
+Example:
+
+```text
+ArcHive
+
+Engineering Quality
+95
+```
+
+```text
+LedgerFlow
+
+Engineering Quality
+91
+```
+
+```text
+Backend Forge
+
+Engineering Quality
+87
+```
+
+These values provide engineering context without implying that one repository is universally better than another.
+
+Different repositories solve different engineering problems.
+
+Benchmarking therefore focuses on engineering execution rather than product scope.
+
+---
+
+# 13.5 Repository Health Benchmark
+
+Repository Health benchmarking compares the overall engineering condition of repositories.
+
+Health benchmarking considers:
+
+- architecture quality
+- engineering quality
+- technical debt
+- maturity
+- confidence
+
+Repositories demonstrating balanced engineering across these dimensions generally rank higher than repositories excelling in only one area.
+
+---
+
+# 13.6 Maturity Benchmark
+
+Repository Maturity benchmarking identifies how developed repositories appear from an engineering perspective.
+
+Typical maturity progression includes:
+
+```text
+Prototype
+
+↓
+
+Growing
+
+↓
+
+Production Ready
+
+↓
+
+Enterprise Grade
+```
+
+Benchmarking maturity enables engineering teams to understand how repositories evolve over time and where additional engineering investment may be required.
+
+---
+
+# 13.7 Capability Benchmark
+
+Capability benchmarking compares engineering functionality across repositories.
+
+Examples include:
+
+```text
+ArcHive
+
+Authentication
+
+Repository Analysis
+
+Engineering Intelligence
+
+Queue Infrastructure
+
+Realtime Systems
+```
+
+```text
+LedgerFlow
+
+Financial Infrastructure
+
+Queue Infrastructure
+
+Background Processing
+
+Audit Logging
+```
+
+```text
+Backend Forge
+
+Code Generation
+
+CLI
+
+Template Engine
+```
+
+Rather than identifying a "winner", capability benchmarking highlights engineering diversity across a software portfolio.
+
+---
+
+# 13.8 Architecture Benchmark
+
+Architecture benchmarking compares repositories according to their dominant architectural characteristics.
+
+For example:
+
+```text
+ArcHive
+
+Engineering Intelligence
+Backend Systems
+Queue Infrastructure
+```
+
+```text
+LedgerFlow
+
+Financial Systems
+Database Layer
+Event Processing
+```
+
+Architecture benchmarking helps engineering teams understand how different repositories are organised internally.
+
+---
+
+# 13.9 Confidence Benchmark
+
+Not every repository produces the same volume or quality of engineering evidence.
+
+Benchmarking therefore also considers confidence.
+
+Repositories with richer engineering evidence produce more reliable intelligence reports.
+
+Confidence benchmarking allows developers to distinguish between:
+
+- high-confidence engineering conclusions
+- preliminary engineering observations
+
+This becomes particularly important when analysing newly imported repositories.
+
+---
+
+# 13.10 Portfolio Insights
+
+Once benchmarking has been completed across multiple repositories, ArcHive can begin identifying portfolio-level engineering insights.
+
+Examples include:
+
+- strongest engineered repository
+- most mature repository
+- fastest growing engineering platform
+- repositories with similar architectural characteristics
+- repositories requiring engineering attention
+- repositories demonstrating reusable engineering practices
+
+Portfolio insights extend ArcHive beyond individual repository analysis into engineering portfolio management.
+
+---
+
+# 13.11 Benchmarking Output
+
+The Benchmarking Engine produces a structured benchmarking report.
+
+Conceptually, the output contains:
+
+```text
+Benchmark Report
+
+├── Engineering Quality Ranking
+├── Repository Health Ranking
+├── Repository Maturity Ranking
+├── Complexity Ranking
+├── Capability Comparison
+├── Architecture Comparison
+├── Technology Comparison
+├── Confidence Ranking
+└── Portfolio Insights
+```
+
+This report enables engineering dashboards to visualise repository comparisons while maintaining a consistent intelligence model.
+
+---
+
+# 13.12 Benchmarking Summary
+
+The Benchmarking Engine represents the final intelligence stage before repository information is assembled into the Canonical Repository Intelligence model.
+
+By comparing repositories across consistent engineering dimensions, ArcHive enables developers to move beyond isolated repository analysis and gain portfolio-wide engineering insight.
+
+The Benchmarking Engine transforms engineering intelligence into comparative intelligence, allowing organisations to understand not only **what each repository is**, but also **how repositories relate to one another** across an entire engineering ecosystem.
+
+
 
 
