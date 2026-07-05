@@ -731,3 +731,335 @@ This profile complements Repository Identity rather than replacing it.
 
 Together, Repository Identity, Repository DNA and Repository Persona provide a comprehensive understanding of what a repository is, how it is engineered and how it behaves within a broader software ecosystem.
 
+# 10. Architecture Intelligence
+
+Following the generation of Repository Identity, Repository DNA and Repository Persona, ArcHive enters one of the most significant stages of the intelligence pipeline: **Architecture Intelligence**.
+
+Architecture Intelligence attempts to answer a different engineering question.
+
+Rather than determining **what** a repository is, it seeks to understand **how the repository is engineered**.
+
+Software architecture influences scalability, maintainability, extensibility and long-term engineering quality. Two repositories may solve the same business problem while adopting entirely different architectural approaches.
+
+For this reason, Architecture Intelligence is implemented as an independent analysis engine rather than a simple extension of Repository Identity.
+
+---
+
+# 10.1 Purpose of Architecture Intelligence
+
+The primary responsibility of Architecture Intelligence is to identify the dominant engineering disciplines present within a repository.
+
+Examples include:
+
+- Backend Systems
+- Frontend Architecture
+- API Layer
+- Database Layer
+- Queue Infrastructure
+- Realtime Systems
+- Authentication
+- Engineering Intelligence
+- Repository Analysis
+- Code Generation
+
+Unlike Repository Types, which describe product purpose, Architecture Domains describe engineering structure.
+
+This distinction allows ArcHive to separately analyse:
+
+- what software has been built
+- how the software has been engineered
+
+---
+
+# 10.2 Why Architecture Matters
+
+Architecture influences every aspect of software engineering.
+
+Poor architectural decisions often lead to:
+
+- tightly coupled modules
+- difficult maintenance
+- scalability limitations
+- duplicated business logic
+- inconsistent engineering practices
+
+Conversely, well-structured architecture often demonstrates:
+
+- clear separation of concerns
+- modular design
+- reusable components
+- maintainability
+- extensibility
+
+Because architecture has such a significant impact on engineering quality, ArcHive treats it as a first-class intelligence concern rather than simply displaying detected technologies.
+
+---
+
+# 10.3 Architecture Domains
+
+Architecture Intelligence groups engineering characteristics into Architecture Domains.
+
+Current domains include:
+
+```text
+API Layer
+
+Backend Systems
+
+Frontend Architecture
+
+Database Layer
+
+Queue Infrastructure
+
+Realtime Systems
+
+Authentication
+
+Engineering Intelligence
+
+Repository Analysis
+
+Developer Infrastructure
+```
+
+Each domain represents an engineering discipline rather than an individual framework.
+
+For example:
+
+```text
+BullMQ
+```
+
+does not become an architecture domain.
+
+Instead, it contributes evidence towards:
+
+```text
+Queue Infrastructure
+```
+
+Similarly:
+
+```text
+Fastify
+```
+
+supports:
+
+```text
+API Layer
+```
+
+while:
+
+```text
+Next.js
+```
+
+supports:
+
+```text
+Frontend Architecture
+```
+
+This abstraction makes Architecture Intelligence significantly more useful than simple framework detection.
+
+---
+
+# 10.4 Architecture Evidence
+
+Architecture Intelligence consumes engineering evidence generated throughout the earlier stages of the pipeline.
+
+Examples include:
+
+- detected technologies
+- architecture changes
+- engineering capabilities
+- repository types
+- repository DNA
+- reasoning signals
+
+Each piece of evidence contributes to one or more architecture domains.
+
+For example:
+
+```text
+BullMQ
+
+Redis
+
+Worker Processing
+```
+
+↓
+
+```text
+Queue Infrastructure
+```
+
+Likewise:
+
+```text
+Fastify
+
+Express
+
+REST Endpoints
+```
+
+↓
+
+```text
+API Layer
+```
+
+Architecture Intelligence therefore builds upon previous engineering analysis rather than repeating repository inspection.
+
+---
+
+# 10.5 Weighted Architecture Scoring
+
+Architecture Intelligence does not simply count technologies.
+
+Instead, every architecture domain receives a weighted engineering score.
+
+Several factors contribute to this score, including:
+
+- supporting technologies
+- engineering capabilities
+- repository purpose
+- reasoning signals
+- architecture evidence
+- repository DNA
+
+The weighting system ensures that architecture reflects overall engineering emphasis rather than isolated implementation details.
+
+This approach allows ArcHive to identify dominant architectural characteristics even when multiple technologies coexist.
+
+---
+
+# 10.6 Architecture Radar
+
+One of the primary outputs of the Architecture Intelligence engine is the Architecture Radar.
+
+The Architecture Radar visualises the relative strength of each architecture domain.
+
+Conceptually, it may resemble:
+
+```text
+Engineering Intelligence    ██████████
+
+Backend Systems             ████████
+
+Queue Infrastructure        ███████
+
+Database Layer              ██████
+
+Frontend Architecture       █████
+
+Realtime Systems            ████
+```
+
+Rather than displaying raw detector counts, the radar represents weighted engineering confidence.
+
+This allows developers to immediately identify the dominant engineering disciplines within a repository.
+
+---
+
+# 10.7 Strongest Architecture Domain
+
+After all architecture domains have been scored, ArcHive identifies the dominant engineering discipline.
+
+For example:
+
+```text
+ArcHive
+
+Strongest Domain
+
+Engineering Intelligence
+```
+
+```text
+Backend Forge
+
+Strongest Domain
+
+Developer Infrastructure
+```
+
+```text
+LedgerFlow
+
+Strongest Domain
+
+Financial Systems
+```
+
+The strongest domain provides a concise architectural summary that complements Repository Identity.
+
+---
+
+# 10.8 Architecture Evolution
+
+Architecture is not static.
+
+Repositories evolve as features are introduced, engineering practices improve and infrastructure changes.
+
+Architecture Intelligence therefore considers repository evolution rather than analysing only the current repository snapshot.
+
+Signals contributing to architecture evolution include:
+
+- architecture changes
+- engineering timeline
+- technology adoption
+- infrastructure growth
+- engineering capabilities
+
+This historical perspective allows ArcHive to identify long-term engineering direction.
+
+---
+
+# 10.9 Architecture Narrative
+
+Architecture Intelligence also contributes to Repository Narrative.
+
+Rather than simply stating:
+
+```text
+Queue Infrastructure detected.
+```
+
+ArcHive generates engineering descriptions such as:
+
+> The repository demonstrates a strong emphasis on asynchronous processing through queue-based workflows supported by Redis and BullMQ. Combined with its API layer and engineering intelligence components, this suggests a modular architecture designed for scalable repository analysis.
+
+Narrative generation transforms engineering observations into readable technical summaries.
+
+---
+
+# 10.10 Architecture Intelligence Output
+
+Architecture Intelligence produces a structured engineering report.
+
+Conceptually, it contains:
+
+```text
+Architecture Intelligence
+
+├── Architecture Domains
+├── Domain Scores
+├── Strongest Domain
+├── Architecture Radar
+├── Architecture Narrative
+├── Evolution Insights
+├── Supporting Evidence
+└── Engineering Confidence
+```
+
+This output becomes a critical input for the remaining stages of the intelligence pipeline.
+
+Engineering Quality, Repository Health, Repository Maturity and Technical Debt all consume Architecture Intelligence to assess the structural quality of a repository rather than relying solely on implementation technologies.
+
+
