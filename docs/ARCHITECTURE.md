@@ -1313,5 +1313,295 @@ Examples of future assessment engines include:
 
 Each can become another independent contributor to the canonical Repository Intelligence model.
 
+# 12. Recommendation Engine
+
+The Recommendation Engine is the final decision-making stage of the ArcHive Intelligence Engine.
+
+After a repository has been analysed, classified and assessed, ArcHive possesses a significant amount of engineering knowledge. Repository Identity explains what the repository represents, Repository DNA summarises its engineering characteristics, Architecture Intelligence describes its structural design and the Engineering Assessment Engines evaluate its overall quality.
+
+The Recommendation Engine transforms this accumulated intelligence into practical engineering guidance.
+
+Rather than presenting raw engineering metrics, the engine answers an important engineering question:
+
+> **What should be improved next?**
+
+This shifts ArcHive from being a descriptive analytics platform into a prescriptive engineering intelligence platform.
+
+---
+
+# 12.1 Purpose of the Recommendation Engine
+
+Modern engineering tools often identify problems without suggesting meaningful next steps.
+
+For example, a repository may receive a low engineering quality score, but the developer is left wondering:
+
+- Which engineering area should I improve first?
+- Which recommendation provides the greatest impact?
+- Which architectural weakness affects repository quality the most?
+- What engineering capability is currently missing?
+
+The Recommendation Engine addresses these questions by converting engineering observations into prioritised recommendations.
+
+Rather than simply exposing engineering data, ArcHive produces actionable engineering advice.
+
+---
+
+# 12.2 Recommendation Inputs
+
+The Recommendation Engine does not perform repository analysis directly.
+
+Instead, it consumes intelligence generated throughout the pipeline.
+
+Current inputs include:
+
+- Repository Identity
+- Repository DNA
+- Repository Persona
+- Architecture Intelligence
+- Engineering Quality
+- Repository Health
+- Repository Maturity
+- Technical Debt
+- Strength Report
+- Weakness Report
+- Reasoning Signals
+
+Because recommendations are generated from multiple intelligence sources, they reflect the overall engineering state of the repository rather than isolated observations.
+
+---
+
+# 12.3 Recommendation Categories
+
+Recommendations are grouped into engineering categories to improve readability and prioritisation.
+
+Typical categories include:
+
+### Architecture
+
+Examples:
+
+- Improve separation of concerns.
+- Reduce coupling between modules.
+- Introduce clearer architectural boundaries.
+- Simplify service dependencies.
+
+---
+
+### Infrastructure
+
+Examples:
+
+- Introduce asynchronous processing.
+- Improve background job handling.
+- Adopt containerisation.
+- Improve deployment automation.
+
+---
+
+### Engineering Quality
+
+Examples:
+
+- Improve repository organisation.
+- Increase modularity.
+- Improve engineering consistency.
+- Refactor duplicated functionality.
+
+---
+
+### Security
+
+Examples:
+
+- Strengthen authentication.
+- Improve authorisation.
+- Secure sensitive configuration.
+- Improve secret management.
+
+---
+
+### Scalability
+
+Examples:
+
+- Introduce caching.
+- Improve queue processing.
+- Reduce synchronous bottlenecks.
+- Optimise database interactions.
+
+Grouping recommendations allows developers to focus on engineering areas most relevant to their repository.
+
+---
+
+# 12.4 Recommendation Prioritisation
+
+Not every recommendation has equal importance.
+
+ArcHive therefore assigns priorities based on engineering impact.
+
+Conceptually, recommendations may be ranked as:
+
+```text
+Critical
+
+↓
+
+High
+
+↓
+
+Medium
+
+↓
+
+Low
+```
+
+Priority is influenced by:
+
+- engineering quality
+- repository health
+- technical debt
+- architecture weaknesses
+- repository maturity
+- engineering confidence
+
+This prevents minor suggestions from overshadowing significant engineering improvements.
+
+---
+
+# 12.5 Context-Aware Recommendations
+
+Recommendations are intentionally repository-specific.
+
+For example:
+
+A repository demonstrating strong queue infrastructure but limited authentication should receive security-focused recommendations rather than advice about background processing.
+
+Likewise:
+
+An Engineering Intelligence Platform should receive recommendations different from those generated for a Financial Infrastructure platform.
+
+Context awareness prevents generic engineering advice and increases the practical value of the recommendation engine.
+
+---
+
+# 12.6 Recommendation Generation Process
+
+Recommendation generation follows a staged approach.
+
+Conceptually:
+
+```text
+Repository Intelligence
+
+↓
+
+Engineering Assessment
+
+↓
+
+Strength Analysis
+
+↓
+
+Weakness Analysis
+
+↓
+
+Technical Debt
+
+↓
+
+Recommendation Generation
+```
+
+Each stage contributes additional context before final recommendations are produced.
+
+This layered approach ensures recommendations remain consistent with the engineering evidence collected throughout the intelligence pipeline.
+
+---
+
+# 12.7 Explainable Recommendations
+
+Every recommendation generated by ArcHive is backed by engineering evidence.
+
+For example:
+
+```text
+Recommendation
+
+Strengthen Queue Infrastructure
+
+Reason
+
+Background processing is partially implemented, but engineering evidence indicates limited infrastructure redundancy.
+```
+
+Similarly:
+
+```text
+Recommendation
+
+Improve Authentication
+
+Reason
+
+Repository demonstrates secure engineering practices but lacks comprehensive authentication coverage.
+```
+
+Providing explanations allows developers to understand why recommendations were generated rather than treating them as arbitrary suggestions.
+
+---
+
+# 12.8 Engineering Trade-Offs
+
+The Recommendation Engine deliberately avoids assuming that every repository should implement every engineering capability.
+
+For example:
+
+A lightweight internal utility should not necessarily receive recommendations encouraging distributed infrastructure.
+
+Likewise:
+
+A command-line tool should not be criticised for lacking frontend architecture.
+
+Recommendations therefore consider repository purpose before proposing engineering improvements.
+
+This significantly reduces irrelevant advice.
+
+---
+
+# 12.9 Recommendation Output
+
+The Recommendation Engine produces a structured recommendation report.
+
+Conceptually, the output contains:
+
+```text
+Recommendation Report
+
+├── Recommendation Category
+├── Recommendation Priority
+├── Recommendation Description
+├── Supporting Evidence
+├── Engineering Reason
+└── Expected Engineering Benefit
+```
+
+This structured format allows frontend dashboards to present recommendations consistently while remaining flexible enough to accommodate future recommendation types.
+
+---
+
+# 12.10 Recommendation Engine Summary
+
+The Recommendation Engine represents the final decision-making stage of the engineering analysis pipeline.
+
+Rather than stopping at repository classification or engineering assessment, ArcHive actively guides developers towards meaningful engineering improvements.
+
+By combining Repository Identity, Repository DNA, Architecture Intelligence and Engineering Assessment into actionable recommendations, ArcHive evolves from a repository analysis platform into an engineering decision-support system.
+
+The next stage of the intelligence pipeline is the **Benchmarking Engine**, where repositories are compared against one another using consistent engineering metrics to identify relative strengths, maturity and engineering quality across an entire portfolio.
+
 
 
