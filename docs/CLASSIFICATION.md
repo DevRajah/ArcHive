@@ -2678,3 +2678,407 @@ Rather than relying on isolated keywords or implementation technologies, ArcHive
 
 These safeguards ensure that repository identities remain meaningful, explainable and consistent as the platform expands to support additional engineering domains.
 
+# 12. Real-World Classification Case Studies
+
+A classification engine is only valuable if it can accurately identify real software systems.
+
+For this reason, ArcHive was designed and continuously refined using actual engineering repositories rather than synthetic examples.
+
+Each repository provides different engineering characteristics, allowing the classification engine to validate detector behaviour, evidence weighting, conflict resolution and repository ranking under realistic conditions.
+
+The following case studies demonstrate how ArcHive classifies three representative repositories.
+
+---
+
+# 12.1 Case Study — ArcHive
+
+## Repository Purpose
+
+ArcHive is designed to analyse software repositories and transform engineering artefacts into structured engineering intelligence.
+
+Rather than serving as a repository host, ArcHive continuously interprets engineering evidence to understand software systems.
+
+Its responsibilities include:
+
+- repository analysis
+- technology fingerprinting
+- repository classification
+- repository DNA generation
+- architecture intelligence
+- engineering assessment
+- repository benchmarking
+- engineering recommendations
+
+These responsibilities collectively establish a strong engineering narrative centred around repository intelligence.
+
+---
+
+## Engineering Evidence
+
+During analysis, ArcHive produces engineering observations such as:
+
+```text
+Repository Intelligence
+
+Technology Fingerprint
+
+Repository DNA
+
+Architecture Intelligence
+
+Engineering Quality
+
+Repository Health
+
+Benchmarking
+
+Repository Narrative
+```
+
+Additional supporting evidence includes:
+
+- Fastify
+- Next.js
+- BullMQ
+- Redis
+- PostgreSQL
+- Prisma
+- Docker
+- Server-Sent Events
+
+Although these implementation technologies contribute valuable engineering context, they do not determine repository identity.
+
+---
+
+## Detector Activity
+
+Several detectors contribute evidence.
+
+Engineering Intelligence Detector
+
+↓
+
+```text
+★★★★★
+```
+
+Technology Detector
+
+↓
+
+```text
+★★★★☆
+```
+
+Architecture Detector
+
+↓
+
+```text
+★★★★★
+```
+
+Developer Tooling Detector
+
+↓
+
+```text
+★☆☆☆☆
+```
+
+The Engineering Intelligence detector receives the strongest engineering support across multiple evidence sources.
+
+---
+
+## Repository Identity
+
+Final classification:
+
+```text
+Primary
+
+Engineering Intelligence Platform
+```
+
+Supporting classifications:
+
+```text
+Frontend Application
+
+JavaScript / TypeScript Project
+```
+
+Developer Tooling is intentionally suppressed because the repository's dominant engineering purpose is software analysis rather than software generation.
+
+---
+
+## Engineering Narrative
+
+ArcHive is therefore described as:
+
+> An Engineering Intelligence Platform that analyses repositories, extracts engineering evidence and generates explainable software intelligence through a modular multi-stage analysis pipeline.
+
+---
+
+# 12.2 Case Study — Backend Forge
+
+## Repository Purpose
+
+Backend Forge focuses on backend project generation.
+
+Its responsibilities include:
+
+- scaffolding
+- project generation
+- module generation
+- CRUD generation
+- template management
+- CLI workflows
+
+Unlike ArcHive, Backend Forge exists primarily to automate backend development.
+
+---
+
+## Engineering Evidence
+
+Typical engineering terminology includes:
+
+```text
+Generator
+
+Scaffold
+
+CLI
+
+Generate Module
+
+Generate Resource
+
+Backend Forge
+```
+
+Implementation technologies include:
+
+- Node.js
+- TypeScript
+- Commander
+- Inquirer
+
+These technologies support—but do not determine—the repository identity.
+
+---
+
+## Detector Activity
+
+Developer Tooling Detector
+
+↓
+
+```text
+★★★★★
+```
+
+Technology Detector
+
+↓
+
+```text
+★★★★☆
+```
+
+Architecture Detector
+
+↓
+
+```text
+★★★☆☆
+```
+
+Engineering Intelligence Detector
+
+↓
+
+```text
+☆☆☆☆☆
+```
+
+Because engineering terminology strongly supports software generation, the Developer Tooling detector becomes dominant.
+
+---
+
+## Repository Identity
+
+Final classification:
+
+```text
+Primary
+
+Developer Tooling Platform
+```
+
+Supporting classifications:
+
+```text
+JavaScript / TypeScript Project
+```
+
+Backend Service is intentionally omitted because Backend Forge's primary engineering purpose is developer tooling rather than backend application development.
+
+---
+
+## Engineering Narrative
+
+Backend Forge is therefore described as:
+
+> A Developer Tooling Platform that automates backend project creation through command-line scaffolding, code generation and reusable engineering templates.
+
+---
+
+# 12.3 Case Study — LedgerFlow
+
+## Repository Purpose
+
+LedgerFlow focuses on financial transaction processing.
+
+Primary engineering responsibilities include:
+
+- payment processing
+- reconciliation
+- audit logging
+- asynchronous processing
+- financial event handling
+
+Unlike ArcHive and Backend Forge, LedgerFlow operates within the financial engineering domain.
+
+---
+
+## Engineering Evidence
+
+Typical engineering terminology includes:
+
+```text
+Ledger
+
+Payment
+
+Settlement
+
+Audit
+
+Reconciliation
+
+Transactions
+```
+
+Supporting technologies include:
+
+- BullMQ
+- Redis
+- PostgreSQL
+- Express
+- Docker
+
+These technologies reinforce—but do not define—the repository purpose.
+
+---
+
+## Detector Activity
+
+Financial Infrastructure Detector
+
+↓
+
+```text
+★★★★★
+```
+
+Technology Detector
+
+↓
+
+```text
+★★★★☆
+```
+
+Architecture Detector
+
+↓
+
+```text
+★★★★☆
+```
+
+Developer Tooling Detector
+
+↓
+
+```text
+☆☆☆☆☆
+```
+
+The Financial Infrastructure detector receives overwhelming engineering support.
+
+---
+
+## Repository Identity
+
+Final classification:
+
+```text
+Primary
+
+Financial Infrastructure
+```
+
+Supporting classifications:
+
+```text
+Backend Service
+
+JavaScript / TypeScript Project
+```
+
+Queue Infrastructure contributes to Architecture Intelligence but is not promoted to the repository identity because it represents implementation rather than engineering purpose.
+
+---
+
+## Engineering Narrative
+
+LedgerFlow is described as:
+
+> A Financial Infrastructure platform designed for payment reconciliation, auditability and asynchronous financial event processing.
+
+---
+
+# 12.4 Lessons Learned
+
+Developing these repositories alongside the classification engine provided several important engineering insights.
+
+First, implementation technologies alone rarely describe repository purpose.
+
+Second, engineering terminology consistently provides stronger classification evidence than framework detection.
+
+Third, detector collaboration produces significantly better classifications than isolated keyword matching.
+
+Finally, repository purpose should always remain the dominant engineering identity regardless of implementation language or framework.
+
+These lessons directly influenced the design of ArcHive's evidence weighting, repository ranking and conflict resolution systems.
+
+---
+
+# 12.5 Engineering Validation
+
+The case studies demonstrate that repositories with similar implementation stacks can still be accurately distinguished through engineering intent.
+
+For example:
+
+| Repository | Primary Identity | Supporting Classifications |
+|------------|------------------|----------------------------|
+| ArcHive | Engineering Intelligence Platform | Frontend Application, JavaScript / TypeScript Project |
+| Backend Forge | Developer Tooling Platform | JavaScript / TypeScript Project |
+| LedgerFlow | Financial Infrastructure | Backend Service, JavaScript / TypeScript Project |
+
+Despite sharing technologies such as TypeScript, Redis and PostgreSQL, each repository receives a distinct engineering identity because ArcHive evaluates engineering purpose rather than implementation alone.
+
+This validation demonstrates the effectiveness of the Repository Classification Engine in distinguishing repositories based on engineering intent, producing classifications that are explainable, deterministic and aligned with real-world software engineering practice.
+
