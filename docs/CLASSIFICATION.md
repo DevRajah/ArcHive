@@ -1911,3 +1911,380 @@ By resolving competing repository types using evidence strength, engineering spe
 
 The result is a classification system that consistently reflects **what a repository is designed to achieve**, rather than simply listing every technology or engineering concept detected during analysis.
 
+# 10. Classification Confidence Model
+
+Repository classification should never be treated as an absolute decision.
+
+Engineering repositories vary significantly in size, complexity and available information. Some repositories provide extensive documentation, rich architectural history and highly descriptive engineering terminology. Others contain only a small collection of source files and minimal metadata.
+
+Although both repositories can be analysed, the confidence associated with their classifications should not be identical.
+
+For this reason, ArcHive implements a dedicated **Classification Confidence Model**.
+
+Rather than simply assigning repository types, the classification engine also evaluates how strongly the available engineering evidence supports those classifications.
+
+Confidence becomes an integral part of every repository intelligence report.
+
+---
+
+# 10.1 Purpose of Classification Confidence
+
+The objective of confidence scoring is not to determine whether a repository is "correct" or "incorrect."
+
+Instead, confidence communicates how reliable the current engineering conclusion appears based on the evidence available during analysis.
+
+For example:
+
+```text
+Repository Type
+
+Engineering Intelligence Platform
+
+Confidence
+
+97%
+```
+
+communicates significantly more information than:
+
+```text
+Engineering Intelligence Platform
+```
+
+alone.
+
+Developers immediately understand that the classification is supported by substantial engineering evidence.
+
+---
+
+# 10.2 Confidence vs Probability
+
+Although confidence is represented numerically, it should not be interpreted as statistical probability.
+
+Instead, confidence represents engineering certainty.
+
+A confidence score reflects:
+
+- the amount of engineering evidence collected
+- the quality of that evidence
+- agreement between detectors
+- engineering consistency
+- repository specificity
+
+Confidence therefore communicates engineering reliability rather than mathematical probability.
+
+---
+
+# 10.3 Factors Influencing Confidence
+
+Several independent engineering factors contribute to classification confidence.
+
+Current contributors include:
+
+## Evidence Quantity
+
+Repositories containing more engineering observations generally produce higher confidence.
+
+Examples include:
+
+- architecture changes
+- repository descriptions
+- engineering terminology
+- detected capabilities
+- engineering signals
+
+---
+
+## Evidence Diversity
+
+Confidence increases when evidence originates from multiple independent sources.
+
+For example:
+
+```text
+Repository Description
+
++
+
+Architecture Changes
+
++
+
+Technology Detection
+
++
+
+Reasoning Signals
+
++
+
+Repository DNA
+```
+
+provides significantly stronger confidence than:
+
+```text
+Repository Name
+```
+
+alone.
+
+---
+
+## Detector Agreement
+
+Independent detectors often identify similar engineering conclusions.
+
+For example:
+
+Engineering Intelligence Detector
+
+↓
+
+Engineering Intelligence Platform
+
+Architecture Detector
+
+↓
+
+Engineering Intelligence
+
+Technology Fingerprint
+
+↓
+
+Repository Analysis
+
+When multiple detectors independently reinforce the same engineering narrative, confidence increases naturally.
+
+---
+
+## Engineering Specificity
+
+Specialised engineering terminology contributes considerably more confidence than generic implementation technologies.
+
+For example:
+
+```text
+Repository DNA
+```
+
+provides stronger engineering confidence than:
+
+```text
+TypeScript
+```
+
+Likewise:
+
+```text
+Payment Reconciliation
+```
+
+provides stronger confidence than:
+
+```text
+Node.js
+```
+
+because it identifies a specialised engineering domain.
+
+---
+
+# 10.4 Confidence Levels
+
+Although internally represented numerically, confidence can be interpreted through qualitative engineering levels.
+
+Conceptually:
+
+| Confidence | Interpretation |
+|------------|----------------|
+| 90–100 | Very High Confidence |
+| 75–89 | High Confidence |
+| 60–74 | Moderate Confidence |
+| 40–59 | Low Confidence |
+| Below 40 | Preliminary Classification |
+
+These ranges help developers understand the reliability of repository classifications without requiring detailed knowledge of the underlying scoring model.
+
+---
+
+# 10.5 Confidence Evolution
+
+Repository confidence is not static.
+
+As repositories evolve, additional engineering evidence becomes available.
+
+Examples include:
+
+- new architecture changes
+- additional engineering capabilities
+- richer documentation
+- infrastructure improvements
+- repository restructuring
+
+Each engineering improvement has the potential to increase classification confidence.
+
+Similarly, removing engineering evidence or simplifying repository scope may reduce confidence.
+
+Confidence therefore evolves alongside the repository itself.
+
+---
+
+# 10.6 Confidence and Repository Growth
+
+Early-stage repositories often produce lower confidence scores.
+
+For example:
+
+```text
+Repository
+
+↓
+
+Basic API
+
+↓
+
+Minimal Documentation
+
+↓
+
+Limited Architecture
+```
+
+↓
+
+```text
+Moderate Confidence
+```
+
+As the repository matures:
+
+```text
+Authentication
+
+↓
+
+Queue Infrastructure
+
+↓
+
+Repository Health
+
+↓
+
+Architecture Intelligence
+
+↓
+
+Engineering Assessment
+```
+
+↓
+
+```text
+High Confidence
+```
+
+This progression reflects the growing amount of engineering evidence available for analysis.
+
+---
+
+# 10.7 Confidence in Repository Comparisons
+
+Confidence also plays an important role during benchmarking.
+
+Two repositories may receive identical classifications while possessing different confidence levels.
+
+For example:
+
+```text
+Repository A
+
+Engineering Intelligence Platform
+
+Confidence
+
+98%
+```
+
+```text
+Repository B
+
+Engineering Intelligence Platform
+
+Confidence
+
+66%
+```
+
+Although both repositories belong to the same engineering domain, Repository A provides significantly stronger supporting evidence.
+
+Benchmarking therefore considers confidence alongside repository identity.
+
+---
+
+# 10.8 Explainable Confidence
+
+A major design objective of ArcHive is transparency.
+
+Confidence should never appear as an unexplained number.
+
+Instead, developers should understand why a repository achieved a particular confidence level.
+
+Examples include:
+
+```text
+High confidence due to:
+
+• Multiple engineering detectors agreed.
+
+• Rich architecture history detected.
+
+• Strong repository-specific terminology identified.
+
+• Consistent engineering capabilities observed.
+```
+
+Likewise:
+
+```text
+Lower confidence due to:
+
+• Limited engineering evidence.
+
+• Minimal repository metadata.
+
+• Few architecture changes.
+
+• Generic implementation technologies.
+```
+
+This explainability reinforces trust in the classification process.
+
+---
+
+# 10.9 Confidence Model Benefits
+
+The Classification Confidence Model provides several engineering advantages.
+
+It:
+
+- communicates engineering certainty
+- reduces ambiguity
+- improves repository benchmarking
+- supports explainable engineering intelligence
+- highlights repositories requiring additional analysis
+- strengthens trust in classification outcomes
+
+Confidence therefore becomes an essential component of ArcHive's engineering intelligence rather than an optional metric.
+
+---
+
+# 10.10 Classification Confidence Summary
+
+The Classification Confidence Model ensures that ArcHive not only identifies what a repository represents but also communicates how strongly that conclusion is supported by engineering evidence.
+
+By combining evidence quantity, evidence diversity, detector agreement and engineering specificity, the platform produces confidence scores that evolve alongside repository development and provide valuable context for every engineering decision.
+
