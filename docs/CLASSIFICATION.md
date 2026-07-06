@@ -1027,3 +1027,423 @@ Rather than relying on a monolithic classifier, ArcHive distributes engineering 
 
 This modular approach enables the platform to grow naturally as additional repository domains, engineering disciplines and classification strategies are introduced.
 
+# 8. Repository Type Ranking
+
+After all detectors have completed execution, ArcHive possesses a collection of repository type candidates generated from independent engineering evidence.
+
+At this stage, multiple classifications may appear equally valid.
+
+For example, a repository may simultaneously be identified as:
+
+```text
+ENGINEERING_INTELLIGENCE_PLATFORM
+
+FRONTEND_APPLICATION
+
+JAVASCRIPT_TYPESCRIPT_PROJECT
+```
+
+Although each classification is technically correct, they do not carry the same engineering significance.
+
+Repository Type Ranking is responsible for ordering these candidates according to their engineering value before selecting the repository's primary identity.
+
+Rather than exposing classifications in arbitrary order, ArcHive applies a deterministic ranking strategy that consistently prioritises engineering purpose over implementation.
+
+---
+
+# 8.1 Why Ranking Is Necessary
+
+Repository classification is inherently additive.
+
+Each detector contributes evidence independently, meaning repositories often accumulate several valid classifications.
+
+Consider ArcHive.
+
+Detectors may identify:
+
+```text
+Engineering Intelligence Platform
+
+Frontend Application
+
+Backend Service
+
+JavaScript / TypeScript Project
+```
+
+All of these observations accurately describe the repository.
+
+However, presenting them without prioritisation creates ambiguity.
+
+Which classification best represents the repository?
+
+Repository Type Ranking answers this question.
+
+---
+
+# 8.2 Purpose Before Implementation
+
+One of the most important design decisions within ArcHive is that repository purpose always outranks implementation.
+
+Purpose describes **why** software exists.
+
+Implementation describes **how** software has been built.
+
+For example:
+
+Purpose
+
+```text
+Engineering Intelligence Platform
+```
+
+Implementation
+
+```text
+Frontend Application
+```
+
+Implementation
+
+```text
+JavaScript / TypeScript Project
+```
+
+Although all three classifications remain useful, the engineering purpose communicates considerably more information than the implementation technologies.
+
+For this reason, ArcHive always promotes repository purpose to the top of the ranking.
+
+---
+
+# 8.3 Repository Classification Hierarchy
+
+Conceptually, repository classifications are organised into three layers.
+
+```text
+Purpose
+
+↓
+
+Implementation
+
+↓
+
+Technology
+```
+
+### Purpose
+
+Examples include:
+
+```text
+Engineering Intelligence Platform
+
+Developer Tooling Platform
+
+Financial Infrastructure
+
+Observability Platform
+
+Healthcare Platform
+```
+
+Purpose communicates the engineering problem being solved.
+
+---
+
+### Implementation
+
+Examples include:
+
+```text
+Frontend Application
+
+Backend Service
+
+Mobile Application
+
+CLI Application
+```
+
+Implementation communicates software structure.
+
+---
+
+### Technology
+
+Examples include:
+
+```text
+JavaScript / TypeScript Project
+
+Go Service
+
+Python Service
+
+Rust Service
+```
+
+Technology communicates implementation language rather than engineering intent.
+
+This hierarchy forms the foundation of ArcHive's repository ranking strategy.
+
+---
+
+# 8.4 Primary Repository Type
+
+Once repository candidates have been ranked, ArcHive selects a Primary Repository Type.
+
+This becomes the canonical engineering identity used throughout the platform.
+
+For example:
+
+```text
+Repository Types
+
+Engineering Intelligence Platform
+
+Frontend Application
+
+JavaScript / TypeScript Project
+```
+
+↓
+
+Primary Repository Type
+
+```text
+Engineering Intelligence Platform
+```
+
+The remaining repository types remain available as supporting engineering context.
+
+---
+
+# 8.5 Secondary Repository Types
+
+Although only one Primary Repository Type is selected, secondary classifications remain valuable.
+
+Secondary repository types provide additional implementation context.
+
+For example:
+
+```text
+Primary
+
+Engineering Intelligence Platform
+```
+
+Supporting Classifications
+
+```text
+Frontend Application
+
+JavaScript / TypeScript Project
+```
+
+This layered representation provides a significantly richer engineering description than a single classification alone.
+
+---
+
+# 8.6 Priority Ordering
+
+ArcHive maintains a deterministic repository priority order.
+
+Conceptually:
+
+```text
+Engineering Intelligence Platform
+
+↓
+
+Developer Tooling Platform
+
+↓
+
+Financial Infrastructure
+
+↓
+
+Observability Platform
+
+↓
+
+Security Platform
+
+↓
+
+AI / Machine Learning
+
+↓
+
+Healthcare Platform
+
+↓
+
+Education Platform
+
+↓
+
+Collaboration Platform
+
+↓
+
+Backend Service
+
+↓
+
+Frontend Application
+
+↓
+
+JavaScript / TypeScript Project
+```
+
+Higher engineering abstractions always outrank implementation technologies.
+
+This ordering ensures consistent classification across all repositories.
+
+---
+
+# 8.7 Why Generic Technologies Rank Last
+
+Programming languages are intentionally ranked at the bottom of the classification hierarchy.
+
+Consider:
+
+```text
+TypeScript
+```
+
+TypeScript may be used to build:
+
+- financial systems
+- engineering intelligence platforms
+- observability tools
+- healthcare applications
+- educational software
+- messaging platforms
+
+Because programming languages span almost every engineering domain, they provide minimal information regarding repository purpose.
+
+For this reason, implementation technologies are treated as supporting context rather than primary identity.
+
+---
+
+# 8.8 Real-World Ranking Examples
+
+### ArcHive
+
+Detected:
+
+```text
+Engineering Intelligence Platform
+
+Frontend Application
+
+JavaScript / TypeScript Project
+```
+
+Displayed:
+
+```text
+Engineering Intelligence Platform
+
+Frontend Application
+
+JavaScript / TypeScript Project
+```
+
+Primary Identity:
+
+```text
+Engineering Intelligence Platform
+```
+
+---
+
+### Backend Forge
+
+Detected:
+
+```text
+Developer Tooling Platform
+
+JavaScript / TypeScript Project
+```
+
+Displayed:
+
+```text
+Developer Tooling Platform
+
+JavaScript / TypeScript Project
+```
+
+Primary Identity:
+
+```text
+Developer Tooling Platform
+```
+
+---
+
+### LedgerFlow
+
+Detected:
+
+```text
+Financial Infrastructure
+
+Backend Service
+
+JavaScript / TypeScript Project
+```
+
+Displayed:
+
+```text
+Financial Infrastructure
+
+Backend Service
+
+JavaScript / TypeScript Project
+```
+
+Primary Identity:
+
+```text
+Financial Infrastructure
+```
+
+These examples demonstrate how repository ranking consistently preserves engineering purpose while retaining useful implementation context.
+
+---
+
+# 8.9 Benefits of Repository Ranking
+
+Repository ranking provides several important engineering advantages.
+
+It:
+
+- eliminates ambiguous classifications
+- ensures deterministic repository identities
+- prevents implementation technologies from dominating engineering purpose
+- simplifies frontend presentation
+- improves explainability
+- produces consistent engineering reports
+
+Without ranking, repository classifications would vary significantly depending on detector execution order.
+
+The ranking engine removes this uncertainty.
+
+---
+
+# 8.10 Repository Type Ranking Summary
+
+Repository Type Ranking represents the decision-making stage of ArcHive's Repository Classification Engine.
+
+Rather than exposing every detected classification equally, the ranking system orders repository types according to engineering significance before selecting the canonical repository identity.
+
+By consistently prioritising engineering purpose over implementation, ArcHive produces repository classifications that more accurately communicate what software systems are designed to achieve rather than simply describing the technologies they happen to use.
+
