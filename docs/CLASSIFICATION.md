@@ -631,3 +631,399 @@ Rather than treating every engineering observation equally, the platform evaluat
 
 This weighted approach enables ArcHive to classify repositories according to engineering intent rather than implementation coincidence.
 
+# 7. Detector Architecture
+
+At the heart of ArcHive's Repository Classification Engine lies a modular detector architecture.
+
+Rather than implementing repository classification inside a single, continuously growing algorithm, ArcHive decomposes repository understanding into a collection of specialised engineering detectors.
+
+Each detector focuses exclusively on one engineering domain.
+
+Examples include:
+
+- Engineering Intelligence
+- Developer Tooling
+- Financial Infrastructure
+- Observability
+- Security
+- Artificial Intelligence
+- Data Engineering
+- Mobile Applications
+- Smart Transport
+- Healthcare
+- Education
+- Energy
+- Collaboration
+- Messaging
+- E-Commerce
+
+This architecture allows the classification engine to evolve organically as new engineering domains emerge without increasing system complexity.
+
+---
+
+# 7.1 Design Objectives
+
+The detector architecture was designed with several engineering objectives.
+
+These include:
+
+- modularity
+- maintainability
+- extensibility
+- explainability
+- independent testing
+- domain isolation
+
+Instead of one classifier attempting to understand every engineering discipline, each detector specialises in recognising a specific repository domain.
+
+This keeps classification logic focused and significantly easier to maintain.
+
+---
+
+# 7.2 Independent Engineering Domains
+
+Each detector represents a single engineering concern.
+
+For example, the Engineering Intelligence detector understands concepts such as:
+
+```text
+Repository Intelligence
+
+Technology Fingerprint
+
+Repository DNA
+
+Architecture Intelligence
+
+Repository Health
+
+Engineering Assessment
+```
+
+Meanwhile, the Financial Infrastructure detector focuses on concepts such as:
+
+```text
+Ledger
+
+Payment
+
+Settlement
+
+Reconciliation
+
+Audit Trail
+
+Transactions
+```
+
+Likewise, the Developer Tooling detector recognises engineering terminology including:
+
+```text
+CLI
+
+Scaffolding
+
+Generator
+
+Module Generation
+
+Templates
+
+Backend Forge
+```
+
+Because every detector focuses on only one engineering domain, the resulting logic remains compact and highly specialised.
+
+---
+
+# 7.3 Detector Responsibilities
+
+Each detector performs the same fundamental responsibilities.
+
+These include:
+
+- inspecting engineering evidence
+- identifying engineering terminology
+- assigning evidence weights
+- generating reasoning signals
+- contributing repository type candidates
+
+Importantly, detectors do **not** determine the final repository classification.
+
+Instead, they simply contribute engineering evidence.
+
+The Classification Engine later combines this evidence before selecting the final repository identity.
+
+---
+
+# 7.4 Detector Lifecycle
+
+Conceptually, every detector follows the same lifecycle.
+
+```text
+Engineering Evidence
+
+↓
+
+Detector Executes
+
+↓
+
+Engineering Concepts Detected
+
+↓
+
+Evidence Assigned
+
+↓
+
+Reasoning Signals Generated
+
+↓
+
+Repository Type Candidate Added
+
+↓
+
+Next Detector Executes
+```
+
+This process repeats for every detector registered within the classification engine.
+
+No detector depends on another detector.
+
+This independence greatly simplifies future development.
+
+---
+
+# 7.5 Detector Registration
+
+Rather than hardcoding repository classification into one large function, ArcHive registers detectors centrally.
+
+Conceptually:
+
+```text
+Evidence Engine
+
+↓
+
+Engineering Intelligence Detector
+
+↓
+
+Developer Tooling Detector
+
+↓
+
+Financial Infrastructure Detector
+
+↓
+
+Observability Detector
+
+↓
+
+Security Detector
+
+↓
+
+Healthcare Detector
+
+↓
+
+Education Detector
+
+↓
+
+Energy Detector
+
+↓
+
+Messaging Detector
+
+↓
+
+...
+
+↓
+
+Evidence Aggregation
+```
+
+Because detectors execute independently, introducing new engineering domains requires minimal modification to the surrounding system.
+
+---
+
+# 7.6 Detector Collaboration
+
+Although detectors execute independently, they frequently contribute evidence towards the same repository.
+
+For example, ArcHive may activate:
+
+Engineering Intelligence Detector
+
+↓
+
+```text
+Repository Intelligence
+```
+
+Technology Detector
+
+↓
+
+```text
+Fastify
+
+Redis
+
+BullMQ
+```
+
+Architecture Detector
+
+↓
+
+```text
+Engineering Intelligence
+
+Backend Systems
+
+Queue Infrastructure
+```
+
+Each detector contributes different evidence.
+
+The Classification Engine later aggregates these observations before resolving repository identity.
+
+This collaborative approach produces considerably stronger engineering conclusions than relying on isolated detector matches.
+
+---
+
+# 7.7 Detector Isolation
+
+One of the most important architectural principles within ArcHive is detector isolation.
+
+Detectors intentionally avoid:
+
+- modifying other detectors
+- overriding repository identity
+- accessing unrelated engineering domains
+- performing ranking decisions
+- calculating confidence
+
+Instead, every detector simply reports engineering observations.
+
+Higher-level intelligence engines remain responsible for:
+
+- evidence aggregation
+- repository ranking
+- confidence calculation
+- conflict resolution
+- repository identity
+
+This separation greatly improves maintainability.
+
+---
+
+# 7.8 Adding a New Detector
+
+Introducing support for a new engineering domain follows a predictable workflow.
+
+```text
+Identify Engineering Domain
+
+↓
+
+Create Detector
+
+↓
+
+Register Detector
+
+↓
+
+Define Repository Type
+
+↓
+
+Assign Evidence
+
+↓
+
+Generate Reasoning Signals
+
+↓
+
+Run Classification
+```
+
+Because detectors are isolated, new engineering domains can be introduced without modifying existing detectors.
+
+For example, adding support for:
+
+```text
+Cybersecurity Platform
+```
+
+would require only:
+
+- creating a Cybersecurity detector
+- registering the detector
+- defining engineering terminology
+- assigning repository types
+
+No existing detector requires modification.
+
+---
+
+# 7.9 Detector Advantages
+
+The modular detector architecture provides several engineering benefits.
+
+## Improved Maintainability
+
+Smaller detectors are significantly easier to understand than one monolithic classification engine.
+
+---
+
+## Independent Testing
+
+Every detector can be tested independently using repository-specific engineering scenarios.
+
+This greatly improves reliability.
+
+---
+
+## Reduced Coupling
+
+Engineering domains remain isolated.
+
+Changes to one detector do not introduce unexpected behaviour into unrelated repository classifications.
+
+---
+
+## Extensibility
+
+Supporting new repository domains becomes straightforward.
+
+Developers simply introduce another detector without redesigning the overall classification engine.
+
+---
+
+## Explainability
+
+Because every detector produces its own reasoning signals, ArcHive can explain exactly why a repository received a particular classification.
+
+This transparency is one of the defining characteristics of the platform.
+
+---
+
+# 7.10 Detector Architecture Summary
+
+The detector architecture forms the foundation of ArcHive's Repository Classification Engine.
+
+Rather than relying on a monolithic classifier, ArcHive distributes engineering understanding across multiple specialised detectors that collaborate through shared engineering evidence.
+
+This modular approach enables the platform to grow naturally as additional repository domains, engineering disciplines and classification strategies are introduced.
+
