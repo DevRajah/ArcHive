@@ -2288,3 +2288,393 @@ The Classification Confidence Model ensures that ArcHive not only identifies wha
 
 By combining evidence quantity, evidence diversity, detector agreement and engineering specificity, the platform produces confidence scores that evolve alongside repository development and provide valuable context for every engineering decision.
 
+
+# 11. False Positive Prevention
+
+Accurate repository classification requires more than identifying engineering terminology.
+
+Many engineering concepts naturally appear across multiple software domains, making naive keyword matching insufficient for reliable repository intelligence.
+
+For example, the presence of:
+
+```text
+Redis
+```
+
+does not imply that a repository is an infrastructure platform.
+
+Likewise:
+
+```text
+Docker
+```
+
+does not necessarily indicate a DevOps platform.
+
+Similarly:
+
+```text
+Authentication
+```
+
+appears in healthcare systems, financial platforms, engineering intelligence platforms and countless backend services.
+
+Without appropriate safeguards, repositories would frequently receive misleading classifications.
+
+To minimise this risk, ArcHive incorporates several false positive prevention mechanisms throughout its Repository Classification Engine.
+
+---
+
+# 11.1 Understanding False Positives
+
+A false positive occurs when a repository is assigned a repository type that does not accurately represent its engineering purpose.
+
+For example:
+
+```text
+Repository
+
+↓
+
+Contains BullMQ
+
+↓
+
+Incorrectly Classified As
+
+Developer Tooling Platform
+```
+
+BullMQ indicates asynchronous processing.
+
+It does **not** indicate developer tooling.
+
+Similarly:
+
+```text
+Repository
+
+↓
+
+Contains Redis
+
+↓
+
+Incorrectly Classified As
+
+Infrastructure Platform
+```
+
+Redis alone provides insufficient engineering evidence to support that conclusion.
+
+False positives reduce confidence in engineering intelligence and negatively affect every downstream intelligence engine.
+
+Preventing them is therefore a critical architectural objective.
+
+---
+
+# 11.2 Domain-Specific Evidence
+
+One of the primary mechanisms for reducing false positives is requiring domain-specific engineering evidence.
+
+Generic implementation technologies are intentionally insufficient.
+
+For example:
+
+```text
+Fastify
+
+Redis
+
+PostgreSQL
+```
+
+These technologies appear in thousands of repositories.
+
+Conversely:
+
+```text
+Repository Intelligence
+
+Technology Fingerprint
+
+Repository DNA
+
+Architecture Radar
+```
+
+strongly indicate an Engineering Intelligence Platform.
+
+Similarly:
+
+```text
+Ledger
+
+Settlement
+
+Payment Reconciliation
+
+Audit Trail
+```
+
+strongly indicate Financial Infrastructure.
+
+Requiring specialised engineering terminology significantly improves classification accuracy.
+
+---
+
+# 11.3 Multiple Evidence Requirement
+
+ArcHive rarely classifies repositories based upon a single engineering observation.
+
+Instead, multiple supporting signals are required.
+
+Conceptually:
+
+```text
+Repository Intelligence
+
++
+
+Repository DNA
+
++
+
+Architecture Intelligence
+
++
+
+Engineering Assessment
+```
+
+↓
+
+```text
+Engineering Intelligence Platform
+```
+
+This multi-evidence strategy prevents isolated keywords from dominating repository classification.
+
+---
+
+# 11.4 Detector Consensus
+
+False positives are also reduced through detector agreement.
+
+Consider:
+
+Engineering Intelligence Detector
+
+↓
+
+Engineering Intelligence Platform
+
+Technology Fingerprint
+
+↓
+
+Repository Analysis
+
+Architecture Detector
+
+↓
+
+Engineering Intelligence
+
+All three detectors support the same engineering narrative.
+
+Classification confidence therefore increases.
+
+Conversely:
+
+Developer Tooling Detector
+
+↓
+
+Developer Tooling Platform
+
+while every other detector identifies Engineering Intelligence.
+
+In this situation, the isolated detector contributes evidence but does not override the dominant engineering narrative.
+
+---
+
+# 11.5 Purpose Overrides Generic Matches
+
+Another important safeguard is repository purpose prioritisation.
+
+Generic implementation characteristics are never allowed to replace engineering purpose.
+
+For example:
+
+Detected:
+
+```text
+JavaScript / TypeScript Project
+```
+
+Detected:
+
+```text
+Engineering Intelligence Platform
+```
+
+The repository is ultimately classified as:
+
+```text
+Engineering Intelligence Platform
+```
+
+because engineering purpose carries significantly greater weight.
+
+This prevents implementation technologies from producing misleading repository identities.
+
+---
+
+# 11.6 Context-Aware Detection
+
+Many engineering concepts are meaningful only within a specific context.
+
+Consider:
+
+```text
+Generator
+```
+
+This term may appear within:
+
+- developer tooling
+- engineering documentation
+- educational material
+- artificial intelligence
+
+Rather than immediately assigning:
+
+```text
+Developer Tooling Platform
+```
+
+ArcHive evaluates surrounding engineering evidence.
+
+Only when multiple supporting observations are present does the detector contribute significant classification weight.
+
+This context-aware strategy substantially reduces accidental classifications.
+
+---
+
+# 11.7 Suppressing Weak Classifications
+
+Repository types supported only by weak evidence may be intentionally excluded from the final repository identity.
+
+For example:
+
+Detected:
+
+```text
+Developer Tooling Platform
+```
+
+Evidence:
+
+```text
+CLI
+```
+
+only.
+
+Meanwhile:
+
+Engineering Intelligence receives evidence from:
+
+- repository intelligence
+- repository health
+- repository DNA
+- architecture intelligence
+- repository analysis
+- engineering quality
+
+The weak Developer Tooling classification remains part of the internal evidence graph but is suppressed from the public repository identity.
+
+This behaviour improves the quality of engineering reports while preserving valuable engineering observations.
+
+---
+
+# 11.8 Continuous Classification Improvement
+
+False positive prevention is not considered a completed feature.
+
+Instead, ArcHive continuously improves classification quality as new engineering domains and repository examples become available.
+
+Typical improvements include:
+
+- refining detector rules
+- introducing additional engineering terminology
+- adjusting evidence weights
+- improving repository ranking
+- enhancing conflict resolution
+- expanding detector coverage
+
+This iterative approach allows repository classification to become progressively more accurate over time.
+
+---
+
+# 11.9 Real-World Examples
+
+### ArcHive
+
+Early Classification
+
+```text
+Engineering Intelligence Platform
+
+Developer Tooling Platform
+
+Frontend Application
+
+JavaScript / TypeScript Project
+```
+
+After improving false positive prevention:
+
+```text
+Engineering Intelligence Platform
+
+Frontend Application
+
+JavaScript / TypeScript Project
+```
+
+The Developer Tooling classification was suppressed because insufficient evidence supported it as the repository's dominant engineering purpose.
+
+---
+
+### Backend Forge
+
+Detected:
+
+```text
+Developer Tooling Platform
+
+JavaScript / TypeScript Project
+```
+
+This classification remains valid because the repository contains strong domain-specific evidence including:
+
+- scaffolding
+- module generation
+- CLI workflows
+- backend generation
+- template creation
+
+Unlike ArcHive, the engineering narrative genuinely represents developer tooling.
+
+---
+
+# 11.10 False Positive Prevention Summary
+
+False positive prevention is essential for producing reliable engineering intelligence.
+
+Rather than relying on isolated keywords or implementation technologies, ArcHive combines specialised engineering terminology, detector consensus, repository purpose prioritisation and context-aware evidence weighting to minimise incorrect classifications.
+
+These safeguards ensure that repository identities remain meaningful, explainable and consistent as the platform expands to support additional engineering domains.
+
