@@ -1447,3 +1447,467 @@ Rather than exposing every detected classification equally, the ranking system o
 
 By consistently prioritising engineering purpose over implementation, ArcHive produces repository classifications that more accurately communicate what software systems are designed to achieve rather than simply describing the technologies they happen to use.
 
+# 9. Classification Conflict Resolution
+
+Repository classification is rarely a straightforward process.
+
+Modern software systems frequently combine multiple engineering disciplines within a single repository.
+
+For example, a repository may simultaneously contain:
+
+- backend services
+- frontend applications
+- asynchronous processing
+- engineering intelligence
+- authentication
+- developer tooling
+- artificial intelligence
+
+Each of these characteristics may activate different detectors throughout the classification pipeline.
+
+Without a dedicated conflict resolution stage, repositories could receive inconsistent or contradictory classifications depending on detector execution order.
+
+To prevent this, ArcHive introduces a deterministic Classification Conflict Resolution Engine.
+
+Its responsibility is to resolve competing repository identities before selecting the final classification.
+
+---
+
+# 9.1 Why Conflict Resolution Is Necessary
+
+Consider ArcHive.
+
+During analysis, the following repository types may be detected:
+
+```text
+Engineering Intelligence Platform
+
+Developer Tooling Platform
+
+Frontend Application
+
+JavaScript / TypeScript Project
+```
+
+Every detector is technically correct.
+
+ArcHive does contain developer tooling concepts.
+
+It also contains a frontend application.
+
+It is also implemented using TypeScript.
+
+However, none of these should replace the repository's primary engineering purpose.
+
+Conflict Resolution determines which repository type best represents the repository as a whole.
+
+---
+
+# 9.2 Sources of Classification Conflicts
+
+Conflicts generally arise for one of four reasons.
+
+## Multiple Engineering Domains
+
+Repositories frequently implement multiple engineering disciplines.
+
+For example:
+
+```text
+Financial Infrastructure
+
+↓
+
+Queue Infrastructure
+
+↓
+
+Realtime Systems
+```
+
+Each detector contributes evidence independently.
+
+Conflict Resolution determines which engineering domain best represents repository purpose.
+
+---
+
+## Generic Technology Signals
+
+Programming languages often activate implementation detectors.
+
+For example:
+
+```text
+TypeScript
+```
+
+may contribute:
+
+```text
+JavaScript / TypeScript Project
+```
+
+while engineering terminology contributes:
+
+```text
+Engineering Intelligence Platform
+```
+
+Conflict Resolution prevents implementation technologies from replacing engineering purpose.
+
+---
+
+## Shared Engineering Concepts
+
+Some engineering concepts appear across multiple domains.
+
+For example:
+
+```text
+Authentication
+```
+
+may exist within:
+
+- healthcare platforms
+- financial systems
+- developer platforms
+- engineering intelligence systems
+
+Authentication alone should never determine repository identity.
+
+Conflict Resolution therefore evaluates supporting evidence before selecting a classification.
+
+---
+
+## Broad Engineering Platforms
+
+Certain repositories naturally span multiple engineering areas.
+
+For example:
+
+ArcHive includes:
+
+- repository analysis
+- architecture intelligence
+- engineering quality
+- benchmarking
+- recommendations
+
+It also contains:
+
+- frontend
+- backend
+- queues
+- authentication
+
+Without conflict resolution, these implementation characteristics could incorrectly outweigh repository purpose.
+
+---
+
+# 9.3 Conflict Resolution Principles
+
+ArcHive follows several principles when resolving competing repository classifications.
+
+---
+
+## Principle 1
+
+Purpose always overrides implementation.
+
+Example:
+
+```text
+Engineering Intelligence Platform
+```
+
+outranks:
+
+```text
+Frontend Application
+```
+
+---
+
+## Principle 2
+
+Specific engineering domains override generic engineering domains.
+
+For example:
+
+```text
+Financial Infrastructure
+```
+
+is more specific than:
+
+```text
+Backend Service
+```
+
+Likewise:
+
+```text
+Engineering Intelligence Platform
+```
+
+is more informative than:
+
+```text
+JavaScript / TypeScript Project
+```
+
+---
+
+## Principle 3
+
+Multiple strong evidence sources outweigh isolated detector matches.
+
+Example:
+
+Engineering Intelligence receives evidence from:
+
+- repository terminology
+- architecture domains
+- repository DNA
+- reasoning signals
+- engineering capabilities
+
+while:
+
+```text
+Developer Tooling Platform
+```
+
+may receive evidence only from:
+
+```text
+CLI
+
+Generator
+
+Scaffolding
+```
+
+Engineering Intelligence therefore becomes the dominant classification.
+
+---
+
+## Principle 4
+
+Conflicting secondary classifications may be removed.
+
+If a secondary repository type introduces ambiguity without adding engineering value, ArcHive suppresses it.
+
+For example:
+
+Instead of displaying:
+
+```text
+Engineering Intelligence Platform
+
+Developer Tooling Platform
+
+Frontend Application
+
+JavaScript / TypeScript Project
+```
+
+ArcHive may instead display:
+
+```text
+Engineering Intelligence Platform
+
+Frontend Application
+
+JavaScript / TypeScript Project
+```
+
+The removed classification remains part of the internal evidence but is excluded from the public repository identity.
+
+---
+
+# 9.4 Evidence Consensus
+
+Conflict Resolution considers detector agreement.
+
+Suppose five detectors contribute evidence.
+
+```text
+Engineering Intelligence
+
+★★★★★
+```
+
+```text
+Developer Tooling
+
+★★
+```
+
+```text
+Frontend
+
+★★★
+```
+
+Engineering Intelligence receives the strongest overall consensus.
+
+Consensus therefore contributes to repository identity alongside evidence weighting.
+
+---
+
+# 9.5 Dominant Engineering Narrative
+
+Rather than selecting the repository type with the highest individual score, ArcHive attempts to identify the dominant engineering narrative.
+
+For example:
+
+ArcHive is not simply:
+
+```text
+A frontend application.
+```
+
+Nor is it merely:
+
+```text
+A TypeScript repository.
+```
+
+Instead, the dominant engineering narrative is:
+
+```text
+An Engineering Intelligence Platform designed to analyse, classify and understand software repositories.
+```
+
+This narrative-based approach produces classifications that better reflect engineering intent.
+
+---
+
+# 9.6 Real-World Conflict Resolution Examples
+
+## ArcHive
+
+Initially Detected
+
+```text
+Engineering Intelligence Platform
+
+Developer Tooling Platform
+
+Frontend Application
+
+JavaScript / TypeScript Project
+```
+
+Resolved
+
+```text
+Engineering Intelligence Platform
+
+Frontend Application
+
+JavaScript / TypeScript Project
+```
+
+Developer Tooling is removed because the repository's primary purpose is repository intelligence rather than software generation.
+
+---
+
+## Backend Forge
+
+Initially Detected
+
+```text
+Developer Tooling Platform
+
+Backend Service
+
+JavaScript / TypeScript Project
+```
+
+Resolved
+
+```text
+Developer Tooling Platform
+
+JavaScript / TypeScript Project
+```
+
+Backend Service is removed because it describes implementation rather than the repository's engineering purpose.
+
+---
+
+## LedgerFlow
+
+Initially Detected
+
+```text
+Financial Infrastructure
+
+Backend Service
+
+Queue Infrastructure
+
+JavaScript / TypeScript Project
+```
+
+Resolved
+
+```text
+Financial Infrastructure
+
+Backend Service
+
+JavaScript / TypeScript Project
+```
+
+Queue Infrastructure remains part of the architectural analysis but is not promoted to repository identity.
+
+---
+
+# 9.7 Deterministic Classification
+
+An important design goal of ArcHive is deterministic classification.
+
+Running the same repository through the classification engine multiple times should always produce the same engineering identity provided the repository evidence remains unchanged.
+
+This determinism improves:
+
+- reproducibility
+- testing
+- debugging
+- engineering confidence
+- frontend consistency
+
+Classification should never depend on detector execution order or random processing decisions.
+
+---
+
+# 9.8 Benefits of Conflict Resolution
+
+The Conflict Resolution Engine provides several important engineering benefits.
+
+It:
+
+- removes contradictory classifications
+- preserves engineering purpose
+- reduces false positives
+- improves frontend readability
+- produces deterministic results
+- simplifies repository comparison
+- increases confidence in engineering intelligence
+
+Without conflict resolution, repository identities would become increasingly ambiguous as additional detectors were introduced.
+
+---
+
+# 9.9 Classification Conflict Resolution Summary
+
+Classification Conflict Resolution represents the final decision-making stage of ArcHive's Repository Classification Engine.
+
+By resolving competing repository types using evidence strength, engineering specificity, detector consensus and repository purpose, ArcHive produces stable, explainable and meaningful repository identities.
+
+The result is a classification system that consistently reflects **what a repository is designed to achieve**, rather than simply listing every technology or engineering concept detected during analysis.
+
