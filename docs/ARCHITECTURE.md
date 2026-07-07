@@ -739,3 +739,316 @@ By combining GitHub OAuth, JWT-based authentication and ownership-based authoris
 This layered security model allows frontend applications, background workers and future API consumers to interact with the platform through a consistent and well-defined authentication mechanism.
 
 The next section introduces the **Repository API**, which serves as the primary entry point for importing repositories, managing engineering data and initiating repository intelligence generation.
+
+# 5. Repository API
+
+The Repository API forms the operational core of the ArcHive platform.
+
+Every engineering intelligence workflow begins with a repository.
+
+Before ArcHive can classify software, analyse architecture or generate engineering insights, repositories must first be imported, tracked and processed.
+
+The Repository API provides the interfaces responsible for managing this lifecycle.
+
+Unlike a traditional CRUD API, the Repository API does considerably more than create and retrieve database records.
+
+It orchestrates repository onboarding, engineering event collection, intelligence generation and repository reprocessing while acting as the primary gateway into the ArcHive Intelligence Platform.
+
+---
+
+# 5.1 Repository Lifecycle
+
+Every repository progresses through a predictable lifecycle after being imported.
+
+Conceptually, the workflow is:
+
+```text
+GitHub Repository
+
+↓
+
+Repository Import
+
+↓
+
+Repository Stored
+
+↓
+
+Engineering Events Collected
+
+↓
+
+Architecture Changes Generated
+
+↓
+
+Technology Fingerprint
+
+↓
+
+Repository Intelligence
+
+↓
+
+Dashboard Visualisation
+```
+
+Each stage contributes additional engineering context until the repository becomes fully analysed.
+
+This staged workflow allows engineering intelligence to evolve naturally as new repository activity is observed.
+
+---
+
+# 5.2 Repository Import
+
+Repository import is the entry point into the ArcHive platform.
+
+After authenticating with GitHub, users may import one or more repositories into their engineering workspace.
+
+The import process retrieves repository metadata including:
+
+- repository name
+- owner
+- description
+- programming language
+- visibility
+- GitHub identifiers
+
+The imported repository becomes the canonical representation used throughout the remainder of the intelligence pipeline.
+
+Repository import intentionally performs minimal engineering analysis.
+
+Instead, analysis is delegated to background processing so that repository onboarding remains responsive.
+
+---
+
+# 5.3 Repository Retrieval
+
+Once repositories have been imported, the Repository API provides endpoints for retrieving engineering information.
+
+Typical operations include:
+
+- listing repositories
+- retrieving repository details
+- viewing engineering summaries
+- opening repository dashboards
+
+Repository retrieval focuses on presenting engineering context rather than raw persistence models.
+
+This allows frontend applications to display meaningful engineering information immediately after retrieval.
+
+---
+
+# 5.4 Repository Dashboard
+
+Each repository has a dedicated dashboard that aggregates engineering information from multiple intelligence engines.
+
+Rather than requiring numerous API requests, the Repository API assembles a concise engineering summary suitable for dashboard presentation.
+
+Typical dashboard information includes:
+
+- repository identity
+- engineering profile
+- engineering quality
+- repository maturity
+- architecture summary
+- recent engineering activity
+
+The dashboard endpoint therefore acts as an aggregation layer rather than a simple data retrieval endpoint.
+
+---
+
+# 5.5 Repository Intelligence
+
+The Repository API also provides access to the complete Repository Intelligence model.
+
+This includes:
+
+```text
+Repository Identity
+
+↓
+
+Repository DNA
+
+↓
+
+Repository Persona
+
+↓
+
+Architecture Intelligence
+
+↓
+
+Engineering Assessment
+
+↓
+
+Recommendations
+
+↓
+
+Benchmarking
+```
+
+Rather than exposing these components individually, the API returns a unified intelligence model that serves as the single source of truth for frontend applications.
+
+This significantly reduces client-side orchestration.
+
+---
+
+# 5.6 Repository Reprocessing
+
+Engineering intelligence evolves continuously.
+
+As detector logic improves or repositories change, previously generated intelligence may become outdated.
+
+To address this, ArcHive supports repository reprocessing.
+
+Reprocessing regenerates engineering intelligence using the latest detector implementations without requiring the repository to be re-imported.
+
+Typical reasons for reprocessing include:
+
+- detector improvements
+- classification enhancements
+- engineering engine updates
+- repository evolution
+- architecture changes
+
+This capability ensures that engineering intelligence remains current as both repositories and the platform evolve.
+
+---
+
+# 5.7 Portfolio Reprocessing
+
+In addition to refreshing individual repositories, ArcHive supports portfolio-wide intelligence regeneration.
+
+Conceptually:
+
+```text
+Repositories
+
+↓
+
+Queue Reprocessing Jobs
+
+↓
+
+Engineering Workers
+
+↓
+
+Repository Intelligence
+
+↓
+
+Updated Dashboard
+```
+
+This functionality becomes particularly valuable after major improvements to the classification engine or engineering assessment modules.
+
+Rather than requiring users to refresh repositories individually, ArcHive can regenerate intelligence across an entire engineering portfolio.
+
+---
+
+# 5.8 Repository Ownership
+
+Every repository managed by the Repository API belongs to a specific authenticated user.
+
+Ownership is enforced before engineering operations are executed.
+
+Examples include:
+
+- viewing repository intelligence
+- refreshing engineering analysis
+- accessing architecture reports
+- retrieving engineering narratives
+- viewing benchmark results
+
+Ownership validation ensures repository intelligence remains isolated between users while allowing future support for shared workspaces and collaborative engineering teams.
+
+---
+
+# 5.9 Repository Deletion
+
+Repository deletion removes repository records together with their associated engineering intelligence.
+
+Depending on deployment requirements, deletion strategies may include:
+
+- soft deletion
+- hard deletion
+- archival
+
+The current implementation removes repository intelligence while preserving overall system consistency.
+
+Future versions of ArcHive may introduce repository archival to preserve historical engineering intelligence for long-term portfolio analysis.
+
+---
+
+# 5.10 Repository API Response Model
+
+Repository endpoints follow the same consistent response structure used throughout the platform.
+
+Conceptually:
+
+```json
+{
+  "success": true,
+  "message": "Repository fetched successfully.",
+  "data": {
+    "...": "..."
+  }
+}
+```
+
+Maintaining a uniform response format simplifies frontend integration, reduces duplicated parsing logic and provides a predictable developer experience.
+
+---
+
+# 5.11 Repository API Design Principles
+
+Several engineering principles guided the design of the Repository API.
+
+### Engineering Before Persistence
+
+Repository endpoints expose engineering concepts rather than database tables.
+
+---
+
+### Aggregated Responses
+
+Endpoints combine related engineering information whenever practical, reducing unnecessary client requests.
+
+---
+
+### Stable Contracts
+
+Response structures remain consistent even as underlying intelligence engines evolve.
+
+---
+
+### Backend Intelligence
+
+Engineering analysis is generated on the backend before being returned to clients.
+
+Frontend applications remain presentation-focused.
+
+---
+
+### Asynchronous Processing
+
+Expensive engineering analysis is delegated to background workers whenever possible, ensuring that repository management remains responsive.
+
+---
+
+# 5.12 Repository API Summary
+
+The Repository API represents the operational foundation of the ArcHive platform.
+
+By managing repository onboarding, engineering intelligence generation, dashboard aggregation and intelligence reprocessing, it provides the primary entry point into every engineering workflow supported by ArcHive.
+
+Rather than exposing simple CRUD operations, the Repository API orchestrates the complete lifecycle of repository intelligence, ensuring that software systems evolve from imported GitHub repositories into fully analysed engineering assets.
+
+The next section introduces the **Engineering Intelligence API**, which exposes the specialised endpoints responsible for Repository DNA, Repository Persona, Architecture Radar, Repository Narrative, Engineering Assessment and Benchmarking.
