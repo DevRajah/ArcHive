@@ -2990,3 +2990,258 @@ By limiting response size, supporting efficient filtering and exposing consisten
 This scalable query model ensures that ArcHive remains effective as repositories, engineering events and intelligence reports continue to grow.
 
 The next section introduces **API Versioning & Compatibility**, explaining how ArcHive evolves its API while preserving stability for existing clients and future integrations.
+
+# 12. API Versioning & Compatibility
+
+Software platforms inevitably evolve.
+
+As new engineering capabilities are introduced, APIs expand to support additional resources, richer intelligence models and improved engineering workflows.
+
+Without a clear versioning strategy, these changes can unintentionally break existing clients, forcing frontend applications and third-party integrations to be rewritten whenever the backend evolves.
+
+ArcHive addresses this challenge through a versioning strategy centred on **backwards compatibility**, **stable API contracts** and **incremental evolution**.
+
+The objective is to allow the Engineering Intelligence Platform to grow without disrupting existing consumers.
+
+---
+
+# 12.1 Why API Versioning Matters
+
+Engineering platforms are long-lived systems.
+
+Over time, requirements change.
+
+New repository types are introduced.
+
+Additional intelligence engines are developed.
+
+Existing engineering reports become richer.
+
+If every enhancement altered existing API responses, frontend applications would require continuous modification.
+
+Instead, ArcHive adopts versioning practices that allow new functionality to be introduced while preserving existing behaviour.
+
+This approach improves platform stability and developer confidence.
+
+---
+
+# 12.2 API Stability
+
+One of the primary design goals of the ArcHive API is stability.
+
+Once an endpoint has been published, its behaviour should remain predictable.
+
+For example, an endpoint returning Repository Intelligence should continue exposing the same top-level response structure even if new engineering intelligence engines are introduced internally.
+
+This stability allows frontend applications to evolve independently from backend implementation details.
+
+---
+
+# 12.3 Backwards Compatibility
+
+Whenever new engineering capabilities are introduced, ArcHive prioritises backwards compatibility.
+
+Instead of modifying existing response structures, new information is generally added as optional fields.
+
+For example, an early intelligence response might contain:
+
+```text
+repositoryIntelligence
+
+├── identity
+├── signals
+└── assessment
+```
+
+As the platform evolves, additional sections may be introduced.
+
+```text
+repositoryIntelligence
+
+├── identity
+├── signals
+├── assessment
+├── advisor
+└── benchmarking
+```
+
+Because the original fields remain unchanged, existing clients continue functioning without modification.
+
+---
+
+# 12.4 Canonical Response Contracts
+
+The Canonical Repository Intelligence Model plays an important role in API compatibility.
+
+Rather than exposing numerous unrelated responses, all engineering intelligence is organised into a single structured model.
+
+This provides a stable contract between backend services and client applications.
+
+As new intelligence engines are developed, they contribute additional information to the canonical model instead of introducing entirely new response formats.
+
+This significantly reduces breaking changes.
+
+---
+
+# 12.5 Endpoint Evolution
+
+New engineering capabilities should generally result in:
+
+- new endpoints
+- additional optional fields
+- expanded intelligence reports
+
+rather than modifying existing endpoint behaviour.
+
+For example:
+
+Instead of replacing:
+
+```text
+/repositories/{repositoryId}/intelligence
+```
+
+ArcHive may introduce:
+
+```text
+/repositories/{repositoryId}/benchmark
+```
+
+or
+
+```text
+/repositories/{repositoryId}/engineering-report
+```
+
+This incremental strategy preserves compatibility while allowing the platform to expand naturally.
+
+---
+
+# 12.6 Deprecation Strategy
+
+Occasionally, existing endpoints may become obsolete.
+
+Rather than removing them immediately, ArcHive follows a gradual deprecation process.
+
+Conceptually:
+
+```text
+Existing Endpoint
+
+↓
+
+Deprecated
+
+↓
+
+Replacement Introduced
+
+↓
+
+Migration Period
+
+↓
+
+Endpoint Removal
+```
+
+This process provides developers with sufficient time to migrate applications before legacy functionality is retired.
+
+---
+
+# 12.7 Semantic Evolution
+
+Not every platform improvement requires a new API version.
+
+Many enhancements occur entirely within the intelligence engines.
+
+Examples include:
+
+- improved repository classification
+- refined detector rules
+- better evidence weighting
+- enhanced repository narratives
+- stronger recommendation logic
+
+Although engineering intelligence becomes more accurate, the external API remains unchanged.
+
+This separation between implementation and interface is one of ArcHive's core architectural principles.
+
+---
+
+# 12.8 Future Versioning Strategy
+
+As ArcHive continues to evolve, future major API versions may be introduced when substantial architectural changes become necessary.
+
+Potential future milestones include:
+
+- organisation-wide engineering intelligence
+- multi-user workspaces
+- public engineering APIs
+- AI-assisted engineering reports
+- enterprise portfolio management
+
+Major versions would allow these capabilities to be introduced without disrupting existing integrations.
+
+---
+
+# 12.9 Compatibility Principles
+
+Several engineering principles guide API evolution.
+
+### Stability
+
+Published endpoints should remain predictable.
+
+---
+
+### Backwards Compatibility
+
+Existing clients should continue functioning whenever practical.
+
+---
+
+### Incremental Evolution
+
+New capabilities should extend the API rather than replace existing behaviour.
+
+---
+
+### Canonical Contracts
+
+The Repository Intelligence model serves as the stable interface between backend and frontend.
+
+---
+
+### Clear Deprecation
+
+Breaking changes should be introduced gradually with appropriate migration periods.
+
+---
+
+# 12.10 Benefits of Versioning
+
+A structured versioning strategy provides several advantages.
+
+It:
+
+- protects frontend applications
+- simplifies third-party integrations
+- reduces maintenance effort
+- encourages API adoption
+- supports long-term platform evolution
+- enables continuous engineering improvements
+
+Developers can therefore build against the ArcHive API with confidence that future platform enhancements will not unexpectedly invalidate existing integrations.
+
+---
+
+# 12.11 API Versioning Summary
+
+API versioning ensures that ArcHive can continue expanding its Engineering Intelligence Platform while maintaining a stable and reliable interface for existing consumers.
+
+By prioritising backwards compatibility, canonical response contracts and incremental evolution, the platform balances innovation with long-term maintainability.
+
+This approach allows engineering intelligence to improve continuously while preserving the predictable developer experience expected from a modern API.
+
+The next section introduces **Future API Roadmap**, outlining planned API capabilities including organisation analytics, AI-assisted engineering endpoints, public developer APIs and advanced engineering intelligence services.
