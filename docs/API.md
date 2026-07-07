@@ -3245,3 +3245,324 @@ By prioritising backwards compatibility, canonical response contracts and increm
 This approach allows engineering intelligence to improve continuously while preserving the predictable developer experience expected from a modern API.
 
 The next section introduces **Future API Roadmap**, outlining planned API capabilities including organisation analytics, AI-assisted engineering endpoints, public developer APIs and advanced engineering intelligence services.
+
+# 13. Future API Roadmap
+
+The current ArcHive API provides a comprehensive interface for repository management, engineering intelligence generation and architecture analysis.
+
+However, the platform has been intentionally designed as an extensible engineering ecosystem rather than a fixed collection of endpoints.
+
+As additional intelligence engines, repository domains and engineering capabilities are introduced, the API will continue evolving while preserving its existing architectural principles.
+
+This section outlines the planned direction of the ArcHive API and highlights future capabilities that can be incorporated without disrupting existing integrations.
+
+---
+
+# 13.1 Organisation APIs
+
+The current implementation focuses primarily on individual users and their repositories.
+
+Future versions of ArcHive will expand this model to support organisation-wide engineering intelligence.
+
+Potential resources include:
+
+```text
+/api/organizations
+```
+
+```text
+/api/organizations/{organizationId}/repositories
+```
+
+```text
+/api/organizations/{organizationId}/dashboard
+```
+
+```text
+/api/organizations/{organizationId}/benchmark
+```
+
+These endpoints would allow engineering leaders to analyse software portfolios across entire organisations rather than individual repositories.
+
+---
+
+# 13.2 Portfolio Intelligence APIs
+
+Future API versions will expose engineering intelligence at the portfolio level.
+
+Rather than analysing repositories independently, ArcHive will generate engineering insights across collections of repositories.
+
+Potential endpoints include:
+
+```text
+/api/portfolio/intelligence
+```
+
+```text
+/api/portfolio/health
+```
+
+```text
+/api/portfolio/maturity
+```
+
+```text
+/api/portfolio/architecture
+```
+
+Example portfolio insights include:
+
+- dominant architecture styles
+- engineering capability distribution
+- repository maturity trends
+- engineering quality trends
+- technical debt distribution
+- technology adoption
+
+These endpoints would support strategic engineering decision-making for larger development teams.
+
+---
+
+# 13.3 AI-Assisted Engineering APIs
+
+One of the most significant future enhancements involves integrating AI-assisted engineering analysis.
+
+These APIs would complement deterministic intelligence rather than replacing it.
+
+Potential endpoints include:
+
+```text
+/api/repositories/{repositoryId}/summary
+```
+
+```text
+/api/repositories/{repositoryId}/architecture-review
+```
+
+```text
+/api/repositories/{repositoryId}/engineering-insights
+```
+
+```text
+/api/repositories/{repositoryId}/risk-analysis
+```
+
+Potential capabilities include:
+
+- repository summarisation
+- architectural explanation
+- engineering documentation generation
+- repository comparison
+- engineering risk identification
+- technical recommendation generation
+
+These endpoints would provide richer engineering narratives while remaining grounded in ArcHive's existing intelligence pipeline.
+
+---
+
+# 13.4 Repository Similarity APIs
+
+Future versions of ArcHive will compare repositories based on engineering characteristics rather than implementation technologies.
+
+Potential endpoints include:
+
+```text
+/api/repositories/{repositoryId}/similar
+```
+
+```text
+/api/repositories/{repositoryId}/related
+```
+
+Returned information may include:
+
+- engineering similarity score
+- shared architecture domains
+- common engineering capabilities
+- overlapping technologies
+- repository personas
+
+Similarity analysis would support engineering reuse, knowledge sharing and architectural discovery across software portfolios.
+
+---
+
+# 13.5 Engineering Search APIs
+
+As repository collections grow, engineering-focused search becomes increasingly valuable.
+
+Future endpoints may include:
+
+```text
+/api/search/repositories
+```
+
+```text
+/api/search/technologies
+```
+
+```text
+/api/search/capabilities
+```
+
+```text
+/api/search/architecture
+```
+
+Unlike traditional text search, engineering search would leverage Repository DNA, Architecture Intelligence and engineering capabilities to return context-aware results.
+
+---
+
+# 13.6 Public Developer APIs
+
+Future releases may expose selected engineering intelligence through public APIs.
+
+Potential capabilities include:
+
+- repository classification
+- engineering profile generation
+- architecture radar generation
+- repository benchmarking
+- engineering quality assessment
+
+This would allow external developer tools, CI/CD pipelines and engineering platforms to integrate directly with ArcHive.
+
+Access would be secured using API keys or OAuth-based authentication.
+
+---
+
+# 13.7 Webhook APIs
+
+While ArcHive currently consumes GitHub webhooks, future versions may also publish engineering events.
+
+Example webhook events include:
+
+```text
+Repository Classified
+
+Engineering Intelligence Updated
+
+Architecture Changed
+
+Repository Reprocessed
+
+Engineering Assessment Completed
+```
+
+Third-party platforms could subscribe to these events to automate engineering workflows.
+
+Example integrations include:
+
+- Slack
+- Microsoft Teams
+- Discord
+- Jira
+- Linear
+- GitHub Actions
+
+This event-driven model would allow ArcHive to become an active participant within broader engineering ecosystems.
+
+---
+
+# 13.8 Analytics APIs
+
+Future analytics endpoints may expose engineering metrics across repositories.
+
+Examples include:
+
+```text
+/api/analytics/engineering-quality
+```
+
+```text
+/api/analytics/maturity
+```
+
+```text
+/api/analytics/repository-health
+```
+
+```text
+/api/analytics/technology-trends
+```
+
+These endpoints would support engineering dashboards used by technical leaders and platform engineering teams.
+
+---
+
+# 13.9 Enterprise APIs
+
+As ArcHive expands into larger engineering organisations, enterprise-specific APIs may include:
+
+- workspace management
+- role-based access control
+- organisation administration
+- audit logging
+- engineering governance
+- repository policy enforcement
+
+These capabilities would enable ArcHive to support enterprise software engineering at scale.
+
+---
+
+# 13.10 API Extensibility
+
+One of the defining architectural characteristics of the ArcHive API is extensibility.
+
+Every future capability is expected to follow the same design principles established throughout this document.
+
+New endpoints should:
+
+- expose engineering concepts
+- follow canonical response models
+- preserve backwards compatibility
+- integrate with Repository Intelligence
+- remain explainable
+- support asynchronous processing where appropriate
+
+Because the API is built around engineering concepts rather than implementation details, additional capabilities can be introduced without disrupting existing consumers.
+
+---
+
+# 13.11 Future API Summary
+
+The ArcHive API has been intentionally designed to support continuous growth.
+
+Future capabilities—including organisation analytics, AI-assisted engineering intelligence, repository similarity analysis, public developer APIs and enterprise engineering services—can be integrated while preserving the platform's existing architectural principles.
+
+This extensibility ensures that the API remains a stable foundation for future innovation, allowing ArcHive to evolve from an Engineering Intelligence Platform into a comprehensive software engineering ecosystem.
+
+---
+
+# 14. Conclusion
+
+The ArcHive API serves as the communication layer between repositories, engineering intelligence engines and client applications.
+
+Rather than exposing database entities or implementation details, the API presents engineering concepts through a consistent, RESTful interface centred around Repository Intelligence.
+
+Throughout this document, the API has been described as a collection of cooperating services responsible for repository management, authentication, engineering intelligence generation, architecture analysis, timeline management, GitHub integration and asynchronous processing.
+
+Together, these services transform raw repository activity into structured engineering knowledge while maintaining predictable API contracts and a consistent developer experience.
+
+Several architectural principles guide every aspect of the API:
+
+- engineering-first resource design
+- stable response contracts
+- backend-generated intelligence
+- asynchronous processing
+- explainable engineering outputs
+- backwards compatibility
+- extensibility
+
+These principles allow ArcHive to grow without compromising maintainability or developer usability.
+
+More importantly, the API does not exist solely to expose data.
+
+It exists to expose **engineering intelligence**.
+
+Every endpoint contributes to the broader objective of helping developers understand software systems through repository classification, engineering assessment, architecture analysis and repository benchmarking.
+
+As additional intelligence engines, engineering domains and platform capabilities are introduced, the ArcHive API provides a robust foundation upon which future innovation can be built while preserving the consistency and reliability expected of a modern engineering platform.
+
+Ultimately, the ArcHive API embodies the central philosophy of the platform:
+
+> **Software repositories should expose engineering knowledge through stable, explainable and developer-friendly interfaces rather than merely providing access to underlying data.**
