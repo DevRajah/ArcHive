@@ -1431,3 +1431,334 @@ By exposing Repository Identity, Repository DNA, Repository Persona, Architectur
 Rather than exposing isolated metrics or raw repository data, the Engineering Intelligence API transforms software repositories into explainable engineering assets capable of supporting architectural analysis, engineering decision-making and portfolio-wide intelligence.
 
 The next section introduces the **Timeline and Engineering Events API**, which captures repository evolution over time and provides the historical engineering context that powers architecture analysis and repository intelligence.
+
+# 7. Timeline & Engineering Events API
+
+Software repositories are continuously evolving systems.
+
+Every commit, pull request, architectural change and engineering decision contributes to the long-term evolution of a software project.
+
+Rather than analysing repositories as static snapshots, ArcHive records these engineering events over time and exposes them through the Timeline & Engineering Events API.
+
+This historical perspective allows developers to understand not only the current state of a repository, but also **how it reached that state**.
+
+The Timeline API therefore complements the Engineering Intelligence API by providing chronological engineering context.
+
+---
+
+# 7.1 Purpose of the Timeline API
+
+Engineering intelligence becomes significantly more valuable when supported by historical evidence.
+
+For example, a repository may currently be classified as an Engineering Intelligence Platform.
+
+The Timeline API explains how that classification emerged by recording engineering events throughout the repository lifecycle.
+
+Typical timeline events include:
+
+- repository import
+- GitHub synchronisation
+- architecture changes
+- technology detection
+- intelligence regeneration
+- engineering assessments
+- repository reprocessing
+
+Rather than storing isolated engineering observations, ArcHive organises them into a coherent engineering history.
+
+---
+
+# 7.2 Timeline Architecture
+
+Conceptually, repository evolution follows the workflow below.
+
+```text
+GitHub Activity
+
+↓
+
+Webhook Events
+
+↓
+
+Engineering Event Queue
+
+↓
+
+Worker Processing
+
+↓
+
+Timeline Entries
+
+↓
+
+Architecture Changes
+
+↓
+
+Repository Intelligence
+
+↓
+
+Timeline API
+```
+
+Each engineering event contributes additional historical context that later intelligence engines can consume.
+
+---
+
+# 7.3 Timeline Entries
+
+Timeline entries represent meaningful engineering milestones throughout repository evolution.
+
+Examples include:
+
+- repository imported
+- repository analysed
+- engineering intelligence regenerated
+- architecture updated
+- new technology detected
+- repository reprocessed
+
+Each timeline entry records:
+
+- title
+- description
+- timestamp
+- related repository
+- engineering metadata
+
+This allows engineering history to be presented chronologically while remaining understandable to developers.
+
+---
+
+# 7.4 Engineering Events
+
+Engineering events differ from timeline entries.
+
+Timeline entries are designed for human consumption.
+
+Engineering events are intended primarily for internal processing.
+
+Examples include:
+
+```text
+Repository Imported
+
+GitHub Push Received
+
+Architecture Updated
+
+Technology Detected
+
+Repository Reprocessed
+```
+
+Engineering events act as the raw operational data that ultimately produces timeline entries and repository intelligence.
+
+---
+
+# 7.5 Event Processing Pipeline
+
+Events generated throughout the platform are processed asynchronously.
+
+Conceptually:
+
+```text
+Incoming Event
+
+↓
+
+Event Queue
+
+↓
+
+Worker
+
+↓
+
+Repository Updated
+
+↓
+
+Timeline Generated
+
+↓
+
+Architecture Updated
+
+↓
+
+Repository Intelligence Regenerated
+```
+
+This asynchronous architecture prevents expensive engineering analysis from delaying API responses while improving scalability.
+
+---
+
+# 7.6 Architecture Change Tracking
+
+One of the most valuable event types recorded by ArcHive is the Architecture Change.
+
+Architecture changes capture engineering evolution over time.
+
+Typical information includes:
+
+- affected component
+- detected technology
+- architecture domain
+- engineering reasoning
+- repository classifications
+- engineering summary
+
+Rather than simply recording file modifications, ArcHive records engineering significance.
+
+This enables Architecture Intelligence to reason about long-term repository evolution.
+
+---
+
+# 7.7 Repository Evolution
+
+As timeline entries accumulate, ArcHive begins constructing an engineering narrative describing repository growth.
+
+Examples include:
+
+```text
+Repository Imported
+
+↓
+
+Authentication Added
+
+↓
+
+Queue Infrastructure Introduced
+
+↓
+
+Engineering Intelligence Expanded
+
+↓
+
+Architecture Assessment Improved
+
+↓
+
+Repository Reprocessed
+```
+
+This engineering timeline provides significantly richer context than a traditional commit history.
+
+---
+
+# 7.8 Timeline Retrieval
+
+Timeline endpoints expose engineering history in chronological order.
+
+Typical operations include:
+
+- retrieve repository timeline
+- view engineering events
+- inspect architecture history
+- analyse repository evolution
+
+Because timeline information is already structured, frontend applications can present repository history without additional processing.
+
+---
+
+# 7.9 Timeline Visualisation
+
+The Timeline API is designed to support visual engineering dashboards.
+
+Typical frontend visualisations include:
+
+- chronological activity feeds
+- engineering milestone timelines
+- architecture evolution views
+- repository growth summaries
+- intelligence refresh history
+
+These visualisations allow developers to understand repository evolution at a glance.
+
+---
+
+# 7.10 Relationship with Architecture Intelligence
+
+Timeline data serves as one of the primary inputs to the Architecture Intelligence Engine.
+
+Rather than analysing only the current repository snapshot, Architecture Intelligence also considers historical engineering evolution.
+
+For example:
+
+```text
+Timeline
+
+↓
+
+Architecture Changes
+
+↓
+
+Engineering Signals
+
+↓
+
+Architecture Radar
+
+↓
+
+Repository Narrative
+```
+
+This historical perspective enables ArcHive to identify long-term engineering trends rather than isolated implementation details.
+
+---
+
+# 7.11 Timeline API Design Principles
+
+The Timeline API follows several architectural principles.
+
+### Historical Accuracy
+
+Timeline entries preserve the chronological order of engineering events.
+
+---
+
+### Explainability
+
+Every significant engineering event can be traced back to supporting repository activity.
+
+---
+
+### Separation of Concerns
+
+Engineering events remain distinct from timeline entries.
+
+Events support processing.
+
+Timeline entries support presentation.
+
+---
+
+### Scalability
+
+Event processing occurs asynchronously through background workers, allowing repository analysis to scale without blocking API requests.
+
+---
+
+### Intelligence Integration
+
+Timeline information feeds directly into Architecture Intelligence, Repository Narratives and Engineering Assessment.
+
+---
+
+# 7.12 Timeline API Summary
+
+The Timeline & Engineering Events API provides the historical foundation of ArcHive's Engineering Intelligence Platform.
+
+By recording engineering milestones, architecture evolution and repository activity over time, the API enables developers to understand not only what a repository currently represents, but also how its engineering characteristics have evolved.
+
+This historical context strengthens repository classification, architecture analysis and engineering assessment while providing a rich engineering narrative that extends far beyond traditional source control history.
+
+The next section introduces the **GitHub Integration API**, which connects ArcHive to GitHub repositories, receives webhook events and continuously synchronises engineering activity into the intelligence pipeline.
