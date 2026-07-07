@@ -1052,3 +1052,382 @@ By managing repository onboarding, engineering intelligence generation, dashboar
 Rather than exposing simple CRUD operations, the Repository API orchestrates the complete lifecycle of repository intelligence, ensuring that software systems evolve from imported GitHub repositories into fully analysed engineering assets.
 
 The next section introduces the **Engineering Intelligence API**, which exposes the specialised endpoints responsible for Repository DNA, Repository Persona, Architecture Radar, Repository Narrative, Engineering Assessment and Benchmarking.
+
+# 6. Engineering Intelligence API
+
+The Engineering Intelligence API represents the defining capability of the ArcHive platform.
+
+While the Repository API manages repository lifecycle operations, the Engineering Intelligence API is responsible for transforming engineering evidence into structured software intelligence.
+
+Rather than exposing raw repository metadata, these endpoints deliver high-level engineering insights including repository identity, engineering profile, architecture analysis, repository narratives, engineering assessments and benchmarking results.
+
+Collectively, these endpoints provide the primary value offered by ArcHive.
+
+---
+
+# 6.1 Engineering Intelligence Overview
+
+Every intelligence endpoint derives its information from the same canonical Repository Intelligence model.
+
+Conceptually:
+
+```text
+Repository
+
+↓
+
+Evidence Collection
+
+↓
+
+Technology Fingerprint
+
+↓
+
+Repository Classification
+
+↓
+
+Repository DNA
+
+↓
+
+Architecture Intelligence
+
+↓
+
+Engineering Assessment
+
+↓
+
+Recommendations
+
+↓
+
+Benchmarking
+
+↓
+
+Repository Intelligence API
+```
+
+Because every endpoint is backed by the same intelligence pipeline, engineering information remains consistent throughout the platform.
+
+---
+
+# 6.2 Repository Intelligence Endpoint
+
+The Repository Intelligence endpoint serves as the primary engineering intelligence resource.
+
+Rather than requiring clients to call multiple APIs, this endpoint aggregates outputs from every major intelligence engine.
+
+Typical response sections include:
+
+```text
+Identity
+
+Signals
+
+Repository DNA
+
+Assessment
+
+Advisor
+
+Benchmarking
+```
+
+This endpoint acts as the canonical engineering intelligence interface used throughout the frontend.
+
+Future intelligence engines can contribute additional information without changing the overall response structure.
+
+---
+
+# 6.3 Repository Identity
+
+Repository Identity describes what a repository fundamentally represents.
+
+Typical information includes:
+
+- primary repository type
+- repository purpose
+- repository types
+- repository persona
+- engineering profile
+
+Examples:
+
+```text
+Engineering Intelligence Platform
+```
+
+```text
+Developer Tooling Platform
+```
+
+```text
+Financial Infrastructure
+```
+
+Repository Identity intentionally communicates engineering purpose before implementation.
+
+---
+
+# 6.4 Repository DNA
+
+Repository DNA provides a concise engineering summary describing the overall engineering characteristics of a repository.
+
+Typical fields include:
+
+```text
+Engineering Profile
+
+Dominant Technologies
+
+Engineering Focus
+
+Strongest Capabilities
+
+Complexity Score
+
+Maturity Score
+
+Confidence Score
+```
+
+Repository DNA is intended for dashboards, portfolio summaries and engineering overview pages where concise intelligence is preferred over detailed reports.
+
+---
+
+# 6.5 Repository Persona
+
+Repository Persona represents the engineering personality of a repository.
+
+Unlike Repository Identity, which focuses on classification, Repository Persona communicates how the repository behaves from an engineering perspective.
+
+Examples include:
+
+- Engineering Intelligence Platform
+- Backend Infrastructure
+- Developer Platform
+- Financial Systems Platform
+
+Repository Persona enables richer engineering descriptions while complementing the repository's primary identity.
+
+---
+
+# 6.6 Architecture Radar
+
+Architecture Radar visualises the architectural composition of a repository.
+
+Rather than listing detected technologies, it highlights the dominant engineering domains identified throughout repository analysis.
+
+Typical domains include:
+
+```text
+API Layer
+
+Database Layer
+
+Authentication
+
+Queue Infrastructure
+
+Realtime Systems
+
+Repository Analysis
+
+Engineering Intelligence
+
+Frontend Architecture
+```
+
+Each domain receives a score based on engineering evidence gathered during analysis.
+
+The resulting radar provides an intuitive visual summary of repository architecture.
+
+---
+
+# 6.7 Repository Narrative
+
+The Repository Narrative endpoint converts structured engineering intelligence into a human-readable description.
+
+Rather than requiring developers to interpret numerous engineering metrics, ArcHive automatically generates an engineering summary describing:
+
+- repository purpose
+- engineering characteristics
+- architecture style
+- dominant technologies
+- engineering capabilities
+- overall engineering focus
+
+For example:
+
+> ArcHive is an Engineering Intelligence Platform designed to analyse software repositories, generate engineering intelligence and provide explainable architectural insights through a modular multi-stage analysis pipeline.
+
+Repository narratives improve onboarding while making engineering reports easier to interpret.
+
+---
+
+# 6.8 Engineering Assessment
+
+The Engineering Assessment endpoint aggregates outputs from multiple specialised assessment engines.
+
+Typical assessment areas include:
+
+```text
+Engineering Quality
+
+Repository Health
+
+Repository Maturity
+
+Production Readiness
+
+Technical Debt
+
+Architecture Intelligence
+```
+
+Unlike Repository DNA, which summarises engineering characteristics, Engineering Assessment evaluates repository quality.
+
+These assessments support engineering decision-making while providing a consistent view of repository condition.
+
+---
+
+# 6.9 Recommendation Report
+
+Recommendations are generated after engineering assessment has completed.
+
+The Recommendation endpoint provides structured engineering guidance rather than static observations.
+
+Typical recommendation categories include:
+
+- architecture
+- infrastructure
+- engineering quality
+- scalability
+- maintainability
+- security
+
+Each recommendation is supported by engineering evidence and accompanied by reasoning describing why the recommendation was generated.
+
+---
+
+# 6.10 Benchmarking
+
+Benchmarking compares repositories across a common engineering framework.
+
+Typical benchmarking dimensions include:
+
+- engineering quality
+- repository maturity
+- repository health
+- complexity
+- engineering confidence
+- architecture diversity
+
+Benchmarking enables developers to understand repositories relative to one another rather than analysing repositories in isolation.
+
+---
+
+# 6.11 Engineering Signals
+
+Engineering Signals provide transparency into the reasoning behind repository classification.
+
+Examples include:
+
+```text
+Detected Repository Intelligence Concepts
+
+Detected Queue Infrastructure
+
+Detected Financial Reconciliation
+
+Detected Authentication Workflow
+```
+
+These signals explain how engineering conclusions were reached and support ArcHive's commitment to explainable engineering intelligence.
+
+---
+
+# 6.12 Evidence Results
+
+Every repository classification is supported by structured engineering evidence.
+
+Evidence results include information such as:
+
+- repository type
+- confidence
+- evidence strength
+- supporting engineering observations
+- strongest evidence
+
+Presenting evidence alongside repository classifications allows developers to understand not only what ArcHive concluded, but why those conclusions were reached.
+
+---
+
+# 6.13 Canonical Intelligence Response
+
+Although multiple endpoints expose specialised engineering information, they all derive from the same canonical model.
+
+Conceptually:
+
+```text
+repositoryIntelligence
+
+├── identity
+├── signals
+├── repositoryDNA
+├── assessment
+├── advisor
+└── benchmarking
+```
+
+Maintaining a single intelligence model ensures consistency across every dashboard, report and engineering visualisation within ArcHive.
+
+---
+
+# 6.14 Engineering Intelligence API Design Principles
+
+Several architectural principles guided the design of the Engineering Intelligence API.
+
+### Canonical Responses
+
+Every endpoint contributes to a shared intelligence model.
+
+---
+
+### Explainability
+
+Engineering conclusions are always accompanied by reasoning signals and supporting evidence.
+
+---
+
+### Extensibility
+
+New intelligence engines can introduce additional sections without breaking existing API contracts.
+
+---
+
+### Backend Intelligence
+
+Engineering analysis is generated exclusively on the backend, ensuring consistent behaviour across all clients.
+
+---
+
+### Engineering-Centric Design
+
+Endpoints expose engineering concepts rather than persistence models or implementation details.
+
+---
+
+# 6.15 Engineering Intelligence API Summary
+
+The Engineering Intelligence API is the analytical heart of ArcHive.
+
+By exposing Repository Identity, Repository DNA, Repository Persona, Architecture Radar, Repository Narrative, Engineering Assessment, Recommendations and Benchmarking through a unified intelligence model, the API enables frontend applications and future integrations to consume sophisticated engineering insights through a simple, consistent interface.
+
+Rather than exposing isolated metrics or raw repository data, the Engineering Intelligence API transforms software repositories into explainable engineering assets capable of supporting architectural analysis, engineering decision-making and portfolio-wide intelligence.
+
+The next section introduces the **Timeline and Engineering Events API**, which captures repository evolution over time and provides the historical engineering context that powers architecture analysis and repository intelligence.
