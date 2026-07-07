@@ -438,3 +438,304 @@ presentation into independent components, making the platform
 maintainable, extensible and suitable for analysing repositories at
 scale.
 
+# 4. Authentication & Authorization
+
+Before engineering intelligence can be generated or repository data accessed, every request must pass through ArcHive's authentication and authorisation layers.
+
+Security is treated as a first-class engineering concern throughout the platform.
+
+Rather than allowing unrestricted access to repository intelligence, ArcHive ensures that every protected request is associated with an authenticated user and that permissions are evaluated before business logic is executed.
+
+This approach protects repository information while providing a consistent security model for both the dashboard and future third-party integrations.
+
+---
+
+# 4.1 Authentication Model
+
+ArcHive authenticates users through GitHub OAuth.
+
+GitHub serves as the platform's identity provider, allowing developers to sign in using their existing GitHub accounts without creating separate ArcHive credentials.
+
+The authentication workflow follows a standard OAuth 2.0 authorisation flow.
+
+Conceptually:
+
+```text
+User
+
+↓
+
+GitHub OAuth
+
+↓
+
+Authorization Code
+
+↓
+
+ArcHive Backend
+
+↓
+
+GitHub Access Token
+
+↓
+
+User Identity
+
+↓
+
+JWT
+
+↓
+
+Authenticated Session
+```
+
+Once authentication succeeds, ArcHive generates its own JSON Web Token (JWT), which becomes the primary authentication mechanism for subsequent API requests.
+
+This separation allows ArcHive to maintain its own session model while delegating user identity verification to GitHub.
+
+---
+
+# 4.2 Why GitHub OAuth?
+
+GitHub OAuth was selected for several reasons.
+
+First, ArcHive is designed primarily for software engineers, making GitHub the most natural identity provider.
+
+Second, OAuth eliminates the need for password storage within ArcHive.
+
+Finally, authenticated GitHub access enables the platform to import repositories and retrieve engineering metadata securely.
+
+By relying on GitHub for identity verification, ArcHive reduces security risk while simplifying the user onboarding experience.
+
+---
+
+# 4.3 JSON Web Tokens (JWT)
+
+After successful authentication, ArcHive issues a signed JSON Web Token.
+
+The JWT represents the authenticated session and is included with every protected API request.
+
+Typical request format:
+
+```http
+Authorization: Bearer <jwt-token>
+```
+
+The backend validates the token before processing the request.
+
+If validation fails, the request is rejected immediately without executing application logic.
+
+This ensures that protected engineering resources remain accessible only to authenticated users.
+
+---
+
+# 4.4 Protected Resources
+
+Most engineering endpoints require authentication.
+
+Examples include:
+
+```text
+Repository Dashboard
+
+Repository Intelligence
+
+Architecture Radar
+
+Repository Narrative
+
+Repository Reprocessing
+
+Timeline
+
+Repository Benchmarking
+```
+
+Public endpoints remain limited to health checks and other non-sensitive resources.
+
+This security model ensures that repository intelligence is only available to authorised users.
+
+---
+
+# 4.5 Authorization
+
+Authentication answers the question:
+
+> Who is making this request?
+
+Authorisation answers:
+
+> What is this user allowed to access?
+
+After authentication succeeds, ArcHive verifies that the authenticated user has permission to access the requested resource.
+
+For example:
+
+```text
+User
+
+↓
+
+Owns Repository
+
+↓
+
+Access Granted
+```
+
+Whereas:
+
+```text
+User
+
+↓
+
+Attempts To Access Another User's Repository
+
+↓
+
+Access Denied
+```
+
+This ownership-based authorisation model prevents users from viewing or modifying repositories that do not belong to them.
+
+---
+
+# 4.6 Repository Ownership
+
+Every repository imported into ArcHive is associated with a specific user.
+
+Ownership is validated before sensitive engineering operations are performed.
+
+Examples include:
+
+- viewing repository intelligence
+- refreshing engineering intelligence
+- accessing repository timelines
+- viewing architecture reports
+- generating repository narratives
+
+Ownership validation is performed on the backend rather than relying on frontend restrictions.
+
+This ensures that authorisation remains enforceable regardless of the client consuming the API.
+
+---
+
+# 4.7 Authentication Middleware
+
+Authentication is implemented through reusable middleware.
+
+Conceptually, the request lifecycle follows:
+
+```text
+Incoming Request
+
+↓
+
+JWT Validation
+
+↓
+
+User Resolution
+
+↓
+
+Ownership Validation
+
+↓
+
+Business Logic
+
+↓
+
+API Response
+```
+
+By centralising authentication within middleware, security logic remains consistent across every protected endpoint.
+
+This also avoids duplicating authentication checks throughout the codebase.
+
+---
+
+# 4.8 Token Validation
+
+Every JWT undergoes several validation steps before access is granted.
+
+Typical validation includes:
+
+- signature verification
+- expiration validation
+- token integrity checks
+- user existence verification
+
+Requests containing invalid or expired tokens are rejected before reaching application services.
+
+This defensive approach minimises unnecessary processing while strengthening API security.
+
+---
+
+# 4.9 Authentication Error Responses
+
+Authentication failures follow a consistent response format.
+
+Example:
+
+```json
+{
+  "success": false,
+  "message": "Authentication required."
+}
+```
+
+Invalid or expired tokens produce similar responses with appropriate HTTP status codes.
+
+Providing consistent error structures simplifies frontend error handling and improves developer experience.
+
+---
+
+# 4.10 Security Principles
+
+ArcHive's authentication layer follows several engineering principles.
+
+### Least Privilege
+
+Users are granted access only to repositories they own.
+
+---
+
+### Stateless Authentication
+
+Authentication information is carried entirely within the JWT.
+
+No server-side session state is required.
+
+---
+
+### Backend Enforcement
+
+Authorisation decisions are always performed on the backend.
+
+Frontend applications cannot bypass repository ownership checks.
+
+---
+
+### Secure by Default
+
+Engineering intelligence endpoints are protected unless explicitly intended to be public.
+
+This reduces the likelihood of unintentionally exposing sensitive repository information.
+
+---
+
+# 4.11 Authentication Summary
+
+Authentication and authorisation form the security foundation of the ArcHive API.
+
+By combining GitHub OAuth, JWT-based authentication and ownership-based authorisation, the platform ensures that engineering intelligence remains both secure and easily accessible to authorised users.
+
+This layered security model allows frontend applications, background workers and future API consumers to interact with the platform through a consistent and well-defined authentication mechanism.
+
+The next section introduces the **Repository API**, which serves as the primary entry point for importing repositories, managing engineering data and initiating repository intelligence generation.
