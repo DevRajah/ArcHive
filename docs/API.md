@@ -1940,3 +1940,391 @@ Through repository discovery, OAuth authentication, webhook processing, asynchro
 By adopting an event-driven architecture, ArcHive avoids unnecessary polling while maintaining accurate, explainable and up-to-date engineering intelligence across the entire repository portfolio.
 
 The next section introduces the **Queue & Background Processing API**, explaining how ArcHive performs large-scale engineering analysis asynchronously while maintaining fast and responsive API interactions.
+
+
+# 9. Queue & Background Processing API
+
+Generating engineering intelligence is a computationally intensive process.
+
+Repository classification, architecture analysis, engineering assessment, benchmarking and repository narrative generation all require multiple intelligence engines to execute sequentially.
+
+Performing these operations synchronously during every API request would significantly increase response times while limiting platform scalability.
+
+To address this challenge, ArcHive adopts an asynchronous processing architecture built around Redis and BullMQ.
+
+Rather than performing expensive engineering analysis during HTTP requests, the API delegates long-running tasks to background workers through a distributed job queue.
+
+This architecture enables the platform to remain responsive while continuously processing engineering intelligence in the background.
+
+---
+
+# 9.1 Why Background Processing?
+
+Engineering intelligence involves considerably more work than retrieving data from a database.
+
+A single repository refresh may require:
+
+- analysing repository metadata
+- executing engineering detectors
+- generating technology fingerprints
+- recalculating repository identity
+- updating Repository DNA
+- rebuilding Architecture Intelligence
+- generating engineering assessments
+- refreshing recommendations
+- updating benchmarking information
+- writing timeline entries
+
+Executing these operations within a single HTTP request would introduce unnecessary latency.
+
+Background processing separates engineering computation from user interaction.
+
+---
+
+# 9.2 Queue Architecture
+
+ArcHive follows an event-driven queue architecture.
+
+Conceptually:
+
+```text
+Client Request
+
+↓
+
+API
+
+↓
+
+Engineering Job
+
+↓
+
+BullMQ Queue
+
+↓
+
+Redis
+
+↓
+
+Worker
+
+↓
+
+Engineering Intelligence
+
+↓
+
+Database
+
+↓
+
+Frontend Refresh
+```
+
+Instead of waiting for engineering analysis to complete, the API immediately accepts the request and schedules background processing.
+
+Workers then execute the required intelligence pipeline independently.
+
+---
+
+# 9.3 BullMQ
+
+BullMQ provides the queue management layer within ArcHive.
+
+Its responsibilities include:
+
+- job scheduling
+- job persistence
+- retry handling
+- failure recovery
+- worker coordination
+- queue monitoring
+
+BullMQ was selected because it provides a robust and scalable foundation for asynchronous engineering workloads while integrating naturally with the Node.js ecosystem.
+
+---
+
+# 9.4 Redis
+
+Redis acts as the underlying message broker for BullMQ.
+
+Rather than storing jobs directly within the application, Redis maintains queue state independently.
+
+This provides several engineering advantages:
+
+- durable job storage
+- efficient queue operations
+- fast worker communication
+- horizontal scalability
+- distributed processing support
+
+Separating queue infrastructure from application logic allows workers to scale independently of the API server.
+
+---
+
+# 9.5 Worker Architecture
+
+Workers are responsible for executing engineering jobs retrieved from the queue.
+
+Each worker processes jobs independently from incoming API requests.
+
+Typical responsibilities include:
+
+- repository classification
+- engineering detector execution
+- architecture analysis
+- timeline generation
+- engineering assessment
+- repository benchmarking
+- intelligence regeneration
+
+This separation ensures that engineering analysis continues even when the API is handling new client requests.
+
+---
+
+# 9.6 Job Lifecycle
+
+Every engineering job progresses through a predictable lifecycle.
+
+Conceptually:
+
+```text
+Job Created
+
+↓
+
+Queued
+
+↓
+
+Waiting
+
+↓
+
+Processing
+
+↓
+
+Completed
+
+↓
+
+Engineering Intelligence Updated
+```
+
+If a problem occurs during execution:
+
+```text
+Processing
+
+↓
+
+Failed
+
+↓
+
+Retry
+
+↓
+
+Completed
+```
+
+This lifecycle provides visibility into engineering operations while improving fault tolerance.
+
+---
+
+# 9.7 Repository Reprocessing Jobs
+
+Repository reprocessing is one of the most common background operations.
+
+Whenever users request an intelligence refresh, the API creates a new background job.
+
+The worker then performs:
+
+- technology fingerprint regeneration
+- repository reclassification
+- Repository DNA updates
+- architecture intelligence refresh
+- engineering assessment regeneration
+- benchmarking updates
+- recommendation regeneration
+
+The frontend can continue operating while these computations occur asynchronously.
+
+---
+
+# 9.8 Webhook Processing Jobs
+
+GitHub webhook events are also processed through the queue.
+
+Conceptually:
+
+```text
+GitHub Webhook
+
+↓
+
+API
+
+↓
+
+Engineering Event
+
+↓
+
+BullMQ Queue
+
+↓
+
+Worker
+
+↓
+
+Architecture Changes
+
+↓
+
+Timeline Updates
+
+↓
+
+Repository Intelligence Refresh
+```
+
+This architecture prevents webhook requests from timing out while allowing complex engineering analysis to execute independently.
+
+---
+
+# 9.9 Queue Monitoring
+
+ArcHive continuously monitors background processing activity.
+
+Typical operational metrics include:
+
+- queued jobs
+- active jobs
+- completed jobs
+- failed jobs
+- retry count
+- processing duration
+
+These metrics help developers understand platform activity while simplifying debugging and operational monitoring.
+
+Future versions of ArcHive may expose richer operational dashboards for engineering teams.
+
+---
+
+# 9.10 Retry Strategy
+
+Background processing occasionally encounters temporary failures.
+
+Examples include:
+
+- database connectivity issues
+- GitHub availability
+- Redis interruptions
+- worker restarts
+
+Rather than immediately discarding failed jobs, BullMQ automatically retries eligible operations.
+
+Retry behaviour improves platform resilience while reducing manual intervention.
+
+Permanent failures are recorded for later inspection.
+
+---
+
+# 9.11 Fault Isolation
+
+One of the primary advantages of asynchronous processing is fault isolation.
+
+If engineering analysis fails:
+
+- API availability remains unaffected.
+- Repository data remains accessible.
+- Users continue interacting with the dashboard.
+- Failed jobs can be retried later.
+
+Separating engineering computation from request handling significantly improves overall platform reliability.
+
+---
+
+# 9.12 Scalability
+
+The queue architecture enables ArcHive to scale horizontally.
+
+Instead of increasing API server resources, additional workers can be introduced as engineering workloads grow.
+
+Conceptually:
+
+```text
+API
+
+↓
+
+Queue
+
+↓
+
+Worker 1
+
+Worker 2
+
+Worker 3
+
+Worker 4
+
+↓
+
+Repository Intelligence
+```
+
+This architecture supports large engineering portfolios without introducing bottlenecks within the API layer.
+
+---
+
+# 9.13 Queue API Design Principles
+
+Several engineering principles influenced the design of ArcHive's background processing system.
+
+### Asynchronous by Default
+
+Long-running engineering operations execute outside the request lifecycle.
+
+---
+
+### Loose Coupling
+
+API servers and workers remain independent services.
+
+---
+
+### Reliability
+
+Jobs are persisted, monitored and retried automatically where appropriate.
+
+---
+
+### Scalability
+
+Additional workers can be introduced without modifying API behaviour.
+
+---
+
+### Fault Tolerance
+
+Processing failures are isolated from frontend interactions.
+
+---
+
+# 9.14 Queue & Background Processing Summary
+
+The Queue & Background Processing API enables ArcHive to perform sophisticated engineering analysis without compromising responsiveness.
+
+By combining BullMQ, Redis and independent worker processes, the platform separates computationally intensive intelligence generation from client interactions, ensuring that repository classification, architecture analysis and engineering assessments remain scalable, reliable and resilient.
+
+This asynchronous architecture forms a critical part of ArcHive's Engineering Intelligence Platform, allowing repository intelligence to evolve continuously while maintaining a fast and predictable user experience.
+
+The next section introduces the **Error Handling & Response Model**, explaining how ArcHive communicates success, failures and validation feedback through a consistent API contract.
