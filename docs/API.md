@@ -2328,3 +2328,338 @@ By combining BullMQ, Redis and independent worker processes, the platform separa
 This asynchronous architecture forms a critical part of ArcHive's Engineering Intelligence Platform, allowing repository intelligence to evolve continuously while maintaining a fast and predictable user experience.
 
 The next section introduces the **Error Handling & Response Model**, explaining how ArcHive communicates success, failures and validation feedback through a consistent API contract.
+
+# 10. Error Handling & Response Model
+
+Consistency is one of the fundamental design principles of the ArcHive API.
+
+Regardless of whether an operation succeeds or fails, every endpoint returns responses using a predictable structure.
+
+This consistency reduces frontend complexity, simplifies API integration and improves the overall developer experience.
+
+Rather than forcing client applications to handle dozens of response formats, ArcHive exposes a unified response model that remains stable across every engineering resource.
+
+---
+
+# 10.1 Design Objectives
+
+The response model was designed with several engineering objectives.
+
+These include:
+
+- consistency
+- predictability
+- readability
+- frontend simplicity
+- backend maintainability
+- future extensibility
+
+Every endpoint, regardless of its underlying business logic, follows the same response contract.
+
+This allows frontend applications to process responses without endpoint-specific parsing logic.
+
+---
+
+# 10.2 Standard Success Response
+
+Successful requests follow a consistent structure.
+
+Conceptually:
+
+```json
+{
+  "success": true,
+  "message": "Repository fetched successfully.",
+  "data": {
+    "...": "..."
+  }
+}
+```
+
+Each property serves a specific purpose.
+
+| Field | Purpose |
+|--------|----------|
+| success | Indicates whether the request completed successfully |
+| message | Human-readable description of the operation |
+| data | Resource returned by the API |
+
+Using a standard response structure improves readability while making the API easier to consume.
+
+---
+
+# 10.3 Standard Error Response
+
+Errors follow the same structural pattern.
+
+Example:
+
+```json
+{
+  "success": false,
+  "message": "Repository not found."
+}
+```
+
+More detailed validation errors may also include additional information.
+
+Example:
+
+```json
+{
+  "success": false,
+  "message": "Validation failed.",
+  "errors": [
+    {
+      "field": "repositoryId",
+      "message": "Repository ID is required."
+    }
+  ]
+}
+```
+
+Maintaining a common error format simplifies frontend validation and error presentation.
+
+---
+
+# 10.4 HTTP Status Codes
+
+ArcHive uses standard HTTP status codes to communicate request outcomes.
+
+Typical responses include:
+
+| Status Code | Meaning |
+|-------------|----------|
+| 200 | Request completed successfully |
+| 201 | Resource created successfully |
+| 400 | Invalid client request |
+| 401 | Authentication required |
+| 403 | Access denied |
+| 404 | Resource not found |
+| 409 | Resource conflict |
+| 422 | Validation failed |
+| 500 | Internal server error |
+
+Using standard HTTP semantics allows developers to interpret API responses without learning platform-specific conventions.
+
+---
+
+# 10.5 Validation Errors
+
+Incoming requests are validated before business logic executes.
+
+Validation checks typically include:
+
+- required fields
+- identifier format
+- request body structure
+- parameter validation
+- query validation
+
+If validation fails, the request is rejected immediately.
+
+Example:
+
+```json
+{
+  "success": false,
+  "message": "Validation failed.",
+  "errors": [
+    {
+      "field": "repositoryName",
+      "message": "Repository name cannot be empty."
+    }
+  ]
+}
+```
+
+Early validation prevents unnecessary processing while improving API reliability.
+
+---
+
+# 10.6 Authentication Errors
+
+Protected endpoints require valid authentication credentials.
+
+If authentication fails, ArcHive returns a consistent response.
+
+Example:
+
+```json
+{
+  "success": false,
+  "message": "Authentication required."
+}
+```
+
+Expired or invalid tokens produce similar responses accompanied by the appropriate HTTP status code.
+
+Authentication failures are handled before application services execute.
+
+---
+
+# 10.7 Authorization Errors
+
+Successfully authenticated users may still lack permission to access particular resources.
+
+For example:
+
+- attempting to access another user's repository
+- modifying repositories without ownership
+- requesting restricted engineering information
+
+Typical response:
+
+```json
+{
+  "success": false,
+  "message": "Access denied."
+}
+```
+
+Separating authentication from authorisation provides clearer feedback while improving security.
+
+---
+
+# 10.8 Resource Errors
+
+Resource-specific failures occur when requested entities do not exist.
+
+Examples include:
+
+- repository not found
+- timeline unavailable
+- intelligence report unavailable
+- architecture report unavailable
+
+Typical response:
+
+```json
+{
+  "success": false,
+  "message": "Repository not found."
+}
+```
+
+Using descriptive messages helps developers identify problems quickly.
+
+---
+
+# 10.9 Unexpected Server Errors
+
+Despite extensive validation, unexpected failures may still occur.
+
+Examples include:
+
+- database connectivity issues
+- queue failures
+- third-party integration failures
+- infrastructure interruptions
+
+ArcHive intentionally avoids exposing internal implementation details.
+
+Instead, users receive a generic response.
+
+Example:
+
+```json
+{
+  "success": false,
+  "message": "An unexpected error occurred."
+}
+```
+
+Detailed error information is recorded internally for debugging while preventing sensitive implementation details from being exposed publicly.
+
+---
+
+# 10.10 Error Logging
+
+All unexpected failures are logged internally.
+
+Typical logged information includes:
+
+- timestamp
+- request identifier
+- endpoint
+- error message
+- stack trace
+- contextual metadata
+
+Structured logging enables efficient debugging while supporting future observability features.
+
+---
+
+# 10.11 Frontend Error Handling
+
+Because every endpoint follows a consistent response model, frontend components can implement reusable error handling.
+
+Typical workflow:
+
+```text
+API Response
+
+↓
+
+success = true ?
+
+↓
+
+Render Data
+
+↓
+
+Otherwise
+
+↓
+
+Display Error Message
+```
+
+This significantly reduces duplicated frontend logic while improving maintainability.
+
+---
+
+# 10.12 API Response Principles
+
+Several principles govern every response returned by ArcHive.
+
+### Consistency
+
+Every endpoint follows the same structural contract.
+
+---
+
+### Simplicity
+
+Responses expose only information relevant to the client.
+
+---
+
+### Readability
+
+Messages are written for developers rather than internal implementation.
+
+---
+
+### Security
+
+Sensitive implementation details are never exposed through API responses.
+
+---
+
+### Extensibility
+
+Additional metadata can be introduced without breaking existing clients.
+
+---
+
+# 10.13 Error Handling Summary
+
+The Error Handling & Response Model ensures that every interaction with the ArcHive API is predictable, consistent and easy to integrate.
+
+By combining standard HTTP status codes, structured success responses, reusable error formats and secure failure handling, the platform provides a stable communication layer between backend services and client applications.
+
+This consistency improves developer experience, simplifies frontend implementation and strengthens the maintainability of the Engineering Intelligence Platform.
+
+The next section introduces **Pagination, Filtering & Query Parameters**, describing how ArcHive efficiently exposes large collections of repositories, engineering events and intelligence reports while maintaining responsive API performance.
