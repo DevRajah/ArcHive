@@ -1,6 +1,8 @@
 import { FastifyPluginAsync } from "fastify";
 import { adminOnly } from "../../middleware/admin.middleware";
 import { successResponse } from "../../utils/http-response";
+import dashboardRoute from "./dashboard.route";
+import usersRoute from "./users.route";
 
 // import dashboardRoute from "./dashboard.route";
 // import usersRoute from "./users.route";
@@ -11,7 +13,7 @@ import { successResponse } from "../../utils/http-response";
 // import systemRoute from "./system.route";
 
 // const adminRoutes: FastifyPluginAsync = async (app) => {
-//   app.register(dashboardRoute);
+//  
 //   app.register(usersRoute);
 //   app.register(repositoriesRoute);
 //   app.register(activityRoute);
@@ -22,6 +24,9 @@ import { successResponse } from "../../utils/http-response";
 
 const adminRoutes: FastifyPluginAsync = async (app) => {
   app.addHook("preHandler", adminOnly);
+
+   app.register(dashboardRoute);
+   app.register(usersRoute);
 
   app.get("/dashboard", async (_request, reply) => {
     return successResponse(reply, "Admin dashboard loaded successfully.", {
