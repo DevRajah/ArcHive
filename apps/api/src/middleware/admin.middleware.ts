@@ -1,23 +1,22 @@
 import { FastifyReply, FastifyRequest } from "fastify";
+import { errorResponse } from "../utils/http-response";
 import { isPlatformAdmin } from "../utils/admin";
 
 export async function adminOnly(
   request: FastifyRequest,
   reply: FastifyReply
 ) {
-  const user = request.user as any;
+  const user = (request as any).user as
+    | {
+        githubUsername?: string | null;
+      }
+    | undefined;
 
   if (!user) {
-    return reply.status(401).send({
-      success: false,
-      message: "Authentication required.",
-    });
+    return errorResponse(reply, 401, "Authentication required.");
   }
 
   if (!isPlatformAdmin(user.githubUsername)) {
-    return reply.status(403).send({
-      success: false,
-      message: "Administrator access required.",
-    });
+    return errorResponse(reply, 403, "Administrator access required.");
   }
 }

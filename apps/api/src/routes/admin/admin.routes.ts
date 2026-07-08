@@ -1,5 +1,5 @@
 import { FastifyPluginAsync } from "fastify";
-import { adminOnly } from "../middleware/admin.middleware";
+import { adminOnly } from "../../middleware/admin.middleware";
 
 const adminRoutes: FastifyPluginAsync = async (app) => {
   app.addHook("preHandler", adminOnly);
