@@ -1,11 +1,15 @@
 import { FastifyPluginAsync } from "fastify";
 import { adminUsersService } from "../../services/admin/users.service";
-import { successResponse } from "../../utils/http-response";
+import { errorResponse, successResponse } from "../../utils/http-response";
 
 type UsersQuery = {
   page?: string;
   limit?: string;
   search?: string;
+};
+
+type UserParams = {
+  userId: string;
 };
 
 const usersRoute: FastifyPluginAsync = async (app) => {
@@ -17,6 +21,16 @@ const usersRoute: FastifyPluginAsync = async (app) => {
     });
 
     return successResponse(reply, "Admin users fetched successfully.", users);
+  });
+
+  app.get<{ Params: UserParams }>("/users/:userId", async (request, reply) => {
+    const user = await adminUsersService.getUser(request.params.userId);
+
+    if (!user) {
+      return errorResponse(reply, 404, "User not found.");
+    }
+
+    return successResponse(reply, "Admin user fetched successfully.", user);
   });
 };
 
