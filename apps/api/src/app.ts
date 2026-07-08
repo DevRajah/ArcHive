@@ -13,6 +13,7 @@ import { githubSyncRoutes } from "./routes/github-sync.routes";
 import { devRoutes } from "./routes/dev.routes";
 import { userRoutes } from "./routes/user.routes";
 import { githubOAuthRoutes } from "./routes/github-oauth.routes";
+import adminRoutes from "./routes/admin.routes";
 
 // This makes future testing easier because I can import the app without starting the port.
 export const buildApp = async () => {
@@ -38,6 +39,10 @@ await app.register(cors, {
   await app.register(healthRoutes, {
     prefix: "/api/health",
   });
+
+  app.register(adminRoutes, {
+    prefix: "/api/admin",
+});
 
   await app.register(repositoryRoutes, {
     prefix: "/api/repositories",
