@@ -1,4 +1,5 @@
 import { prisma } from "@archive/database";
+import { GENERATED_CHANGE_TYPE } from "../../constants/intelligence.constants";
 
 const startOfToday = () => {
   const date = new Date();
@@ -16,39 +17,27 @@ export const adminDashboardService = {
       trackedRepositories,
       totalArchitectureChanges,
       totalTimelineEvents,
+      totalEngineeringRecommendations,
       repositoriesImportedToday,
       repositoriesReprocessedToday,
+      failedEvents,
+      completedEvents,
     ] = await Promise.all([
       prisma.user.count(),
-
       prisma.repository.count(),
-
-      prisma.repository.count({
-        where: {
-          isTracked: true,
-        },
-      }),
-
+      prisma.repository.count({ where: { isTracked: true } }),
       prisma.architectureChange.count(),
-
       prisma.timelineEntry.count(),
-
-      prisma.repository.count({
-        where: {
-          createdAt: {
-            gte: today,
-          },
-        },
-      }),
-
+      prisma.engineeringRecommendation.count(),
+      prisma.repository.count({ where: { createdAt: { gte: today } } }),
       prisma.architectureChange.count({
         where: {
-          changeType: "REPOSITORY_INTELLIGENCE_REPROCESSED",
-          createdAt: {
-            gte: today,
-          },
+          changeType: GENERATED_CHANGE_TYPE,
+          createdAt: { gte: today },
         },
       }),
+      prisma.engineeringEvent.count({ where: { status: "FAILED" } }),
+      prisma.engineeringEvent.count({ where: { status: "COMPLETED" } }),
     ]);
 
     return {
@@ -57,13 +46,16 @@ export const adminDashboardService = {
       trackedRepositories,
       totalArchitectureChanges,
       totalTimelineEvents,
-
-      // For now, one generated architecture intelligence row represents one engineering report.
-      // Later, if we create a dedicated EngineeringReport table, this can point there instead.
-      totalEngineeringReports: repositoriesReprocessedToday,
-
+      totalEngineeringReports: await prisma.architectureChange.count({
+        where: { changeType: GENERATED_CHANGE_TYPE },
+      }),
+      totalEngineeringRecommendations,
       repositoriesImportedToday,
       repositoriesReprocessedToday,
+      eventProcessing: {
+        completed: completedEvents,
+        failed: failedEvents,
+      },
     };
   },
 };

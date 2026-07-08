@@ -18,7 +18,7 @@ const normalizePagination = ({ page = 1, limit = 20 }: GetUsersParams) => {
 };
 
 export const adminUsersService = {
-  async getUsers(params: GetUsersParams) {
+  async getUsers(params: GetUsersParams = {}) {
     const { page, limit, skip } = normalizePagination(params);
     const search = params.search?.trim();
 
@@ -26,13 +26,13 @@ export const adminUsersService = {
       ? {
           OR: [
             {
-              githubUsername: {
+              username: {
                 contains: search,
                 mode: "insensitive" as const,
               },
             },
             {
-              name: {
+              email: {
                 contains: search,
                 mode: "insensitive" as const,
               },
@@ -43,20 +43,18 @@ export const adminUsersService = {
 
     const [totalItems, users] = await Promise.all([
       prisma.user.count({ where }),
-
       prisma.user.findMany({
         where,
-        orderBy: {
-          createdAt: "desc",
-        },
+        orderBy: { createdAt: "desc" },
         skip,
         take: limit,
         select: {
           id: true,
-          githubUsername: true,
-          name: true,
+          username: true,
+          email: true,
           avatarUrl: true,
           createdAt: true,
+          updatedAt: true,
           repositories: {
             select: {
               id: true,
@@ -68,34 +66,27 @@ export const adminUsersService = {
       }),
     ]);
 
-    const mappedUsers = users.map((user) => {
-      const repositoryCount = user.repositories.length;
-
-      const trackedRepositories = user.repositories.filter(
-        (repository) => repository.isTracked
-      ).length;
-
-      // Last activity is currently inferred from repository updates.
-      // This keeps the admin dashboard useful before a dedicated activity table exists.
-      const lastActivity =
-        user.repositories
-          .map((repository) => repository.updatedAt)
-          .sort((a, b) => b.getTime() - a.getTime())[0] || null;
-
-      return {
-        id: user.id,
-        githubUsername: user.githubUsername,
-        name: user.name,
-        avatarUrl: user.avatarUrl,
-        joinedAt: user.createdAt,
-        repositoryCount,
-        trackedRepositories,
-        lastActivity,
-      };
-    });
-
     return {
-      users: mappedUsers,
+      users: users.map((user) => {
+        const lastRepositoryActivity =
+          user.repositories
+            .map((repository) => repository.updatedAt)
+            .sort((a, b) => b.getTime() - a.getTime())[0] || null;
+
+        return {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          avatarUrl: user.avatarUrl,
+          joinedAt: user.createdAt,
+          updatedAt: user.updatedAt,
+          repositoryCount: user.repositories.length,
+          trackedRepositories: user.repositories.filter(
+            (repository) => repository.isTracked
+          ).length,
+          lastActivity: lastRepositoryActivity,
+        };
+      }),
       pagination: {
         page,
         limit,
@@ -103,5 +94,43 @@ export const adminUsersService = {
         totalPages: Math.ceil(totalItems / limit),
       },
     };
+  },
+
+  async getUser(userId: string) {
+    return prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        githubId: true,
+        username: true,
+        email: true,
+        avatarUrl: true,
+        createdAt: true,
+        updatedAt: true,
+        repositories: {
+          orderBy: { updatedAt: "desc" },
+          select: {
+            id: true,
+            name: true,
+            owner: true,
+            fullName: true,
+            language: true,
+            stars: true,
+            forks: true,
+            isTracked: true,
+            createdAt: true,
+            updatedAt: true,
+            _count: {
+              select: {
+                events: true,
+                timelineEntries: true,
+                architectureChanges: true,
+                engineeringRecommendations: true,
+              },
+            },
+          },
+        },
+      },
+    });
   },
 };

@@ -18,7 +18,7 @@ import { detectTechnologyFingerprint } from "@archive/detectors";
  |--------------------------------------------------------------------------
  */
 
-const GENERATED_CHANGE_TYPE = "REPOSITORY_INTELLIGENCE_REPROCESSED";
+import { GENERATED_CHANGE_TYPE } from "../constants/intelligence.constants";
 
 const getGitHubHeaders = (token?: string | null) => ({
   Accept: "application/vnd.github+json",
