@@ -147,3 +147,36 @@ export interface AdminRepositoryDetails {
     createdAt?: string;
   }>;
 }
+
+export interface AdminActivityItem {
+  id: string;
+  type?: string | null;
+  title?: string | null;
+  description?: string | null;
+  repositoryId?: string | null;
+  repositoryName?: string | null;
+  createdAt?: string;
+}
+
+export interface AdminActivityResponse {
+  activities: AdminActivityItem[];
+}
+
+export interface AdminQueueJob {
+  id: string;
+  name?: string | null;
+  status?: string | null;
+  failedReason?: string | null;
+  timestamp?: string | null;
+  createdAt?: string | null;
+}
+
+export interface AdminQueueResponse {
+  waiting: number;
+  active: number;
+  completed: number;
+  failed: number;
+  delayed: number;
+  paused: number;
+  recentFailedJobs: AdminQueueJob[];
+}
