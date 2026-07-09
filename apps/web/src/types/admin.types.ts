@@ -70,3 +70,34 @@ export interface AdminSystemResponse {
     heapTotal?: number;
   };
 }
+
+export interface AdminUserRepository {
+  id: string;
+  name: string;
+  fullName?: string | null;
+  description?: string | null;
+  language?: string | null;
+  stars?: number;
+  forks?: number;
+  isTracked?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface AdminUserDetails {
+  user: AdminUser;
+  repositories: AdminUserRepository[];
+
+  stats?: {
+    totalRepositories?: number;
+    trackedRepositories?: number;
+    totalTimelineEntries?: number;
+    totalArchitectureChanges?: number;
+    totalEngineeringEvents?: number;
+  };
+
+  timelineSummary?: {
+    recentEntries?: number;
+    lastActivityAt?: string | null;
+  };
+}
