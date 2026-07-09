@@ -6,6 +6,7 @@ import {
     AdminSystemResponse,
     AdminUser,
     AdminUserDetails,
+    AdminRepositoryDetails,
 } from "@/types/admin.types";
 
 function unwrap<T>(response: { data: T | { data?: T } }): T {
@@ -48,9 +49,9 @@ export const adminService = {
         return unwrap<{ repositories: AdminRepository[]; total?: number; page?: number }>(response);
     },
 
-    async getRepository(repositoryId: string) {
+    async getRepository(repositoryId: string): Promise<AdminRepositoryDetails> {
         const response = await api.get(`/admin/repositories/${repositoryId}`);
-        return unwrap(response);
+        return unwrap<AdminRepositoryDetails>(response);
     },
 
     async reprocessRepository(repositoryId: string) {

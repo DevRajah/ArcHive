@@ -101,3 +101,49 @@ export interface AdminUserDetails {
     lastActivityAt?: string | null;
   };
 }
+
+export interface AdminRepositoryDetails {
+  repository: AdminRepository;
+
+  owner?: AdminUser | null;
+
+  stats?: {
+    totalTimelineEntries?: number;
+    totalEngineeringEvents?: number;
+    totalArchitectureChanges?: number;
+    totalRecommendations?: number;
+  };
+
+  intelligence?: {
+    primaryRepositoryType?: string | null;
+    repositoryTypes?: string[];
+    architectureDomains?: string[];
+    technologies?: string[];
+    engineeringProfile?: string | null;
+    lastRefreshedAt?: string | null;
+  };
+
+  timelineEntries?: Array<{
+    id: string;
+    title?: string | null;
+    description?: string | null;
+    createdAt?: string;
+  }>;
+
+  architectureChanges?: Array<{
+    id: string;
+    changeType?: string | null;
+    summary?: string | null;
+    detectedTechnology?: string | null;
+    createdAt?: string;
+  }>;
+
+  recommendations?: Array<{
+    id: string;
+    title?: string | null;
+    description?: string | null;
+    priority?: string | null;
+    status?: string | null;
+    createdAt?: string;
+  }>;
+}
