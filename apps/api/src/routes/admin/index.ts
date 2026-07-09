@@ -38,11 +38,11 @@ const adminRoutes: FastifyPluginAsync = async (app) => {
     app.register(queueRoute);
     app.register(systemRoute);
 
-    app.get("/dashboard", async (_request, reply) => {
-        return successResponse(reply, "Admin dashboard loaded successfully.", {
-            status: "ONLINE",
-        });
-    });
+    // app.get("/dashboard", async (_request, reply) => {
+    //     return successResponse(reply, "Admin dashboard loaded successfully.", {
+    //         status: "ONLINE",
+    //     });
+    // });
 };
 
 export default adminRoutes;
