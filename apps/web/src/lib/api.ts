@@ -14,13 +14,20 @@ export const api = axios.create({
 
 // I keep auth handling here so every backend request uses one central setup.
 api.interceptors.request.use((config) => {
-  if (typeof window === "undefined") return config;
-
-  const token = localStorage.getItem("archive_token");
-
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+  if (typeof window === "undefined") {
+    return config;
   }
+
+  const session = getSession();
+
+  console.log("SESSION", session);
+  console.log("TOKEN", session?.token);
+
+  if (session?.token) {
+    config.headers.Authorization = `Bearer ${session.token}`;
+  }
+
+  console.log("AUTH HEADER", config.headers.Authorization);
 
   return config;
 });

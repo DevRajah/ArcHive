@@ -13,6 +13,10 @@
     "dev:web": "npm run dev -w apps/web"
   },
   "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.10",
     "dotenv-cli": "^11.0.0"
+  },
+  "dependencies": {
+    "jsonwebtoken": "^9.0.3"
   }
 }

@@ -1,6 +1,7 @@
 import { FastifyInstance, FastifyReply } from "fastify";
 import axios from "axios";
 import { prisma } from "@archive/database";
+import jwt from "jsonwebtoken";
 
 type GitHubAccessTokenResponse = {
   access_token: string;
@@ -166,6 +167,17 @@ export const githubOAuthRoutes = async (app: FastifyInstance) => {
         });
       }
 
+      const appToken = jwt.sign(
+        {
+          userId: user.id,
+          username: user.username,
+        },
+        process.env.JWT_SECRET || "dev-secret",
+        {
+          expiresIn: "7d",
+        }
+      );
+
       // Optional API/testing mode:
       // Visit callback with ?mode=json only when manually testing OAuth response.
       if (mode === "json") {
@@ -176,15 +188,25 @@ export const githubOAuthRoutes = async (app: FastifyInstance) => {
             userId: user.id,
             username: user.username,
             avatarUrl: user.avatarUrl,
+            token: appToken,
           },
         });
       }
+
+      // Generate the same JWT used by the rest of the application.
+      // GitHub OAuth should establish an authenticated session identical
+      // to the normal login flow.
+      // const token = app.jwt.sign({
+      //   userId: user.id,
+      //   username: user.username,
+      // });
 
       const finalRedirectUrl = buildFrontendUrl("/github/callback");
 
       finalRedirectUrl.searchParams.set("userId", user.id);
       finalRedirectUrl.searchParams.set("username", user.username);
       finalRedirectUrl.searchParams.set("avatarUrl", user.avatarUrl || "");
+      finalRedirectUrl.searchParams.set("token", appToken);
 
       console.log(
         "GitHub OAuth final frontend redirect URL:",
