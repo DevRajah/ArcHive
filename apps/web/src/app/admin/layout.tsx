@@ -13,7 +13,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         <AdminSidebar />
       </div>
 
-      <div className="min-w-0">{children}</div>
+      <main className="min-w-0">{children}</main>
     </div>
   );
 }

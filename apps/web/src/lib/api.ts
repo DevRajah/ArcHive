@@ -20,15 +20,10 @@ api.interceptors.request.use((config) => {
 
   const session = getSession();
 
-  console.log("SESSION", session);
-  console.log("TOKEN", session?.token);
 
   if (session?.token) {
     config.headers.Authorization = `Bearer ${session.token}`;
   }
-
-  console.log("AUTH HEADER", config.headers.Authorization);
-
   return config;
 });
 

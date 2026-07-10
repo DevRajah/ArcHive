@@ -8,10 +8,20 @@ import {
   Database,
   Gauge,
   ListTodo,
+  Menu,
   Server,
+  ShieldCheck,
   Users,
 } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 
 const adminItems = [
@@ -52,43 +62,80 @@ const adminItems = [
   },
 ];
 
-export function AdminSidebar() {
+function AdminNavigation({ mobile = false }: { mobile?: boolean }) {
   const pathname = usePathname();
 
   return (
-    <aside className="rounded-xl border border-border bg-card p-3">
-      <div className="px-3 py-3">
-        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          Admin Operations
-        </p>
+    <nav className="space-y-1">
+      {adminItems.map((item) => {
+        const Icon = item.icon;
+
+        const isActive =
+          pathname === item.href ||
+          (item.href !== "/admin/dashboard" &&
+            pathname.startsWith(`${item.href}/`));
+
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            className={cn(
+              "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition",
+              isActive
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:bg-accent hover:text-foreground",
+              mobile && "py-3"
+            )}
+          >
+            <Icon className="h-4 w-4" />
+            {item.label}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
+
+export function AdminSidebar() {
+  return (
+    <>
+      <div className="xl:hidden">
+        <Sheet>
+          <SheetTrigger asChild>
+            <Button type="button" variant="outline">
+              <Menu className="mr-2 h-4 w-4" />
+              Admin Menu
+            </Button>
+          </SheetTrigger>
+
+          <SheetContent side="left" className="w-72">
+            <SheetHeader>
+              <SheetTitle className="flex items-center gap-2">
+                <ShieldCheck className="h-5 w-5 text-primary" />
+                Admin Operations
+              </SheetTitle>
+            </SheetHeader>
+
+            <div className="mt-6">
+              <AdminNavigation mobile />
+            </div>
+          </SheetContent>
+        </Sheet>
       </div>
 
-      <nav className="space-y-1">
-        {adminItems.map((item) => {
-          const Icon = item.icon;
+      <aside className="hidden rounded-xl border border-border bg-card p-3 xl:block">
+        <div className="px-3 py-3">
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="h-4 w-4 text-primary" />
 
-          const isActive =
-            pathname === item.href ||
-            (item.href !== "/admin/dashboard" &&
-              pathname.startsWith(`${item.href}/`));
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Admin Operations
+            </p>
+          </div>
+        </div>
 
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition",
-                isActive
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-accent hover:text-foreground"
-              )}
-            >
-              <Icon className="h-4 w-4" />
-              {item.label}
-            </Link>
-          );
-        })}
-      </nav>
-    </aside>
+        <AdminNavigation />
+      </aside>
+    </>
   );
 }
