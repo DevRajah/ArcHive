@@ -11,6 +11,11 @@ type RepositoriesQuery = {
     tracked?: string;
 };
 
+type AdminJwtPayload = {
+    userId: string;
+    username: string;
+};
+
 type RepositoryParams = {
     repositoryId: string;
 };
@@ -83,8 +88,16 @@ const repositoriesRoute: FastifyPluginAsync = async (app) => {
         "/repositories/:repositoryId",
         async (request, reply) => {
             try {
+                const admin = (request as typeof request & {
+                    user: AdminJwtPayload;
+                }).user;
+
                 const result = await adminRepositoriesService.deleteRepository(
-                    request.params.repositoryId
+                    request.params.repositoryId,
+                    {
+                        userId: admin.userId,
+                        username: admin.username,
+                    }
                 );
 
                 if (!result) {

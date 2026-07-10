@@ -10,6 +10,11 @@ type GetRepositoriesParams = {
     tracked?: boolean;
 };
 
+type AdminActor = {
+  userId: string;
+  username: string;
+};
+
 const normalizePagination = ({
     page = 1,
     limit = 20,
@@ -292,68 +297,115 @@ export const adminRepositoriesService = {
         };
     },
 
-    async deleteRepository(repositoryId: string) {
-        const repository = await prisma.repository.findUnique({
-            where: {
-                id: repositoryId,
-            },
-            select: {
-                id: true,
-                name: true,
-                fullName: true,
-            },
-        });
-
-        if (!repository) {
-            return null;
-        }
-
-        const deletionResult = await prisma.$transaction(async (tx) => {
-            // Dependent records are removed explicitly so repository deletion remains
-            // predictable even when individual database relations do not use cascading deletes.
-            const recommendations = await tx.engineeringRecommendation.deleteMany({
-                where: {
-                    repositoryId,
-                },
-            });
-
-            const timelineEntries = await tx.timelineEntry.deleteMany({
-                where: {
-                    repositoryId,
-                },
-            });
-
-            const architectureChanges = await tx.architectureChange.deleteMany({
-                where: {
-                    repositoryId,
-                },
-            });
-
-            const engineeringEvents = await tx.engineeringEvent.deleteMany({
-                where: {
-                    repositoryId,
-                },
-            });
-
-            await tx.repository.delete({
-                where: {
-                    id: repositoryId,
-                },
-            });
-
-            return {
-                deletedRecords: {
-                    engineeringRecommendations: recommendations.count,
-                    timelineEntries: timelineEntries.count,
-                    architectureChanges: architectureChanges.count,
-                    engineeringEvents: engineeringEvents.count,
-                },
-            };
-        });
-
-        return {
-            repository,
-            ...deletionResult,
-        };
+    async deleteRepository(
+  repositoryId: string,
+  actor: AdminActor
+) {
+  const repository = await prisma.repository.findUnique({
+    where: {
+      id: repositoryId,
     },
+    select: {
+      id: true,
+      name: true,
+      fullName: true,
+      owner: true,
+      language: true,
+      isTracked: true,
+      userId: true,
+      _count: {
+        select: {
+          events: true,
+          timelineEntries: true,
+          architectureChanges: true,
+          engineeringRecommendations: true,
+        },
+      },
+    },
+  });
+
+  if (!repository) {
+    return null;
+  }
+
+  const deletionResult = await prisma.$transaction(async (tx) => {
+    // The audit record stores repository snapshot data rather than using a
+    // foreign-key relation, allowing the activity to remain meaningful after deletion.
+    const auditActivity = await tx.adminActivity.create({
+      data: {
+        action: "REPOSITORY_DELETED",
+        actorUserId: actor.userId,
+        actorUsername: actor.username,
+        repositoryId: repository.id,
+        repositoryName: repository.name,
+        repositoryFullName: repository.fullName,
+        description: `${actor.username} deleted ${repository.fullName}.`,
+        metadata: {
+          owner: repository.owner,
+          language: repository.language,
+          wasTracked: repository.isTracked,
+          repositoryOwnerUserId: repository.userId,
+          deletedRecordCounts: {
+            engineeringEvents: repository._count.events,
+            timelineEntries: repository._count.timelineEntries,
+            architectureChanges: repository._count.architectureChanges,
+            engineeringRecommendations:
+              repository._count.engineeringRecommendations,
+          },
+        },
+      },
+    });
+
+    // Explicit cleanup keeps deletion predictable even if database cascade
+    // behaviour differs across repository-owned record types.
+    const recommendations = await tx.engineeringRecommendation.deleteMany({
+      where: {
+        repositoryId,
+      },
+    });
+
+    const timelineEntries = await tx.timelineEntry.deleteMany({
+      where: {
+        repositoryId,
+      },
+    });
+
+    const architectureChanges = await tx.architectureChange.deleteMany({
+      where: {
+        repositoryId,
+      },
+    });
+
+    const engineeringEvents = await tx.engineeringEvent.deleteMany({
+      where: {
+        repositoryId,
+      },
+    });
+
+    await tx.repository.delete({
+      where: {
+        id: repositoryId,
+      },
+    });
+
+    return {
+      auditActivity,
+      deletedRecords: {
+        engineeringRecommendations: recommendations.count,
+        timelineEntries: timelineEntries.count,
+        architectureChanges: architectureChanges.count,
+        engineeringEvents: engineeringEvents.count,
+      },
+    };
+  });
+
+  return {
+    repository: {
+      id: repository.id,
+      name: repository.name,
+      fullName: repository.fullName,
+    },
+    ...deletionResult,
+  };
+},
 };

@@ -149,3 +149,37 @@ model EngineeringRecommendation {
 
   @@unique([repositoryId, recommendationKey])
 }
+
+enum AdminActivityAction {
+  REPOSITORY_IMPORTED
+  REPOSITORY_REPROCESSED
+  REPOSITORY_DELETED
+  INTELLIGENCE_REFRESHED
+  ENGINEERING_EVENT_PROCESSED
+  ARCHITECTURE_CHANGE_DETECTED
+  USER_CREATED
+  ADMIN_ACTION
+}
+
+model AdminActivity {
+  id String @id @default(uuid())
+
+  action AdminActivityAction
+
+  actorUserId   String?
+  actorUsername String?
+
+  repositoryId       String?
+  repositoryName     String?
+  repositoryFullName String?
+
+  description String?
+  metadata    Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([action])
+  @@index([actorUserId])
+  @@index([repositoryId])
+  @@index([createdAt])
+}
