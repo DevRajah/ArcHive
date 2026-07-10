@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import {
   Activity,
@@ -62,7 +63,15 @@ const adminItems = [
   },
 ];
 
-function AdminNavigation({ mobile = false }: { mobile?: boolean }) {
+interface AdminNavigationProps {
+  mobile?: boolean;
+  onNavigate?: () => void;
+}
+
+function AdminNavigation({
+  mobile = false,
+  onNavigate,
+}: AdminNavigationProps) {
   const pathname = usePathname();
 
   return (
@@ -79,6 +88,7 @@ function AdminNavigation({ mobile = false }: { mobile?: boolean }) {
           <Link
             key={item.href}
             href={item.href}
+            onClick={onNavigate}
             className={cn(
               "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition",
               isActive
@@ -97,10 +107,21 @@ function AdminNavigation({ mobile = false }: { mobile?: boolean }) {
 }
 
 export function AdminSidebar() {
+  const pathname = usePathname();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Close the mobile sidebar whenever navigation completes.
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [pathname]);
+
   return (
     <>
       <div className="xl:hidden">
-        <Sheet>
+        <Sheet
+          open={isMobileMenuOpen}
+          onOpenChange={setIsMobileMenuOpen}
+        >
           <SheetTrigger asChild>
             <Button type="button" variant="outline">
               <Menu className="mr-2 h-4 w-4" />
@@ -117,7 +138,10 @@ export function AdminSidebar() {
             </SheetHeader>
 
             <div className="mt-6">
-              <AdminNavigation mobile />
+              <AdminNavigation
+                mobile
+                onNavigate={() => setIsMobileMenuOpen(false)}
+              />
             </div>
           </SheetContent>
         </Sheet>
