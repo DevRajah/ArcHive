@@ -135,18 +135,54 @@ export interface AdminRepositoryDetails {
     }>;
 }
 
+export type AdminActivityType =
+    | "ADMIN_AUDIT"
+    | "TIMELINE"
+    | "ENGINEERING_EVENT"
+    | "ARCHITECTURE_CHANGE"
+    | string;
+
+export type AdminActivityAction =
+    | "REPOSITORY_DELETED"
+    | "REPOSITORY_REPROCESSED"
+    | "INTELLIGENCE_REFRESHED"
+    | string
+    | null;
+
+export interface AdminActivityActor {
+    userId: string | null;
+    username: string | null;
+}
+
+export interface AdminActivityRepository {
+    id: string;
+    name: string | null;
+    fullName: string | null;
+    deleted: boolean;
+}
+
 export interface AdminActivityItem {
     id: string;
-    type?: string | null;
+
+    type: AdminActivityType;
+
+    action?: AdminActivityAction;
+
     title?: string | null;
+
     description?: string | null;
-    repositoryId?: string | null;
-    repositoryName?: string | null;
+
     createdAt?: string;
+
+    actor?: AdminActivityActor | null;
+
+    repository?: AdminActivityRepository | null;
+
+    metadata?: unknown;
 }
 
 export interface AdminActivityResponse {
-    activities: AdminActivityItem[];
+    activity: AdminActivityItem[];
 }
 
 export interface AdminQueueJob {

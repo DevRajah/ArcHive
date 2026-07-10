@@ -1,29 +1,29 @@
 "use client";
 
 import { AppShell } from "@/components/layout/AppShell";
+import { AdminAccessRequired } from "@/components/admin/AdminAccessRequired";
 import { AdminActivityTimeline } from "@/components/admin/AdminActivityTimeline";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { AdminStateCard } from "@/components/admin/AdminStateCard";
 import { Skeleton } from "@/components/ui/skeleton";
+
 import { useAdminActivity } from "@/hooks/useAdmin";
-import { AdminAccessRequired } from "@/components/admin/AdminAccessRequired";
 import { isAdminForbidden } from "@/lib/admin-errors";
+import { AdminActivityItem } from "@/types/admin.types";
 
 export default function AdminActivityPage() {
   const { data, isLoading, isError, error, refetch } = useAdminActivity();
 
-  const activities = Array.isArray(data)
+  const activities: AdminActivityItem[] = Array.isArray(data)
     ? data
-    : data && typeof data === "object" && "activities" in data
-      ? data.activities
-      : [];
+    : data?.activity || [];
 
   return (
     <AppShell>
       <div className="space-y-6">
         <AdminPageHeader
           title="Admin Activity"
-          description="Timeline of repository events, engineering activity, architecture changes, and admin-visible operational activity."
+          description="Platform-wide audit trail covering administrator actions, repository events, engineering activity, and architecture changes."
         />
 
         {isLoading && (
@@ -33,11 +33,12 @@ export default function AdminActivityPage() {
             ))}
           </div>
         )}
+
         {isError && isAdminForbidden(error) && <AdminAccessRequired />}
 
         {isError && !isAdminForbidden(error) && (
           <AdminStateCard
-            title="Failed to load activity"
+            title="Failed to load admin activity"
             description={
               error instanceof Error
                 ? error.message
@@ -50,7 +51,7 @@ export default function AdminActivityPage() {
         {!isLoading && !isError && activities.length === 0 && (
           <AdminStateCard
             title="No admin activity found"
-            description="No activity has been recorded yet."
+            description="No platform activity has been recorded yet."
           />
         )}
 

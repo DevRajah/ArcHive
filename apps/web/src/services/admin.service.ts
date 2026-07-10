@@ -8,6 +8,7 @@ import {
     AdminUserDetails,
     AdminRepositoryDetails,
     AdminAnalyticsResponse,
+    AdminActivityResponse,
 } from "@/types/admin.types";
 
 function unwrap<T>(response: { data: T | { data?: T } }): T {
@@ -65,9 +66,9 @@ export const adminService = {
         return response.data;
     },
 
-    async getActivity() {
+    async getActivity(): Promise<AdminActivityResponse> {
         const response = await api.get("/admin/activity");
-        return unwrap(response);
+        return unwrap<AdminActivityResponse>(response);
     },
 
     async getAnalytics(): Promise<AdminAnalyticsResponse> {
