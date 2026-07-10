@@ -43,21 +43,6 @@ export interface AdminRepository {
   recommendationCount?: number;
 }
 
-// export interface AdminQueueResponse {
-//   waiting: number;
-//   active: number;
-//   completed: number;
-//   failed: number;
-//   delayed: number;
-//   paused: number;
-//   recentFailedJobs: Array<{
-//     id: string;
-//     name?: string;
-//     failedReason?: string;
-//     timestamp?: string;
-//   }>;
-// }
-
 export interface AdminSystemResponse {
   apiStatus: string;
   database: string;
@@ -179,4 +164,17 @@ export interface AdminQueueResponse {
   delayed: number;
   paused: number;
   recentFailedJobs: AdminQueueJob[];
+}
+
+export interface AdminAnalyticsDatum {
+  name: string;
+  value: number;
+}
+
+export interface AdminAnalyticsResponse {
+  repositoryTypes: AdminAnalyticsDatum[];
+  languages: AdminAnalyticsDatum[];
+  architectureDomains: AdminAnalyticsDatum[];
+  technologies: AdminAnalyticsDatum[];
+  engineeringProfiles: AdminAnalyticsDatum[];
 }

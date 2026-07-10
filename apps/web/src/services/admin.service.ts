@@ -7,6 +7,7 @@ import {
     AdminUser,
     AdminUserDetails,
     AdminRepositoryDetails,
+    AdminAnalyticsResponse,
 } from "@/types/admin.types";
 
 function unwrap<T>(response: { data: T | { data?: T } }): T {
@@ -69,9 +70,9 @@ export const adminService = {
         return unwrap(response);
     },
 
-    async getAnalytics() {
+    async getAnalytics(): Promise<AdminAnalyticsResponse> {
         const response = await api.get("/admin/analytics");
-        return unwrap(response);
+        return unwrap<AdminAnalyticsResponse>(response);
     },
 
     async getQueue() {

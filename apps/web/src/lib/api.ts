@@ -31,3 +31,18 @@ api.interceptors.request.use((config) => {
 
   return config;
 });
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (
+      typeof window !== "undefined" &&
+      error?.response?.status === 401 &&
+      window.location.pathname.startsWith("/admin")
+    ) {
+      window.location.href = "/";
+    }
+
+    return Promise.reject(error);
+  }
+);
