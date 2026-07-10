@@ -20,6 +20,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAdminUser } from "@/hooks/useAdmin";
+import { AdminAccessRequired } from "@/components/admin/AdminAccessRequired";
+import { isAdminForbidden } from "@/lib/admin-errors";
 
 function formatDate(value?: string | null) {
   if (!value) return "Unknown";
@@ -62,7 +64,9 @@ export default function AdminUserDetailsPage() {
           </div>
         )}
 
-        {isError && (
+        {isError && isAdminForbidden(error) && <AdminAccessRequired />}
+
+        {isError && !isAdminForbidden(error) && (
           <AdminStateCard
             title="Failed to load user details"
             description={

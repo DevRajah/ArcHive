@@ -27,6 +27,8 @@ import {
   useAdminReprocessRepository,
 } from "@/hooks/useAdmin";
 import { formatIntelligenceLabel } from "@/lib/intelligence-labels";
+import { AdminAccessRequired } from "@/components/admin/AdminAccessRequired";
+import { isAdminForbidden } from "@/lib/admin-errors";
 
 function formatDate(value?: string | null) {
   if (!value) return "Unknown";
@@ -176,6 +178,7 @@ export default function AdminRepositoryDetailsPage() {
           </div>
         )}
 
+
         {isLoading && (
           <div className="space-y-6">
             <Skeleton className="h-40 rounded-xl" />
@@ -187,7 +190,9 @@ export default function AdminRepositoryDetailsPage() {
           </div>
         )}
 
-        {isError && (
+        {isError && isAdminForbidden(error) && <AdminAccessRequired />}
+
+        {isError && !isAdminForbidden(error) && (
           <AdminStateCard
             title="Failed to load repository details"
             description={

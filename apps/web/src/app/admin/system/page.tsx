@@ -8,6 +8,8 @@ import { AdminStateCard } from "@/components/admin/AdminStateCard";
 import { AdminStatCard } from "@/components/admin/AdminStatCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAdminSystem } from "@/hooks/useAdmin";
+import { AdminAccessRequired } from "@/components/admin/AdminAccessRequired";
+import { isAdminForbidden } from "@/lib/admin-errors";
 
 function bytesToMB(value?: number) {
   if (!value) return "0 MB";
@@ -43,7 +45,9 @@ export default function AdminSystemPage() {
           </div>
         )}
 
-        {isError && (
+        {isError && isAdminForbidden(error) && <AdminAccessRequired />}
+
+        {isError && !isAdminForbidden(error) && (
           <AdminStateCard
             title="Failed to load system health"
             description={

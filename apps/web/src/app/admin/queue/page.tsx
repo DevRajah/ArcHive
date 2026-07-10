@@ -16,6 +16,8 @@ import { AdminStateCard } from "@/components/admin/AdminStateCard";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAdminQueue } from "@/hooks/useAdmin";
+import { AdminAccessRequired } from "@/components/admin/AdminAccessRequired";
+import { isAdminForbidden } from "@/lib/admin-errors";
 
 function formatDate(value?: string | null) {
   if (!value) return "Unknown";
@@ -41,7 +43,9 @@ export default function AdminQueuePage() {
           </div>
         )}
 
-        {isError && (
+        {isError && isAdminForbidden(error) && <AdminAccessRequired />}
+
+        {isError && !isAdminForbidden(error) && (
           <AdminStateCard
             title="Failed to load queue health"
             description={

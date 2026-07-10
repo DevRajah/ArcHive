@@ -6,6 +6,8 @@ import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { AdminStateCard } from "@/components/admin/AdminStateCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAdminActivity } from "@/hooks/useAdmin";
+import { AdminAccessRequired } from "@/components/admin/AdminAccessRequired";
+import { isAdminForbidden } from "@/lib/admin-errors";
 
 export default function AdminActivityPage() {
   const { data, isLoading, isError, error, refetch } = useAdminActivity();
@@ -31,8 +33,9 @@ export default function AdminActivityPage() {
             ))}
           </div>
         )}
+        {isError && isAdminForbidden(error) && <AdminAccessRequired />}
 
-        {isError && (
+        {isError && !isAdminForbidden(error) && (
           <AdminStateCard
             title="Failed to load activity"
             description={

@@ -6,6 +6,8 @@ import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { AdminStateCard } from "@/components/admin/AdminStateCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAdminAnalytics } from "@/hooks/useAdmin";
+import { AdminAccessRequired } from "@/components/admin/AdminAccessRequired";
+import { isAdminForbidden } from "@/lib/admin-errors";
 
 export default function AdminAnalyticsPage() {
   const { data, isLoading, isError, error, refetch } = useAdminAnalytics();
@@ -26,7 +28,9 @@ export default function AdminAnalyticsPage() {
           </div>
         )}
 
-        {isError && (
+        {isError && isAdminForbidden(error) && <AdminAccessRequired />}
+
+        {isError && !isAdminForbidden(error) && (
           <AdminStateCard
             title="Failed to load admin analytics"
             description={
