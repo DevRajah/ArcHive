@@ -4,12 +4,14 @@ import { AppShell } from "@/components/layout/AppShell";
 import { AdminAccessRequired } from "@/components/admin/AdminAccessRequired";
 import { AdminActivityTimeline } from "@/components/admin/AdminActivityTimeline";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
-import { AdminStateCard } from "@/components/admin/AdminStateCard";
+//import { AdminStateCard } from "@/components/admin/AdminStateCard";
+import { AdminQueryError } from "@/components/admin/AdminQueryError";
 import { Skeleton } from "@/components/ui/skeleton";
 
 import { useAdminActivity } from "@/hooks/useAdmin";
 import { isAdminForbidden } from "@/lib/admin-errors";
 import { AdminActivityItem } from "@/types/admin.types";
+import { AdminStateCard } from "@/components/admin/AdminStateCard";
 
 export default function AdminActivityPage() {
   const { data, isLoading, isError, error, refetch } = useAdminActivity();
@@ -37,14 +39,17 @@ export default function AdminActivityPage() {
         {isError && isAdminForbidden(error) && <AdminAccessRequired />}
 
         {isError && !isAdminForbidden(error) && (
-          <AdminStateCard
+          <AdminQueryError
+            error={error}
             title="Failed to load admin activity"
-            description={
-              error instanceof Error
-                ? error.message
-                : "Please check backend connection."
-            }
             onRetry={() => refetch()}
+          />
+        )}
+
+        {!isLoading && !isError && activities.length === 0 && (
+          <AdminStateCard
+            title="No admin activity found"
+            description="No platform activity has been recorded yet."
           />
         )}
 
