@@ -74,9 +74,23 @@ export function useAdminDeleteRepository() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (repositoryId: string) => adminService.deleteRepository(repositoryId),
+    mutationFn: (repositoryId: string) =>
+      adminService.deleteRepository(repositoryId),
+
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ADMIN_QUERY_KEYS.repositories() });
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ["admin", "repositories"],
+        }),
+
+        queryClient.invalidateQueries({
+          queryKey: ADMIN_QUERY_KEYS.dashboard,
+        }),
+
+        queryClient.invalidateQueries({
+          queryKey: ADMIN_QUERY_KEYS.activity,
+        }),
+      ]);
     },
   });
 }
@@ -106,5 +120,34 @@ export function useAdminSystem() {
   return useQuery({
     queryKey: ADMIN_QUERY_KEYS.system,
     queryFn: adminService.getSystem,
+  });
+}
+
+export function useAdminReprocessRepositoryFromList() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (repositoryId: string) =>
+      adminService.reprocessRepository(repositoryId),
+
+    onSuccess: async (_, repositoryId) => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ADMIN_QUERY_KEYS.repository(repositoryId),
+        }),
+
+        queryClient.invalidateQueries({
+          queryKey: ["admin", "repositories"],
+        }),
+
+        queryClient.invalidateQueries({
+          queryKey: ADMIN_QUERY_KEYS.dashboard,
+        }),
+
+        queryClient.invalidateQueries({
+          queryKey: ADMIN_QUERY_KEYS.activity,
+        }),
+      ]);
+    },
   });
 }
