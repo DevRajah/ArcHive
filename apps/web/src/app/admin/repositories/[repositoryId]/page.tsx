@@ -13,6 +13,7 @@ import {
     Trash2,
 } from "lucide-react";
 import { getApiErrorMessage } from "@/lib/api-errors";
+import { AdminRepositoryDetails } from "@/types/admin.types";
 
 import { AppShell } from "@/components/layout/AppShell";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
@@ -50,13 +51,29 @@ export default function AdminRepositoryDetailsPage() {
 
     const { data, isLoading, isError, error, refetch } =
         useAdminRepository(repositoryId);
+    useEffect(() => {
+        if (process.env.NODE_ENV === "development" && data) {
+            console.log("ADMIN_REPOSITORY_DETAILS_RESPONSE", data);
+        }
+    }, [data]);
 
     const reprocessMutation = useAdminReprocessRepository(repositoryId);
     const deleteMutation = useAdminDeleteRepository();
 
-    const repository = data?.repository;
-    const stats = data?.stats;
-    const intelligence = data?.intelligence;
+    const payload = data as AdminRepositoryDetails | undefined;
+
+    const repository = payload?.repository;
+    const owner = payload?.owner;
+
+    const stats = payload?.stats;
+
+    const intelligence = payload?.intelligence;
+
+    const timelineEntries = payload?.timelineEntries ?? [];
+
+    const architectureChanges = payload?.architectureChanges ?? [];
+
+    const recommendations = payload?.recommendations ?? [];
 
     function handleReprocess() {
         reprocessMutation.mutate(undefined, {
@@ -74,7 +91,7 @@ export default function AdminRepositoryDetailsPage() {
                     type: "error",
                     message: getApiErrorMessage(
                         error,
-                        "Failed to delete repository."
+                        "Failed to refresh repository intelligence."
                     ),
                 });
             },
@@ -202,6 +219,14 @@ export default function AdminRepositoryDetailsPage() {
                     />
                 )}
 
+                {!isLoading && !isError && data && !repository && (
+                    <AdminStateCard
+                        title="Repository details unavailable"
+                        description="The admin repository endpoint responded successfully, but the repository object was not found in the expected response structure. Check ADMIN_REPOSITORY_DETAILS_RESPONSE in the browser console."
+                        onRetry={() => refetch()}
+                    />
+                )}
+
                 {!isLoading && !isError && repository && (
                     <>
                         <div className="rounded-xl border border-border bg-card p-6">
@@ -220,7 +245,7 @@ export default function AdminRepositoryDetailsPage() {
                                     </div>
 
                                     <p className="mt-3 text-sm text-muted-foreground">
-                                        Owner: {repository.owner || data?.owner?.username || "Unknown"}
+                                        Owner: {repository.owner || owner?.username || "Unknown"}
                                     </p>
 
                                     <p className="mt-2 text-sm text-muted-foreground">
@@ -323,7 +348,7 @@ export default function AdminRepositoryDetailsPage() {
                         <SectionList
                             title="Recent Timeline"
                             empty="No timeline entries available."
-                            items={data.timelineEntries}
+                            items={timelineEntries}
                             render={(item) => (
                                 <>
                                     <p className="font-medium">
@@ -342,7 +367,7 @@ export default function AdminRepositoryDetailsPage() {
                         <SectionList
                             title="Architecture Changes"
                             empty="No architecture changes available."
-                            items={data.architectureChanges}
+                            items={architectureChanges}
                             render={(item) => (
                                 <>
                                     <div className="flex flex-wrap gap-2">
@@ -371,7 +396,7 @@ export default function AdminRepositoryDetailsPage() {
                         <SectionList
                             title="Engineering Recommendations"
                             empty="No engineering recommendations available."
-                            items={data.recommendations}
+                            items={recommendations}
                             render={(item) => (
                                 <>
                                     <div className="flex flex-wrap gap-2">
