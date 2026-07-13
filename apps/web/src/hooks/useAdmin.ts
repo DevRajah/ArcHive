@@ -14,15 +14,15 @@ export const ADMIN_QUERY_KEYS = {
 };
 
 export function useAdminDashboard() {
-  return useQuery({
-    queryKey: ADMIN_QUERY_KEYS.dashboard,
-    queryFn: adminService.getDashboard,
+    return useQuery({
+        queryKey: ADMIN_QUERY_KEYS.dashboard,
+        queryFn: adminService.getDashboard,
 
-    // The admin dashboard contains operational information, so i keep it fresh
-    // while the administrator is actively viewing the page.
-    refetchInterval: 30_000,
-    refetchIntervalInBackground: false,
-  });
+        // The admin dashboard contains operational information, so i keep it fresh
+        // while the administrator is actively viewing the page.
+        refetchInterval: 30_000,
+        refetchIntervalInBackground: false,
+    });
 }
 
 export function useAdminUsers(params?: { search?: string; page?: number }) {
@@ -104,6 +104,11 @@ export function useAdminActivity() {
     return useQuery({
         queryKey: ADMIN_QUERY_KEYS.activity,
         queryFn: adminService.getActivity,
+
+        // Activity changes after imports, reprocessing, deletions,
+        // and other platform operations.
+        refetchInterval: 30_000,
+        refetchIntervalInBackground: false,
     });
 }
 
