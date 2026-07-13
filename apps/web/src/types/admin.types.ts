@@ -210,6 +210,14 @@ export interface AdminAnalyticsDatum {
 }
 
 export interface AdminAnalyticsResponse {
+  repositoryTypes: AdminAnalyticsDatum[];
+  languages: AdminAnalyticsDatum[];
+  architectureDomains: AdminAnalyticsDatum[];
+  technologies: AdminAnalyticsDatum[];
+  engineeringProfiles: AdminAnalyticsDatum[];
+}
+
+export interface AdminAnalyticsResponse {
     repositoryTypes: AdminAnalyticsDatum[];
     languages: AdminAnalyticsDatum[];
     architectureDomains: AdminAnalyticsDatum[];

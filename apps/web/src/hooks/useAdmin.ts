@@ -116,6 +116,11 @@ export function useAdminAnalytics() {
     return useQuery({
         queryKey: ADMIN_QUERY_KEYS.analytics,
         queryFn: adminService.getAnalytics,
+
+        // Analytics changes when repositories are imported, deleted,
+        // or reprocessed.
+        refetchInterval: 60_000,
+        refetchIntervalInBackground: false,
     });
 }
 

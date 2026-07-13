@@ -1,5 +1,8 @@
 import { api } from "@/lib/api";
 import {
+    AdminAnalyticsDatum,
+    AdminAnalyticsResponse,
+    AdminActivityAction,
     AdminDashboardResponse,
     AdminQueueResponse,
     AdminRepository,
@@ -7,7 +10,6 @@ import {
     AdminUser,
     AdminUserDetails,
     AdminRepositoryDetails,
-    AdminAnalyticsResponse,
     AdminActivityResponse,
 } from "@/types/admin.types";
 
@@ -23,6 +25,52 @@ function unwrap<T>(response: { data: T | { data?: T } }): T {
     }
 
     return payload as T;
+}
+
+function normalizeAnalyticsGroup(value: unknown): AdminAnalyticsDatum[] {
+    if (Array.isArray(value)) {
+        return value
+            .map((item) => {
+                if (!item || typeof item !== "object") return null;
+
+                const record = item as Record<string, unknown>;
+
+                const name =
+                    record.name ||
+                    record.label ||
+                    record.type ||
+                    record.category ||
+                    record.key;
+
+                const count =
+                    record.value ||
+                    record.count ||
+                    record.total;
+
+                if (typeof name !== "string") return null;
+
+                const numericValue = Number(count);
+
+                if (!Number.isFinite(numericValue)) return null;
+
+                return {
+                    name,
+                    value: numericValue,
+                };
+            })
+            .filter((item): item is AdminAnalyticsDatum => Boolean(item));
+    }
+
+    if (value && typeof value === "object") {
+        return Object.entries(value as Record<string, unknown>)
+            .map(([name, count]) => ({
+                name,
+                value: Number(count),
+            }))
+            .filter((item) => Number.isFinite(item.value));
+    }
+
+    return [];
 }
 
 export const adminService = {
@@ -73,7 +121,20 @@ export const adminService = {
 
     async getAnalytics(): Promise<AdminAnalyticsResponse> {
         const response = await api.get("/admin/analytics");
-        return unwrap<AdminAnalyticsResponse>(response);
+
+        const payload = unwrap<Record<string, unknown>>(response);
+
+        return {
+            repositoryTypes: normalizeAnalyticsGroup(payload.repositoryTypes),
+            languages: normalizeAnalyticsGroup(payload.languages),
+            architectureDomains: normalizeAnalyticsGroup(
+                payload.architectureDomains
+            ),
+            technologies: normalizeAnalyticsGroup(payload.technologies),
+            engineeringProfiles: normalizeAnalyticsGroup(
+                payload.engineeringProfiles
+            ),
+        };
     },
 
     async getQueue() {
