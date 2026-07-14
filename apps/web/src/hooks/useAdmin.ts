@@ -25,10 +25,16 @@ export function useAdminDashboard() {
     });
 }
 
-export function useAdminUsers(params?: { search?: string; page?: number }) {
+export function useAdminUsers(params?: {
+    search?: string;
+    page?: number;
+    limit?: number;
+    sort?: string;
+}) {
     return useQuery({
         queryKey: ADMIN_QUERY_KEYS.users(params),
         queryFn: () => adminService.getUsers(params),
+        placeholderData: (previousData) => previousData,
     });
 }
 

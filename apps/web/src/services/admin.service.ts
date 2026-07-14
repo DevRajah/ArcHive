@@ -79,9 +79,23 @@ export const adminService = {
         return unwrap<AdminDashboardResponse>(response);
     },
 
-    async getUsers(params?: { search?: string; page?: number }) {
-        const response = await api.get("/admin/users", { params });
-        return unwrap<{ users: AdminUser[]; total?: number; page?: number }>(response);
+    async getUsers(params?: {
+        search?: string;
+        page?: number;
+        limit?: number;
+        sort?: string;
+    }) {
+        const response = await api.get("/admin/users", {
+            params,
+        });
+
+        return unwrap<{
+            users: AdminUser[];
+            total?: number;
+            page?: number;
+            limit?: number;
+            totalPages?: number;
+        }>(response);
     },
 
     async getUser(userId: string): Promise<AdminUserDetails> {

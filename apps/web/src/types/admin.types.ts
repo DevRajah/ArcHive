@@ -19,12 +19,16 @@ export interface AdminUser {
     username?: string | null;
     email?: string | null;
     avatarUrl?: string | null;
+
     repositoryCount?: number;
     trackedRepositories?: number;
-    createdAt?: string;
-    lastActivityAt?: string | null;
+
+    createdAt?: string | null;
     joinedAt?: string | null;
     accountCreatedAt?: string | null;
+    updatedAt?: string | null;
+
+    lastActivityAt?: string | null;
 }
 
 export interface AdminRepository {
@@ -210,11 +214,11 @@ export interface AdminAnalyticsDatum {
 }
 
 export interface AdminAnalyticsResponse {
-  repositoryTypes: AdminAnalyticsDatum[];
-  languages: AdminAnalyticsDatum[];
-  architectureDomains: AdminAnalyticsDatum[];
-  technologies: AdminAnalyticsDatum[];
-  engineeringProfiles: AdminAnalyticsDatum[];
+    repositoryTypes: AdminAnalyticsDatum[];
+    languages: AdminAnalyticsDatum[];
+    architectureDomains: AdminAnalyticsDatum[];
+    technologies: AdminAnalyticsDatum[];
+    engineeringProfiles: AdminAnalyticsDatum[];
 }
 
 export interface AdminAnalyticsResponse {
