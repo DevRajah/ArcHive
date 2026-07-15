@@ -14,6 +14,7 @@ import { devRoutes } from "./routes/dev.routes";
 import { userRoutes } from "./routes/user.routes";
 import { githubOAuthRoutes } from "./routes/github-oauth.routes";
 import adminRoutes from "./routes/admin";
+import { portfolioRoutes } from "./routes/portfolio.routes";
 
 // This makes future testing easier because I can import the app without starting the port.
 export const buildApp = async () => {
@@ -21,19 +22,19 @@ export const buildApp = async () => {
     logger: true,
   });
 
-await app.register(cors, {
-  origin: true,
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
-});
+  await app.register(cors, {
+    origin: true,
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  });
 
   await app.register(fastifyRawBody, {
-  field: "rawBody",
-  global: false,
-  encoding: "utf8",
-  runFirst: true,
-});
+    field: "rawBody",
+    global: false,
+    encoding: "utf8",
+    runFirst: true,
+  });
 
   // I keep routes modular so ArcHive does not become messy as it grows.
   await app.register(healthRoutes, {
@@ -42,7 +43,7 @@ await app.register(cors, {
 
   app.register(adminRoutes, {
     prefix: "/api/admin",
-});
+  });
 
   await app.register(repositoryRoutes, {
     prefix: "/api/repositories",
@@ -81,12 +82,16 @@ await app.register(cors, {
   });
 
   await app.register(userRoutes, {
-  prefix: "/api/users",
-});
+    prefix: "/api/users",
+  });
 
-await app.register(githubOAuthRoutes, {
-  prefix: "/api/github/oauth",
-});
+  await app.register(portfolioRoutes, {
+    prefix: "/api/users",
+  });
+
+  await app.register(githubOAuthRoutes, {
+    prefix: "/api/github/oauth",
+  });
 
   return app;
 };
