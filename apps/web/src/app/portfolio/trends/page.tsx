@@ -405,35 +405,48 @@ function RepositoryRanking({
                 </p>
             ) : (
                 <div className="mt-5 space-y-3">
-                    {repositories.map((repository, index) => (
-                        <Link
-                            key={repository.repositoryId}
-                            href={`/repositories/${repository.repositoryId}/intelligence`}
-                            className="flex items-center justify-between gap-4 rounded-xl border border-border bg-background p-4 transition hover:border-primary/50 hover:bg-accent"
-                        >
-                            <div className="flex min-w-0 items-center gap-3">
-                                <Badge variant="secondary">
-                                    {index + 1}
-                                </Badge>
+                    {repositories.map((repository, index) => {
+                        const repositoryKey =
+                            repository.repositoryId ??
+                            repository.repositoryFullName ??
+                            repository.repositoryName ??
+                            `repository-${index}`;
 
-                                <div className="min-w-0">
-                                    <p className="truncate font-medium">
-                                        {repository.repositoryFullName ||
-                                            repository.repositoryName ||
-                                            repository.repositoryId}
-                                    </p>
 
-                                    <p className="mt-1 text-xs text-muted-foreground">
-                                        {(repository.totalActivity ?? 0).toLocaleString()} total activity
-                                    </p>
+                        return (
+                            <Link
+                                key={repositoryKey}
+                                href={
+                                    repository.repositoryId
+                                        ? `/repositories/${repository.repositoryId}/intelligence`
+                                        : "#"
+                                }
+                                className="flex items-center justify-between gap-4 rounded-xl border border-border bg-background p-4 transition hover:border-primary/50 hover:bg-accent"
+                            >
+                                <div className="flex min-w-0 items-center gap-3">
+                                    <Badge variant="secondary">
+                                        {index + 1}
+                                    </Badge>
+
+                                    <div className="min-w-0">
+                                        <p className="truncate font-medium">
+                                            {repository.repositoryFullName ||
+                                                repository.repositoryName ||
+                                                "Unknown Repository"}
+                                        </p>
+
+                                        <p className="mt-1 text-xs text-muted-foreground">
+                                            {(repository.totalActivity ?? 0).toLocaleString()} total activity
+                                        </p>
+                                    </div>
                                 </div>
-                            </div>
 
-                            <Badge>
-                                {(repository.totalActivity ?? 0).toLocaleString()}
-                            </Badge>
-                        </Link>
-                    ))}
+                                <Badge>
+                                    {(repository.totalActivity ?? 0).toLocaleString()}
+                                </Badge>
+                            </Link>
+                        );
+                    })}
                 </div>
             )}
         </div>
@@ -447,33 +460,56 @@ function HighlightCard({
     title: string;
     repository: PortfolioRepositoryActivity | null;
 }) {
+    if (!repository) {
+        return (
+            <div className="rounded-xl border border-border bg-card p-5">
+                <p className="text-sm text-muted-foreground">{title}</p>
+
+                <p className="mt-3 font-medium">
+                    No repository highlight available
+                </p>
+
+                <p className="mt-2 text-sm text-muted-foreground">
+                    ArcHive does not have enough activity data for this highlight yet.
+                </p>
+            </div>
+        );
+    }
+
+    const safeTotalActivity =
+        typeof repository.totalActivity === "number" &&
+            Number.isFinite(repository.totalActivity)
+            ? repository.totalActivity
+            : 0;
+
+    const repositoryLabel =
+        repository.repositoryFullName ||
+        repository.repositoryName ||
+        "Unknown repository";
+
     return (
         <div className="rounded-xl border border-border bg-card p-5">
             <p className="text-sm text-muted-foreground">{title}</p>
 
-            {!repository ? (
-                <p className="mt-3 font-medium">
-                    No repository highlight available
-                </p>
+            <h3 className="mt-3 break-words text-xl font-bold">
+                {repositoryLabel}
+            </h3>
+
+            <Badge variant="secondary" className="mt-3">
+                {safeTotalActivity.toLocaleString()} activities
+            </Badge>
+
+            {repository.repositoryId ? (
+                <Link
+                    href={`/repositories/${repository.repositoryId}/intelligence`}
+                    className="mt-4 block text-sm font-medium text-primary hover:underline"
+                >
+                    Open repository intelligence
+                </Link>
             ) : (
-                <>
-                    <h3 className="mt-3 text-xl font-bold">
-                        {repository.repositoryFullName ||
-                            repository.repositoryName ||
-                            repository.repositoryId}
-                    </h3>
-
-                    <Badge variant="secondary" className="mt-3">
-                        {repository.totalActivity.toLocaleString()} activities
-                    </Badge>
-
-                    <Link
-                        href={`/repositories/${repository.repositoryId}/intelligence`}
-                        className="mt-4 block text-sm font-medium text-primary hover:underline"
-                    >
-                        Open repository intelligence
-                    </Link>
-                </>
+                <p className="mt-4 text-sm text-muted-foreground">
+                    Repository link unavailable.
+                </p>
             )}
         </div>
     );
