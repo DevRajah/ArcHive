@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { ArrowRight, GitCompareArrows, Sparkles } from "lucide-react";
-
+import { formatIntelligenceLabel } from "@/lib/intelligence-labels";
 import { ComparisonScoreCard } from "@/components/comparison/ComparisonScoreCard";
 import { TechnologyOverlap } from "@/components/comparison/TechnologyOverlap";
 import { Badge } from "@/components/ui/badge";
@@ -174,31 +174,133 @@ function RepoSelect({
     );
 }
 
+interface ComparisonInsightItem {
+    category?: string | null;
+    title?: string | null;
+    description?: string | null;
+    evidence?: string | null;
+    severity?: string | null;
+}
+
+function isComparisonInsightItem(
+    item: unknown
+): item is ComparisonInsightItem {
+    return Boolean(
+        item &&
+        typeof item === "object" &&
+        !Array.isArray(item)
+    );
+}
+
+function getInsightKey(item: unknown, index: number) {
+    if (typeof item === "string") {
+        return `${item}-${index}`;
+    }
+
+    if (isComparisonInsightItem(item)) {
+        return [
+            item.category,
+            item.title,
+            item.description,
+            index,
+        ]
+            .filter(Boolean)
+            .join("-");
+    }
+
+    return `insight-${index}`;
+}
+
 function InsightColumn({
     title,
     items,
 }: {
     title: string;
-    items?: string[];
+    items?: unknown[];
 }) {
-    return (
-        <div className="rounded-xl border border-border bg-background p-4">
-            <p className="mb-3 text-sm font-medium">{title}</p>
+    const normalizedItems = Array.isArray(items) ? items : [];
 
-            <div className="space-y-2">
-                {items && items.length > 0 ? (
-                    items.slice(0, 5).map((item, index) => (
-                        <div
-                            key={`${item}-${index}`}
-                            className="rounded-lg border border-border bg-card p-3 text-sm text-muted-foreground"
-                        >
-                            {item}
-                        </div>
-                    ))
-                ) : (
-                    <p className="text-sm text-muted-foreground">No insights available.</p>
-                )}
-            </div>
+    return (
+        <div className="rounded-xl border border-border bg-card p-5">
+            <h3 className="font-semibold">{title}</h3>
+
+            {normalizedItems.length === 0 ? (
+                <p className="mt-4 text-sm text-muted-foreground">
+                    No comparison insights available.
+                </p>
+            ) : (
+                <div className="mt-4 space-y-3">
+                    {normalizedItems.map((item, index) => {
+                        if (
+                            typeof item === "string" ||
+                            typeof item === "number"
+                        ) {
+                            return (
+                                <div
+                                    key={getInsightKey(item, index)}
+                                    className="rounded-lg border border-border bg-background p-4"
+                                >
+                                    <p className="text-sm leading-6 text-muted-foreground">
+                                        {String(item)}
+                                    </p>
+                                </div>
+                            );
+                        }
+
+                        if (isComparisonInsightItem(item)) {
+                            return (
+                                <div
+                                    key={getInsightKey(item, index)}
+                                    className="rounded-lg border border-border bg-background p-4"
+                                >
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        {item.category && (
+                                            <Badge variant="secondary">
+                                                {formatIntelligenceLabel(item.category)}
+                                            </Badge>
+                                        )}
+
+                                        {item.severity && (
+                                            <Badge variant="outline">
+                                                {formatIntelligenceLabel(item.severity)}
+                                            </Badge>
+                                        )}
+                                    </div>
+
+                                    {item.title && (
+                                        <p className="mt-3 font-medium">
+                                            {item.title}
+                                        </p>
+                                    )}
+
+                                    {item.description && (
+                                        <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                                            {item.description}
+                                        </p>
+                                    )}
+
+                                    {item.evidence && (
+                                        <p className="mt-3 break-words text-xs text-muted-foreground">
+                                            Evidence: {item.evidence}
+                                        </p>
+                                    )}
+                                </div>
+                            );
+                        }
+
+                        return (
+                            <div
+                                key={getInsightKey(item, index)}
+                                className="rounded-lg border border-border bg-background p-4"
+                            >
+                                <p className="text-sm text-muted-foreground">
+                                    Insight data is unavailable.
+                                </p>
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
         </div>
     );
 }
