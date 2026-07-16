@@ -80,3 +80,143 @@ export interface UserPortfolioResponse {
   highlights: PortfolioHighlights;
   repositories: PortfolioRepository[];
 }
+
+
+/* -------------------------------------------------------------------------- */
+/* Portfolio timeline                                                         */
+/* -------------------------------------------------------------------------- */
+
+export type PortfolioActivityType =
+  | "TIMELINE"
+  | "ENGINEERING_EVENT"
+  | "ARCHITECTURE_CHANGE"
+  | "RECOMMENDATION";
+
+export interface PortfolioTimelineRepository {
+  id: string;
+  name?: string | null;
+  fullName?: string | null;
+}
+
+export interface PortfolioTimelineActivity {
+  id: string;
+  type: PortfolioActivityType | string;
+  action?: string | null;
+  title?: string | null;
+  description?: string | null;
+  createdAt: string;
+
+  repository?: PortfolioTimelineRepository | null;
+
+  metadata?: Record<string, unknown> | null;
+}
+
+export interface PortfolioTimelineFilters {
+  repositories: Array<{
+    id: string;
+    name?: string | null;
+    fullName?: string | null;
+  }>;
+
+  activityTypes: string[];
+}
+
+export interface PortfolioTimelineTotals {
+  totalActivity: number;
+  timelineEntries: number;
+  engineeringEvents: number;
+  architectureChanges: number;
+  recommendations: number;
+}
+
+export interface PortfolioPagination {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  hasNextPage?: boolean;
+  hasPreviousPage?: boolean;
+}
+
+export interface PortfolioTimelineResponse {
+  user: PortfolioUser;
+  activity: PortfolioTimelineActivity[];
+  filters: PortfolioTimelineFilters;
+  totals: PortfolioTimelineTotals;
+  pagination: PortfolioPagination;
+}
+
+export interface PortfolioTimelineParams {
+  page?: number;
+  limit?: number;
+  repositoryId?: string;
+  activityType?: string;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Portfolio trends                                                           */
+/* -------------------------------------------------------------------------- */
+
+export type PortfolioTrendPeriod = "7d" | "30d" | "90d" | "1y";
+
+export interface PortfolioTrendPoint {
+  date: string;
+  totalActivity: number;
+  engineeringEvents: number;
+  timelineEntries: number;
+  architectureChanges: number;
+  recommendations: number;
+}
+
+export interface PortfolioTrendTotals {
+  totalEngineeringEvents: number;
+  totalTimelineEntries: number;
+  totalArchitectureChanges: number;
+  totalRecommendations: number;
+  totalPortfolioActivity: number;
+}
+
+export interface PortfolioDateRange {
+  start: string;
+  end: string;
+}
+
+export interface PortfolioRepositoryActivity {
+  repositoryId: string;
+  repositoryName?: string | null;
+  repositoryFullName?: string | null;
+
+  totalActivity: number;
+  engineeringEvents?: number;
+  timelineEntries?: number;
+  architectureChanges?: number;
+  recommendations?: number;
+
+  isTracked?: boolean;
+}
+
+export interface PortfolioTrendDistributions {
+  technologies: PortfolioDistributionItem[];
+  architectureDomains: PortfolioDistributionItem[];
+  repositoryTypes: PortfolioDistributionItem[];
+  languages: PortfolioDistributionItem[];
+  engineeringEventTypes: PortfolioDistributionItem[];
+  recommendationStatuses: PortfolioDistributionItem[];
+}
+
+export interface PortfolioTrendHighlights {
+  mostActiveRepository: PortfolioRepositoryActivity | null;
+  leastActiveRepository: PortfolioRepositoryActivity | null;
+  inactiveTrackedRepositories: PortfolioRepositoryActivity[];
+}
+
+export interface PortfolioTrendsResponse {
+  user: PortfolioUser;
+  period: PortfolioTrendPeriod;
+  dateRange: PortfolioDateRange;
+  totals: PortfolioTrendTotals;
+  trend: PortfolioTrendPoint[];
+  distributions: PortfolioTrendDistributions;
+  repositoryActivity: PortfolioRepositoryActivity[];
+  highlights: PortfolioTrendHighlights;
+}

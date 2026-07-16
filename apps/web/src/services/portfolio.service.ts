@@ -1,11 +1,17 @@
 import { api } from "@/lib/api";
 
-import {
+import type {
   PortfolioDistributionItem,
   PortfolioDistributions,
   PortfolioHighlightRepository,
   PortfolioHighlights,
   PortfolioRepository,
+  PortfolioTimelineActivity,
+  PortfolioTimelineParams,
+  PortfolioTimelineResponse,
+  PortfolioTrendPeriod,
+  PortfolioTrendPoint,
+  PortfolioTrendsResponse,
   UserPortfolioResponse,
 } from "@/types/portfolio.types";
 
@@ -43,7 +49,8 @@ function normalizeDistribution(value: unknown): PortfolioDistributionItem[] {
           record.type ??
           record.language ??
           record.technology ??
-          record.domain;
+          record.domain ??
+          record.status;
 
         const count =
           record.count ??
@@ -95,21 +102,16 @@ function normalizeHighlight(
 
   const record = value as Record<string, unknown>;
 
-  /*
-   * The API may return the repository directly or wrap it in a repository
-   * property together with a metric. The service normalises both forms so
-   * presentation components receive one stable contract.
-   */
   const repositoryValue =
     record.repository &&
     typeof record.repository === "object"
       ? (record.repository as Record<string, unknown>)
       : record;
 
-  const id = repositoryValue.id;
-  const name = repositoryValue.name;
-
-  if (typeof id !== "string" || typeof name !== "string") {
+  if (
+    typeof repositoryValue.id !== "string" ||
+    typeof repositoryValue.name !== "string"
+  ) {
     return null;
   }
 
@@ -151,12 +153,15 @@ function normalizePortfolio(
 
   const distributions: PortfolioDistributions = {
     languages: normalizeDistribution(rawDistributions?.languages),
+
     repositoryTypes: normalizeDistribution(
       rawDistributions?.repositoryTypes
     ),
+
     architectureDomains: normalizeDistribution(
       rawDistributions?.architectureDomains
     ),
+
     technologies: normalizeDistribution(
       rawDistributions?.technologies
     ),
@@ -190,6 +195,151 @@ function normalizePortfolio(
   };
 }
 
+function normalizeTimelineActivity(
+  value: unknown
+): PortfolioTimelineActivity[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .filter(
+      (item): item is PortfolioTimelineActivity =>
+        Boolean(
+          item &&
+            typeof item === "object" &&
+            "id" in item &&
+            "type" in item &&
+            "createdAt" in item
+        )
+    )
+    .sort((first, second) => {
+      return (
+        new Date(second.createdAt).getTime() -
+        new Date(first.createdAt).getTime()
+      );
+    });
+}
+
+function normalizeTrend(value: unknown): PortfolioTrendPoint[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((item) => {
+      if (!item || typeof item !== "object") {
+        return null;
+      }
+
+      const record = item as Record<string, unknown>;
+
+      const date =
+        record.date ??
+        record.day ??
+        record.period ??
+        record.label;
+
+      if (typeof date !== "string") {
+        return null;
+      }
+
+      const engineeringEvents = Number(
+        record.engineeringEvents ?? record.events ?? 0
+      );
+
+      const timelineEntries = Number(
+        record.timelineEntries ?? record.timeline ?? 0
+      );
+
+      const architectureChanges = Number(
+        record.architectureChanges ?? record.architecture ?? 0
+      );
+
+      const recommendations = Number(
+        record.recommendations ?? 0
+      );
+
+      const totalActivity = Number(
+        record.totalActivity ??
+          engineeringEvents +
+            timelineEntries +
+            architectureChanges +
+            recommendations
+      );
+
+      return {
+        date,
+        totalActivity,
+        engineeringEvents,
+        timelineEntries,
+        architectureChanges,
+        recommendations,
+      };
+    })
+    .filter(
+      (item): item is PortfolioTrendPoint =>
+        item !== null
+    );
+}
+
+function normalizeTrends(
+  value: PortfolioTrendsResponse
+): PortfolioTrendsResponse {
+  const distributions =
+    value.distributions as unknown as Record<string, unknown>;
+
+  return {
+    ...value,
+
+    trend: normalizeTrend(value.trend),
+
+    repositoryActivity: Array.isArray(value.repositoryActivity)
+      ? value.repositoryActivity
+      : [],
+
+    distributions: {
+      technologies: normalizeDistribution(
+        distributions?.technologies
+      ),
+
+      architectureDomains: normalizeDistribution(
+        distributions?.architectureDomains
+      ),
+
+      repositoryTypes: normalizeDistribution(
+        distributions?.repositoryTypes
+      ),
+
+      languages: normalizeDistribution(
+        distributions?.languages
+      ),
+
+      engineeringEventTypes: normalizeDistribution(
+        distributions?.engineeringEventTypes
+      ),
+
+      recommendationStatuses: normalizeDistribution(
+        distributions?.recommendationStatuses
+      ),
+    },
+
+    highlights: {
+      mostActiveRepository:
+        value.highlights?.mostActiveRepository ?? null,
+
+      leastActiveRepository:
+        value.highlights?.leastActiveRepository ?? null,
+
+      inactiveTrackedRepositories: Array.isArray(
+        value.highlights?.inactiveTrackedRepositories
+      )
+        ? value.highlights.inactiveTrackedRepositories
+        : [],
+    },
+  };
+}
+
 export const portfolioService = {
   async getUserPortfolio(
     userId: string
@@ -198,8 +348,52 @@ export const portfolioService = {
       UserPortfolioResponse | ApiEnvelope<UserPortfolioResponse>
     >(`/users/${userId}/portfolio`);
 
+    return normalizePortfolio(
+      unwrapResponse(response.data)
+    );
+  },
+
+  async getPortfolioTimeline(
+    userId: string,
+    params?: PortfolioTimelineParams
+  ): Promise<PortfolioTimelineResponse> {
+    const response = await api.get<
+      PortfolioTimelineResponse |
+        ApiEnvelope<PortfolioTimelineResponse>
+    >(`/users/${userId}/portfolio/timeline`, {
+      params: {
+        page: params?.page,
+        limit: params?.limit,
+        repositoryId:
+          params?.repositoryId || undefined,
+        activityType:
+          params?.activityType || undefined,
+      },
+    });
+
     const payload = unwrapResponse(response.data);
 
-    return normalizePortfolio(payload);
+    return {
+      ...payload,
+      activity: normalizeTimelineActivity(payload.activity),
+    };
+  },
+
+  async getPortfolioTrends(
+    userId: string,
+    period: PortfolioTrendPeriod
+  ): Promise<PortfolioTrendsResponse> {
+    const response = await api.get<
+      PortfolioTrendsResponse |
+        ApiEnvelope<PortfolioTrendsResponse>
+    >(`/users/${userId}/portfolio/trends`, {
+      params: {
+        period,
+      },
+    });
+
+    return normalizeTrends(
+      unwrapResponse(response.data)
+    );
   },
 };
