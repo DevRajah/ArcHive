@@ -79,6 +79,8 @@ model Repository {
 
   engineeringRecommendations EngineeringRecommendation[]
 
+  intelligenceSnapshots RepositoryIntelligenceSnapshot[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -182,4 +184,31 @@ model AdminActivity {
   @@index([actorUserId])
   @@index([repositoryId])
   @@index([createdAt])
+}
+
+model RepositoryIntelligenceSnapshot {
+  id           String @id @default(uuid())
+  repositoryId String
+
+  primaryRepositoryType String?
+
+  repositoryTypes     Json
+  technologies        Json
+  architectureDomains Json
+  capabilities        Json
+  recommendations     Json
+  intelligence        Json
+
+  confidenceScore          Int?
+  maturityScore            Int?
+  architectureScore        Int?
+  capabilityScore          Int?
+  engineeringQualityScore  Int?
+  productionReadinessScore Int?
+
+  createdAt DateTime @default(now())
+
+  repository Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+
+  @@index([repositoryId, createdAt])
 }

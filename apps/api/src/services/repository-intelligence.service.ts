@@ -1,7 +1,7 @@
 import axios from "axios";
 import { prisma } from "@archive/database";
 import { detectTechnologyFingerprint } from "@archive/detectors";
-
+import { createRepositoryIntelligenceSnapshot } from "./intelligence-snapshot.service";
 /*
  |--------------------------------------------------------------------------
  | Single source of truth for repository intelligence generation.
@@ -198,6 +198,15 @@ export const generateRepositoryIntelligence = async ({
       : fingerprint.reasoningSignals;
 
   await prisma.$transaction(async (tx) => {
+    /*
+    |--------------------------------------------------------------------------
+    | Keep one current generated ArchitectureChange row.
+    |
+    | ArchitectureChange remains the latest lightweight record consumed by
+    | existing pages. Historical intelligence is now preserved separately in
+    | RepositoryIntelligenceSnapshot.
+    |--------------------------------------------------------------------------
+    */
     await tx.architectureChange.deleteMany({
       where: {
         repositoryId,
@@ -212,13 +221,28 @@ export const generateRepositoryIntelligence = async ({
         detectedTechnology: primaryTechnology,
         fileAffected: "repository-intelligence.service.ts",
         architectureDomain: primaryArchitectureDomain,
-        repositoryTypes: repositoryIntelligence.identity.repositoryTypes.join(","),
+        repositoryTypes:
+          repositoryIntelligence.identity.repositoryTypes.join(","),
         reasoningSignals: reasoningSignals.join(","),
         summary: `${repository.name} intelligence was regenerated as ${primaryRepositoryType}.`,
         evolutionSummary:
           repositoryIntelligence.assessment.evolutionInsights.summary ||
           "Repository intelligence was regenerated using the latest ArcHive intelligence engine.",
       },
+    });
+
+    /*
+    |--------------------------------------------------------------------------
+    | Preserve the complete generated intelligence result.
+    |
+    | Unlike the lightweight ArchitectureChange row, snapshots are immutable.
+    | They give the diff engine two complete versions to compare later.
+    |--------------------------------------------------------------------------
+    */
+    await createRepositoryIntelligenceSnapshot({
+      tx,
+      repositoryId,
+      fingerprint,
     });
   });
 

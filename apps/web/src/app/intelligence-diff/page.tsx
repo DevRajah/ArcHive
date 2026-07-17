@@ -212,7 +212,7 @@ export default function IntelligenceDiffPage() {
                       className="mt-5 w-full"
                     >
                       <Link
-                        href={`/repositories/${repository.id}/diff`}
+                        href={`/repositories/${repository.id}/intelligence/diff`}
                       >
                         Open Intelligence Diff
                         <ArrowRight className="ml-2 h-4 w-4" />
