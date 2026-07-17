@@ -128,9 +128,12 @@ export function RepositoryIntelligenceNav({
 }: RepositoryIntelligenceNavProps) {
   const pathname = usePathname();
 
-  const moreIsActive = moreItems.some((item) =>
-    isItemActive(pathname, item, repositoryId)
-  );
+  const activeMoreItem =
+    moreItems.find((item) =>
+      isItemActive(pathname, item, repositoryId)
+    ) ?? null;
+
+  const ActiveMoreIcon = activeMoreItem?.icon;
 
   return (
     <div className="w-full max-w-full overflow-hidden rounded-xl border border-border bg-card p-3">
@@ -138,6 +141,7 @@ export function RepositoryIntelligenceNav({
         {primaryItems.map((item) => {
           const Icon = item.icon;
           const href = getHref(repositoryId, item.href);
+
           const active = isItemActive(
             pathname,
             item,
@@ -162,15 +166,20 @@ export function RepositoryIntelligenceNav({
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
-              variant={moreIsActive ? "secondary" : "ghost"}
+              variant={activeMoreItem ? "secondary" : "ghost"}
               size="sm"
               className={cn(
                 "gap-2",
-                moreIsActive &&
+                activeMoreItem &&
                   "bg-primary/10 text-primary hover:bg-primary/10"
               )}
             >
-              More
+              {ActiveMoreIcon && (
+                <ActiveMoreIcon className="h-4 w-4" />
+              )}
+
+              {activeMoreItem?.label || "More"}
+
               <ChevronDown className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
@@ -182,6 +191,7 @@ export function RepositoryIntelligenceNav({
             {moreItems.map((item) => {
               const Icon = item.icon;
               const href = getHref(repositoryId, item.href);
+
               const active = isItemActive(
                 pathname,
                 item,
