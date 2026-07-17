@@ -1,45 +1,53 @@
-export interface IntelligenceDiffChange {
+export type IntelligenceDiffDirection =
+  | "UP"
+  | "DOWN"
+  | "UNCHANGED"
+  | null;
+
+export interface IntelligenceDiffRepository {
+  id: string;
+  name: string;
+  fullName: string | null;
+}
+
+export interface IntelligenceDiffSummary {
+  headline: string;
+  description: string;
+}
+
+export interface IntelligenceDiffScoreChange {
   label: string;
-  previous?: string | number | null;
-  current?: string | number | null;
-  direction?: "UP" | "DOWN" | "UNCHANGED" | string;
-  summary?: string | null;
+  previous: number | string | null;
+  current: number | string | null;
+  direction: IntelligenceDiffDirection;
+  summary: string | null;
 }
 
 export interface IntelligenceDiffSignalGroup {
-  added?: string[];
-  removed?: string[];
-  unchanged?: string[];
+  added: string[];
+  removed: string[];
+  unchanged: string[];
+}
+
+export interface IntelligenceDiffSignalChanges {
+  technologies: IntelligenceDiffSignalGroup;
+  architectureDomains: IntelligenceDiffSignalGroup;
+  repositoryTypes: IntelligenceDiffSignalGroup;
+  capabilities: IntelligenceDiffSignalGroup;
+}
+
+export interface IntelligenceDiffRecommendationChanges {
+  added: string[];
+  resolved: string[];
+  removed: string[];
 }
 
 export interface RepositoryIntelligenceDiffResponse {
-  repository?: {
-    id: string;
-    name: string;
-    fullName?: string | null;
-  };
-
-  hasDiff?: boolean;
-
-  generatedAt?: string | null;
-
-  scoreChanges?: IntelligenceDiffChange[];
-
-  signalChanges?: {
-    technologies?: IntelligenceDiffSignalGroup;
-    architectureDomains?: IntelligenceDiffSignalGroup;
-    repositoryTypes?: IntelligenceDiffSignalGroup;
-    capabilities?: IntelligenceDiffSignalGroup;
-  };
-
-  recommendationChanges?: {
-    added?: string[];
-    resolved?: string[];
-    removed?: string[];
-  };
-
-  summary?: {
-    headline?: string | null;
-    description?: string | null;
-  };
+  repository: IntelligenceDiffRepository;
+  hasDiff: boolean;
+  generatedAt: string | null;
+  summary: IntelligenceDiffSummary | null;
+  scoreChanges: IntelligenceDiffScoreChange[];
+  signalChanges: IntelligenceDiffSignalChanges;
+  recommendationChanges: IntelligenceDiffRecommendationChanges;
 }

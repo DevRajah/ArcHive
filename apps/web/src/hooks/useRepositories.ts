@@ -1,6 +1,12 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+
 import { QUERY_KEYS } from "@/constants/query-keys";
 import { repositoryService } from "@/services/repository.service";
+
 import { GithubRepository } from "@/types/repository.types";
 import { IntelligenceSearchParams } from "@/types/intelligence-search.types";
 
@@ -56,26 +62,44 @@ export function useImportSelectedRepositories() {
   });
 }
 
-export function useRepositoryCapabilities(repositoryId: string) {
+export function useRepositoryCapabilities(
+  repositoryId: string
+) {
   return useQuery({
     queryKey: QUERY_KEYS.REPOSITORY_CAPABILITIES(repositoryId),
-    queryFn: () => repositoryService.getRepositoryCapabilities(repositoryId),
+
+    queryFn: () =>
+      repositoryService.getRepositoryCapabilities(repositoryId),
+
     enabled: Boolean(repositoryId),
   });
 }
 
-export function useRepositoryArchitectureRadar(repositoryId: string) {
+export function useRepositoryArchitectureRadar(
+  repositoryId: string
+) {
   return useQuery({
-    queryKey: QUERY_KEYS.REPOSITORY_ARCHITECTURE_RADAR(repositoryId),
-    queryFn: () => repositoryService.getRepositoryArchitectureRadar(repositoryId),
+    queryKey:
+      QUERY_KEYS.REPOSITORY_ARCHITECTURE_RADAR(repositoryId),
+
+    queryFn: () =>
+      repositoryService.getRepositoryArchitectureRadar(
+        repositoryId
+      ),
+
     enabled: Boolean(repositoryId),
   });
 }
 
-export function useRepositoryNarrative(repositoryId: string) {
+export function useRepositoryNarrative(
+  repositoryId: string
+) {
   return useQuery({
     queryKey: QUERY_KEYS.REPOSITORY_NARRATIVE(repositoryId),
-    queryFn: () => repositoryService.getRepositoryNarrative(repositoryId),
+
+    queryFn: () =>
+      repositoryService.getRepositoryNarrative(repositoryId),
+
     enabled: Boolean(repositoryId),
   });
 }
@@ -97,47 +121,78 @@ export function useRepositoryIntelligenceSummary(
   });
 }
 
-export function useRepositoryPurpose(repositoryId: string) {
+export function useRepositoryPurpose(
+  repositoryId: string
+) {
   return useQuery({
     queryKey: QUERY_KEYS.REPOSITORY_PURPOSE(repositoryId),
-    queryFn: () => repositoryService.getRepositoryPurpose(repositoryId),
-    enabled: Boolean(repositoryId),
-    retry: false,
-  });
-}
 
-export function useRepositoryIntelligenceReport(repositoryId: string) {
-  return useQuery({
-    queryKey: QUERY_KEYS.REPOSITORY_INTELLIGENCE_REPORT(repositoryId),
-    queryFn: () => repositoryService.getRepositoryIntelligenceReport(repositoryId),
-    enabled: Boolean(repositoryId),
-    retry: false,
-  });
-}
-
-export function useRepositoryIntelligenceTimeline(repositoryId: string) {
-  return useQuery({
-    queryKey: QUERY_KEYS.REPOSITORY_INTELLIGENCE_TIMELINE(repositoryId),
     queryFn: () =>
-      repositoryService.getRepositoryIntelligenceTimeline(repositoryId),
+      repositoryService.getRepositoryPurpose(repositoryId),
+
     enabled: Boolean(repositoryId),
     retry: false,
   });
 }
 
-export function useRelatedRepositories(repositoryId: string) {
+export function useRepositoryIntelligenceReport(
+  repositoryId: string
+) {
+  return useQuery({
+    queryKey:
+      QUERY_KEYS.REPOSITORY_INTELLIGENCE_REPORT(repositoryId),
+
+    queryFn: () =>
+      repositoryService.getRepositoryIntelligenceReport(
+        repositoryId
+      ),
+
+    enabled: Boolean(repositoryId),
+    retry: false,
+  });
+}
+
+export function useRepositoryIntelligenceTimeline(
+  repositoryId: string
+) {
+  return useQuery({
+    queryKey:
+      QUERY_KEYS.REPOSITORY_INTELLIGENCE_TIMELINE(repositoryId),
+
+    queryFn: () =>
+      repositoryService.getRepositoryIntelligenceTimeline(
+        repositoryId
+      ),
+
+    enabled: Boolean(repositoryId),
+    retry: false,
+  });
+}
+
+export function useRelatedRepositories(
+  repositoryId: string
+) {
   return useQuery({
     queryKey: QUERY_KEYS.REPOSITORY_RELATED(repositoryId),
-    queryFn: () => repositoryService.getRelatedRepositories(repositoryId),
+
+    queryFn: () =>
+      repositoryService.getRelatedRepositories(repositoryId),
+
     enabled: Boolean(repositoryId),
     retry: false,
   });
 }
 
-export function useRepositoryMarkdownReport(repositoryId: string) {
+export function useRepositoryMarkdownReport(
+  repositoryId: string
+) {
   return useQuery({
-    queryKey: QUERY_KEYS.REPOSITORY_INTELLIGENCE_MARKDOWN(repositoryId),
-    queryFn: () => repositoryService.getRepositoryMarkdownReport(repositoryId),
+    queryKey:
+      QUERY_KEYS.REPOSITORY_INTELLIGENCE_MARKDOWN(repositoryId),
+
+    queryFn: () =>
+      repositoryService.getRepositoryMarkdownReport(repositoryId),
+
     enabled: Boolean(repositoryId),
     retry: false,
   });
@@ -146,46 +201,76 @@ export function useRepositoryMarkdownReport(repositoryId: string) {
 export function useIntelligenceOverview() {
   return useQuery({
     queryKey: QUERY_KEYS.INTELLIGENCE_OVERVIEW,
-    queryFn: () => repositoryService.getIntelligenceOverview(),
+
+    queryFn: () =>
+      repositoryService.getIntelligenceOverview(),
+
     retry: false,
   });
 }
 
-export function useIntelligenceSearch(params: IntelligenceSearchParams) {
+export function useIntelligenceSearch(
+  params: IntelligenceSearchParams
+) {
   const hasParams = Object.values(params).some(
-    (value) => typeof value === "string" && value.trim().length > 0
+    (value) =>
+      typeof value === "string" &&
+      value.trim().length > 0
   );
 
   return useQuery({
     queryKey: QUERY_KEYS.INTELLIGENCE_SEARCH(params),
-    queryFn: () => repositoryService.searchRepositoryIntelligence(params),
+
+    queryFn: () =>
+      repositoryService.searchRepositoryIntelligence(params),
+
     enabled: hasParams,
     retry: false,
   });
 }
 
-export function useRepositoryKnowledgeGraph(repositoryId: string) {
+export function useRepositoryKnowledgeGraph(
+  repositoryId: string
+) {
   return useQuery({
-    queryKey: QUERY_KEYS.REPOSITORY_KNOWLEDGE_GRAPH(repositoryId),
-    queryFn: () => repositoryService.getRepositoryKnowledgeGraph(repositoryId),
+    queryKey:
+      QUERY_KEYS.REPOSITORY_KNOWLEDGE_GRAPH(repositoryId),
+
+    queryFn: () =>
+      repositoryService.getRepositoryKnowledgeGraph(repositoryId),
+
     enabled: Boolean(repositoryId),
     retry: false,
   });
 }
 
-export function useRepositoryIntelligenceAudit(repositoryId: string) {
+export function useRepositoryIntelligenceAudit(
+  repositoryId: string
+) {
   return useQuery({
-    queryKey: QUERY_KEYS.REPOSITORY_INTELLIGENCE_AUDIT(repositoryId),
-    queryFn: () => repositoryService.getRepositoryIntelligenceAudit(repositoryId),
+    queryKey:
+      QUERY_KEYS.REPOSITORY_INTELLIGENCE_AUDIT(repositoryId),
+
+    queryFn: () =>
+      repositoryService.getRepositoryIntelligenceAudit(
+        repositoryId
+      ),
+
     enabled: Boolean(repositoryId),
     retry: false,
   });
 }
 
-export function useRepositoryRecommendations(repositoryId: string) {
+export function useRepositoryRecommendations(
+  repositoryId: string
+) {
   return useQuery({
-    queryKey: QUERY_KEYS.REPOSITORY_RECOMMENDATIONS(repositoryId),
-    queryFn: () => repositoryService.getRepositoryRecommendations(repositoryId),
+    queryKey:
+      QUERY_KEYS.REPOSITORY_RECOMMENDATIONS(repositoryId),
+
+    queryFn: () =>
+      repositoryService.getRepositoryRecommendations(repositoryId),
+
     enabled: Boolean(repositoryId),
     retry: false,
   });
@@ -200,7 +285,8 @@ export function useReprocessRepository() {
 
 export function useReprocessAllRepositories() {
   return useMutation({
-    mutationFn: () => repositoryService.reprocessAllRepository(),
+    mutationFn: () =>
+      repositoryService.reprocessAllRepository(),
   });
 }
 
