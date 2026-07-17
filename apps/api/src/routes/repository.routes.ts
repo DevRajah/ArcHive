@@ -22,6 +22,9 @@ import {
   compareRepositories,
 
 } from "@archive/detectors";
+import { intelligenceDiffService } from "../services/intelligence-diff.service";
+import { getAuthenticatedUser } from "../utils/authenticated-user";
+import { isPlatformAdmin } from "../utils/admin";
 
 import { generateRepositoryIntelligence } from "../services/repository-intelligence.service"
 
@@ -2001,6 +2004,95 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
       data,
     };
   });
+
+  /*
+|--------------------------------------------------------------------------
+| Repository intelligence diff
+|
+| Compares the newest completed intelligence snapshot against the immediately
+| previous snapshot. A repository with insufficient history still returns 200
+| so the frontend can show a useful empty state instead of a missing page.
+|--------------------------------------------------------------------------
+*/
+app.get<{ Params: { repositoryId: string } }>(
+  "/:repositoryId/intelligence-diff",
+  async (request, reply) => {
+    const authentication = getAuthenticatedUser(request);
+
+    if (!authentication.authenticated) {
+      return reply.status(401).send({
+        success: false,
+        message:
+          authentication.reason === "MISSING_TOKEN"
+            ? "Authentication required."
+            : "Invalid or expired authentication token.",
+      });
+    }
+
+    const { repositoryId } = request.params;
+
+    /*
+     * Repository existence is checked separately from access so the endpoint
+     * can return the precise status required by the API contract.
+     */
+    const repository =
+      await prisma.repository.findUnique({
+        where: {
+          id: repositoryId,
+        },
+        select: {
+          id: true,
+          userId: true,
+        },
+      });
+
+    if (!repository) {
+      return reply.status(404).send({
+        success: false,
+        message: "Repository not found.",
+      });
+    }
+
+    const isOwner =
+      repository.userId === authentication.user.userId;
+
+    const hasAdminAccess = isPlatformAdmin(
+      authentication.user.username
+    );
+
+    if (!isOwner && !hasAdminAccess) {
+      return reply.status(403).send({
+        success: false,
+        message:
+          "You do not have permission to access this repository.",
+      });
+    }
+
+    const diff =
+      await intelligenceDiffService.getRepositoryDiff(
+        repositoryId
+      );
+
+    /*
+     * This should only be reachable if the repository disappears between the
+     * access check and diff query, but the response remains safely handled.
+     */
+    if (!diff) {
+      return reply.status(404).send({
+        success: false,
+        message: "Repository not found.",
+      });
+    }
+
+    return reply.send({
+      success: true,
+      message: diff.hasDiff
+        ? "Repository intelligence diff fetched successfully."
+        : "Repository intelligence history is not yet sufficient for comparison.",
+      data: diff,
+    });
+  }
+);
 
 
   // intelligence search analysis
