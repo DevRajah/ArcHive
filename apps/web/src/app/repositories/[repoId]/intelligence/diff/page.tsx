@@ -11,6 +11,13 @@ import {
   Sparkles,
 } from "lucide-react";
 
+import type {
+  IntelligenceDiffDirection,
+  IntelligenceDiffRecommendationChanges,
+  IntelligenceDiffScoreChange,
+  IntelligenceDiffSignalGroup,
+} from "@/types/repository-intelligence-diff.types";
+
 import { AppShell } from "@/components/layout/AppShell";
 import { PageContent } from "@/components/layout/PageContent";
 import { RepositoryIntelligenceNav } from "@/components/repositories/RepositoryIntelligenceNav";
@@ -26,15 +33,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useRepositoryIntelligenceDiff } from "@/hooks/useRepositories";
 import { formatFilterLabel } from "@/lib/filters";
 
-function getDirectionIcon(direction?: string) {
-  const value = direction?.toUpperCase();
-
-  if (value === "UP") {
+function getDirectionIcon(
+  direction?: IntelligenceDiffDirection
+) {
+  if (direction === "UP") {
     return <ArrowUp className="h-4 w-4 text-emerald-500" />;
   }
 
-  if (value === "DOWN") {
-    return <ArrowDown className="h-4 w-4 text-yellow-500" />;
+  if (direction === "DOWN") {
+    return <ArrowDown className="h-4 w-4 text-destructive" />;
   }
 
   return <Minus className="h-4 w-4 text-muted-foreground" />;
