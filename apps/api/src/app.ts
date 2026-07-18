@@ -16,6 +16,7 @@ import { githubOAuthRoutes } from "./routes/github-oauth.routes";
 import adminRoutes from "./routes/admin";
 import { portfolioRoutes } from "./routes/portfolio.routes";
 import { portfolioIntelligenceRoutes } from "./routes/portfolio-intelligence.routes";
+import { portfolioKnowledgeGraphRoutes } from "./routes/portfolio-knowledge-graph.routes";
 
 // This makes future testing easier because I can import the app without starting the port.
 export const buildApp = async () => {
@@ -93,6 +94,10 @@ export const buildApp = async () => {
   await app.register(portfolioIntelligenceRoutes, {
     prefix: "/api/users",
   });
+
+  await app.register(portfolioKnowledgeGraphRoutes, {
+  prefix: "/api/users",
+});
 
   await app.register(githubOAuthRoutes, {
     prefix: "/api/github/oauth",

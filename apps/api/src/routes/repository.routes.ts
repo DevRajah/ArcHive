@@ -20,8 +20,8 @@ import {
   auditRepositoryIntelligence,
   buildIntelligenceTimeline,
   compareRepositories,
-
 } from "@archive/detectors";
+import { knowledgeGraphService } from "../services/knowledge-graph.service";
 import { intelligenceDiffService } from "../services/intelligence-diff.service";
 import { getAuthenticatedUser } from "../utils/authenticated-user";
 import { isPlatformAdmin } from "../utils/admin";
@@ -1503,100 +1503,59 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
     }
   );
 
-  // technology relationships analysis
-  app.get<{ Params: { repositoryId: string } }>(
-    "/:repositoryId/knowledge-graph",
-    async (request, reply) => {
-      const { repositoryId } = request.params;
 
-      const repository = await prisma.repository.findUnique({
-        where: { id: repositoryId },
-        select: {
-          id: true,
-          name: true,
-          fullName: true,
-        },
+// Repository-level engineering knowledge graph
+app.get<{ Params: { repositoryId: string } }>(
+  "/:repositoryId/knowledge-graph",
+  async (request, reply) => {
+    const { repositoryId } = request.params;
+
+    const knowledgeGraph =
+      await knowledgeGraphService.getRepositoryGraph(repositoryId);
+
+    if (!knowledgeGraph) {
+      return reply.status(404).send({
+        success: false,
+        message: "Repository not found",
       });
-
-      if (!repository) {
-        return reply.status(404).send({
-          success: false,
-          message: "Repository not found",
-        });
-      }
-
-      const architectureChanges =
-        await prisma.architectureChange.findMany({
-          where: { repositoryId },
-          select: {
-            architectureDomain: true,
-            detectedTechnology: true,
-            repositoryTypes: true,
-          },
-        });
-
-      const domains = Array.from(
-        new Set(
-          architectureChanges
-            .map((change) => change.architectureDomain)
-            .filter(
-              (domain): domain is string =>
-                Boolean(domain)
-            )
-        )
-      );
-
-      const technologies = Array.from(
-        new Set(
-          architectureChanges
-            .map((change) => change.detectedTechnology)
-            .filter(
-              (
-                technology
-              ): technology is string =>
-                Boolean(technology)
-            )
-        )
-      );
-
-      const repositoryTypes = Array.from(
-        new Set(
-          architectureChanges
-            .flatMap(
-              (change) =>
-                change.repositoryTypes?.split(",") ||
-                []
-            )
-            .map((type) => type.trim())
-            .filter(Boolean)
-        )
-      );
-
-      const graph =
-        buildTechnologyRelationships({
-          technologies,
-          domains,
-          repositoryTypes,
-        });
-
-      return {
-        success: true,
-        message:
-          "Repository knowledge graph fetched successfully",
-        data: {
-          repository,
-
-          graph,
-
-          nodes: {
-            technologies,
-            domains,
-            repositoryTypes,
-          },
-        },
-      };
     }
-  );
+
+    /*
+     * Keep the original graph format available so the current frontend does
+     * not break while richer node-and-edge visualisations are introduced.
+     */
+    const legacyGraph = buildTechnologyRelationships({
+      technologies: knowledgeGraph.signals.technologies,
+      domains: knowledgeGraph.signals.architectureDomains,
+      repositoryTypes: knowledgeGraph.signals.repositoryTypes,
+    });
+
+    return {
+      success: true,
+      message: "Repository knowledge graph fetched successfully",
+      data: {
+        repository: knowledgeGraph.repository,
+
+        graph: legacyGraph,
+
+        nodes: {
+          technologies: knowledgeGraph.signals.technologies,
+          domains: knowledgeGraph.signals.architectureDomains,
+          repositoryTypes: knowledgeGraph.signals.repositoryTypes,
+          capabilities: knowledgeGraph.signals.capabilities,
+        },
+
+        knowledgeGraph: {
+          nodes: knowledgeGraph.nodes,
+          edges: knowledgeGraph.edges,
+          summary: knowledgeGraph.summary,
+        },
+      },
+    };
+  }
+);
+
+
   // evolution direction analysis
   app.get<{ Params: { repositoryId: string } }>(
     "/:repositoryId/evolution-direction",
