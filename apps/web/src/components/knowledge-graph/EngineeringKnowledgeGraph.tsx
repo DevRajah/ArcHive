@@ -921,17 +921,23 @@ export function EngineeringKnowledgeGraph({
                         maxZoom={8}
                         backgroundColor="rgba(255,255,255,0)"
                         onZoom={(transformValue: unknown) => {
-                            const transform =
-                                transformValue as {
-                                    k?: number;
-                                };
+                            const transform = transformValue as {
+                                k?: number;
+                            };
 
-                            if (
-                                typeof transform.k ===
-                                "number"
-                            ) {
-                                setCurrentZoom(transform.k);
+                            if (typeof transform.k !== "number") {
+                                return;
                             }
+
+                            const nextZoom = transform.k;
+
+                            window.requestAnimationFrame(() => {
+                                setCurrentZoom((currentValue) =>
+                                    currentValue === nextZoom
+                                        ? currentValue
+                                        : nextZoom
+                                );
+                            });
                         }}
                     />
                 </div>
