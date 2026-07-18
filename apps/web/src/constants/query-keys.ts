@@ -103,9 +103,14 @@ export const QUERY_KEYS = {
     "repository-intelligence-markdown",
     repositoryId,
   ],
-  
+
   REPOSITORY_INTELLIGENCE_DIFF: (repositoryId: string) => [
     "repository-intelligence-diff",
     repositoryId,
+  ],
+
+  PORTFOLIO_KNOWLEDGE_GRAPH: (userId: string) => [
+    "portfolio-knowledge-graph",
+    userId,
   ],
 };
