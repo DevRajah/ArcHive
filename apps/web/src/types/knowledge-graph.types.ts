@@ -12,6 +12,7 @@ export type KnowledgeGraphEdgeType =
   | "CLASSIFIED_AS"
   | "HAS_ARCHITECTURE_DOMAIN"
   | "REPOSITORY_SIMILARITY"
+  | "RELATIONSHIP"
   | string;
 
 export interface KnowledgeGraphNode {
