@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   Activity,
   BarChart3,
+  Braces,
   LayoutDashboard,
   Network,
 } from "lucide-react";
@@ -18,20 +19,29 @@ const portfolioNavigationItems = [
     icon: LayoutDashboard,
     exact: true,
   },
+
   {
     label: "Portfolio Timeline",
     href: "/portfolio/timeline",
     icon: Activity,
   },
+
   {
     label: "Engineering Trends",
     href: "/portfolio/trends",
     icon: BarChart3,
   },
+
   {
     label: "Knowledge Graph",
     href: "/portfolio/knowledge-graph",
     icon: Network,
+  },
+
+  {
+    label: "Technology Intelligence",
+    href: "/portfolio/technologies",
+    icon: Braces,
   },
 ];
 
