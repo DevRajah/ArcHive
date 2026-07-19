@@ -6,6 +6,7 @@ import {
   Activity,
   BarChart3,
   Braces,
+  GitCompareArrows,
   LayoutDashboard,
   Network,
 } from "lucide-react";
@@ -43,6 +44,12 @@ const portfolioNavigationItems = [
     href: "/portfolio/technologies",
     icon: Braces,
   },
+
+  {
+  label: "Dependency Intelligence",
+  href: "/portfolio/dependencies",
+  icon: GitCompareArrows,
+},
 ];
 
 export function PortfolioNavigation() {
