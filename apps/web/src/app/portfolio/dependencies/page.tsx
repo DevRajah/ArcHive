@@ -44,6 +44,7 @@ import type {
 import { EngineeringDependencyGraph } from "@/components/dependencies/EngineeringDependencyGraph";
 
 const RELATIONSHIPS_PER_PAGE = 12;
+const TECHNOLOGIES_PER_PAGE = 12;
 
 function getStatus(error: unknown) {
     return axios.isAxiosError(error)
@@ -86,6 +87,9 @@ export default function DependencyIntelligencePage() {
         relationshipPage,
         setRelationshipPage,
     ] = useState(1);
+
+    const [technologyPage, setTechnologyPage] =
+        useState(1);
 
     const [search, setSearch] = useState("");
     const [risk, setRisk] = useState("");
@@ -164,6 +168,34 @@ export default function DependencyIntelligencePage() {
         trackedOnly,
     ]);
 
+    const technologyPageCount = Math.max(
+        1,
+        Math.ceil(
+            technologies.length /
+            TECHNOLOGIES_PER_PAGE
+        )
+    );
+
+    const paginatedTechnologies = useMemo(() => {
+        const safePage = Math.min(
+            technologyPage,
+            technologyPageCount
+        );
+
+        const start =
+            (safePage - 1) *
+            TECHNOLOGIES_PER_PAGE;
+
+        return technologies.slice(
+            start,
+            start + TECHNOLOGIES_PER_PAGE
+        );
+    }, [
+        technologies,
+        technologyPage,
+        technologyPageCount,
+    ]);
+
     const filteredRelationships = useMemo(() => {
         const query =
             relationshipSearch.trim().toLowerCase();
@@ -238,6 +270,17 @@ export default function DependencyIntelligencePage() {
     useEffect(() => {
         setRelationshipPage(1);
     }, [relationshipSearch, relationshipSort]);
+
+    useEffect(() => {
+        setTechnologyPage(1);
+    }, [
+        search,
+        risk,
+        minimumCentrality,
+        minimumImpact,
+        trackedOnly,
+        sort,
+    ]);
 
     return (
         <AppShell>
@@ -488,6 +531,13 @@ export default function DependencyIntelligencePage() {
                             </div>
                         </section>
 
+                        <p className="text-sm text-muted-foreground">
+                            Showing{" "}
+                            {paginatedTechnologies.length.toLocaleString()} of{" "}
+                            {technologies.length.toLocaleString()} matching
+                            technologies.
+                        </p>
+
                         {data.technologies.length === 0 ? (
                             <DependencyEmptyState
                                 title="No dependency intelligence available"
@@ -501,7 +551,7 @@ export default function DependencyIntelligencePage() {
                             />
                         ) : (
                             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                                {technologies.map((technology) => (
+                                {paginatedTechnologies.map((technology) => (
                                     <TechnologyDependencyCard
                                         key={technology.technology}
                                         technology={technology}
@@ -509,6 +559,46 @@ export default function DependencyIntelligencePage() {
                                 ))}
                             </div>
                         )}
+
+
+
+                        <div className="mt-6 flex flex-col justify-between gap-4 border-t border-border pt-5 sm:flex-row sm:items-center">
+                            <p className="text-sm text-muted-foreground">
+                                Page {technologyPage} of {technologyPageCount}
+                            </p>
+
+                            <div className="flex gap-2">
+                                <Button
+                                    variant="outline"
+                                    disabled={technologyPage <= 1}
+                                    onClick={() =>
+                                        setTechnologyPage((current) =>
+                                            Math.max(1, current - 1)
+                                        )
+                                    }
+                                >
+                                    Previous
+                                </Button>
+
+                                <Button
+                                    variant="outline"
+                                    disabled={
+                                        technologyPage >=
+                                        technologyPageCount
+                                    }
+                                    onClick={() =>
+                                        setTechnologyPage((current) =>
+                                            Math.min(
+                                                technologyPageCount,
+                                                current + 1
+                                            )
+                                        )
+                                    }
+                                >
+                                    Next
+                                </Button>
+                            </div>
+                        </div>
 
                         <section className="space-y-6">
                             <div>
@@ -527,6 +617,8 @@ export default function DependencyIntelligencePage() {
                                 relationships={data.relationships}
                             />
                         </section>
+
+
 
                         <section className="rounded-xl border border-border bg-card p-6">
                             <h2 className="text-lg font-semibold">
