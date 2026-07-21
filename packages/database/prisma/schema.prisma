@@ -81,6 +81,13 @@ model Repository {
 
   intelligenceSnapshots RepositoryIntelligenceSnapshot[]
 
+  /**
+   * Advisor snapshots preserve what ArcHive believed at a particular point in
+   * time. This lets future versions explain how architecture risks and
+   * recommendations changed as the repository evolved.
+   */
+  architectureAdvisorSnapshots ArchitectureAdvisorSnapshot[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -211,4 +218,61 @@ model RepositoryIntelligenceSnapshot {
   repository Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
 
   @@index([repositoryId, createdAt])
+}
+
+model ArchitectureAdvisorSnapshot {
+  id           String @id @default(uuid())
+  repositoryId String
+
+  overallAssessment String
+  maturityLabel     String
+
+  strengths               Json
+  architectureConcerns    Json
+  productionRisks         Json
+  securityObservations    Json
+  scalabilityConcerns     Json
+  reliabilityConcerns     Json
+  maintainabilityConcerns Json
+  observabilityConcerns   Json
+  dataConcerns            Json
+  deliveryConcerns        Json
+
+  priorityActions      Json
+  recommendedNextSteps Json
+  evidenceSummary      Json
+
+  overallRiskScore Int
+  confidenceScore  Int
+
+  sourceIntelligenceSnapshotId String?
+
+  generatedAt DateTime @default(now())
+
+  repository Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+
+  @@index([repositoryId, generatedAt])
+  @@index([overallRiskScore])
+  @@index([confidenceScore])
+}
+
+enum ArchitectureAdvisorSeverity {
+  INFO
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum ArchitectureAdvisorCategory {
+  ARCHITECTURE
+  PRODUCTION_READINESS
+  SECURITY
+  SCALABILITY
+  RELIABILITY
+  MAINTAINABILITY
+  OBSERVABILITY
+  DATA
+  DELIVERY
+  ENGINEERING_QUALITY
 }

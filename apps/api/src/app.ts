@@ -19,6 +19,7 @@ import { portfolioIntelligenceRoutes } from "./routes/portfolio-intelligence.rou
 import { portfolioKnowledgeGraphRoutes } from "./routes/portfolio-knowledge-graph.routes";
 import { technologyIntelligenceRoutes } from "./routes/technology-intelligence.routes";
 import { dependencyIntelligenceRoutes } from "./routes/dependency-intelligence.routes";
+import { architectureAdvisorRoutes } from "./routes/architecture-advisor.routes";
 
 // This makes future testing easier because I can import the app without starting the port.
 export const buildApp = async () => {
@@ -62,6 +63,14 @@ export const buildApp = async () => {
   });
 
   await app.register(architectureChangeRoutes, {
+    prefix: "/api/repositories",
+  });
+
+  await app.register(repositoryRoutes, {
+    prefix: "/api/repositories",
+  });
+
+  await app.register(architectureAdvisorRoutes, {
     prefix: "/api/repositories",
   });
 
