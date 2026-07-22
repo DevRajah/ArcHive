@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, GitBranch, Network, Trash2, BrainCircuit } from "lucide-react";
+import { Activity, ArrowLeft, GitBranch, Network, Trash2, BrainCircuit } from "lucide-react";
 
 import { AppShell } from "@/components/layout/AppShell";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
@@ -201,6 +201,13 @@ export default function RepositoryDetailPage() {
                     <Link href={`/repositories/${repoId}/architecture`}>
                       <Network className="mr-2 h-4 w-4" />
                       Architecture
+                    </Link>
+                  </Button>
+
+                  <Button asChild variant="outline">
+                    <Link href={`/repositories/${repoId}/health-trends`}>
+                      <Activity className="mr-2 h-4 w-4" />
+                      Health Trends
                     </Link>
                   </Button>
 
