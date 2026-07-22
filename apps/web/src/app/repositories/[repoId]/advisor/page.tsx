@@ -36,6 +36,7 @@ import { AdvisorLoadingSkeleton } from "@/components/advisor/AdvisorLoadingSkele
 import { AdvisorPriorityRoadmap } from "@/components/advisor/AdvisorPriorityRoadmap";
 import { AdvisorScoreCard } from "@/components/advisor/AdvisorScoreCard";
 import { AdvisorSeverityBadge } from "@/components/advisor/AdvisorSeverityBadge";
+import { useRepositoryOverview } from "@/hooks/useRepositoryOverview";
 
 import { AppShell } from "@/components/layout/AppShell";
 import { PageContent } from "@/components/layout/PageContent";
@@ -75,6 +76,41 @@ function percentage(value: number) {
         0,
         Math.min(100, Math.round(normalized))
     );
+}
+
+/*
+ * The advisor backend may expose score names using slightly different
+ * aliases as the contract evolves. This helper keeps the page resilient
+ * without changing or inventing any API endpoint.
+ */
+function getAdvisorScore(
+    scores: unknown,
+    keys: string[]
+) {
+    if (
+        typeof scores !== "object" ||
+        scores === null
+    ) {
+        return 0;
+    }
+
+    const scoreRecord = scores as Record<
+        string,
+        unknown
+    >;
+
+    for (const key of keys) {
+        const value = scoreRecord[key];
+
+        if (
+            typeof value === "number" &&
+            Number.isFinite(value)
+        ) {
+            return value;
+        }
+    }
+
+    return 0;
 }
 
 function formatDate(value: string) {
@@ -118,6 +154,14 @@ export default function ArchitectureAdvisorPage({
     const refreshMutation =
         useRefreshArchitectureAdvisor(repoId);
 
+    /*
+     * Reuse ArcHive's existing repository overview query so the hero can
+     * display the real repository name even when the advisor payload only
+     * contains the repository ID.
+     */
+    const repositoryOverviewQuery =
+        useRepositoryOverview(repoId);
+
     const status = getStatus(advisorQuery.error);
 
     useEffect(() => {
@@ -139,6 +183,45 @@ export default function ArchitectureAdvisorPage({
     }, [showSuccessToast]);
 
     const assessment = advisorQuery.data;
+
+    const resolvedRepositoryName =
+        assessment?.repositoryName ||
+        repositoryOverviewQuery.data?.repository
+            ?.fullName ||
+        repositoryOverviewQuery.data?.repository?.name;
+
+    const architectureScore = assessment
+        ? getAdvisorScore(assessment.scores, [
+              "architectureScore",
+              "architecture",
+              "architectureMaturityScore",
+              "architectureQualityScore",
+          ])
+        : 0;
+
+    const engineeringQualityScore = assessment
+        ? getAdvisorScore(assessment.scores, [
+              "engineeringQuality",
+              "engineeringQualityScore",
+              "qualityScore",
+          ])
+        : 0;
+
+    const capabilityScore = assessment
+        ? getAdvisorScore(assessment.scores, [
+              "capabilityScore",
+              "capability",
+              "capabilitiesScore",
+          ])
+        : 0;
+
+    const productionReadinessScore = assessment
+        ? getAdvisorScore(assessment.scores, [
+              "productionReadiness",
+              "productionReadinessScore",
+              "readinessScore",
+          ])
+        : 0;
 
     const findingSections = useMemo(
         () =>
@@ -361,7 +444,7 @@ export default function ArchitectureAdvisorPage({
                         <AdvisorHero
                             repositoryId={repoId}
                             repositoryName={
-                                assessment.repositoryName
+                                resolvedRepositoryName
                             }
                             assessment={
                                 assessment.overallAssessment
@@ -418,8 +501,7 @@ export default function ArchitectureAdvisorPage({
                                 <AdvisorScoreCard
                                     label="Architecture Score"
                                     value={
-                                        assessment.scores
-                                            .architectureScore
+                                        architectureScore
                                     }
                                     icon={Layers3}
                                     description="How coherently the repository structure and detected architecture patterns work together."
@@ -428,11 +510,7 @@ export default function ArchitectureAdvisorPage({
                                 <AdvisorScoreCard
                                     label="Engineering Quality"
                                     value={
-                                        assessment.scores
-                                            .engineeringQuality ??
-                                        assessment.scores
-                                            .engineeringQualityScore ??
-                                        0
+                                        engineeringQualityScore
                                     }
                                     icon={Code2}
                                     description="Evidence of maintainable engineering practices, separation of concerns, and implementation discipline."
@@ -441,8 +519,7 @@ export default function ArchitectureAdvisorPage({
                                 <AdvisorScoreCard
                                     label="Capability Score"
                                     value={
-                                        assessment.scores
-                                            .capabilityScore
+                                        capabilityScore
                                     }
                                     icon={Blocks}
                                     description="The breadth and strength of meaningful engineering capabilities detected in the repository."
@@ -451,11 +528,7 @@ export default function ArchitectureAdvisorPage({
                                 <AdvisorScoreCard
                                     label="Production Readiness"
                                     value={
-                                        assessment.scores
-                                            .productionReadiness ??
-                                        assessment.scores
-                                            .productionReadinessScore ??
-                                        0
+                                        productionReadinessScore
                                     }
                                     icon={Rocket}
                                     description="How prepared the system appears for reliable, secure, and observable production operation."
@@ -476,8 +549,7 @@ export default function ArchitectureAdvisorPage({
                                         assessment.maturityLabel
                                     }
                                     progress={percentage(
-                                        assessment.scores
-                                            .architectureScore
+                                        architectureScore
                                     )}
                                     icon={Award}
                                     description="The advisor's overall maturity classification based on the available engineering evidence."

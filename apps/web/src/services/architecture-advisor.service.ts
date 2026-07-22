@@ -54,7 +54,7 @@ export const architectureAdvisorService = {
         const response = await api.get<
             ApiEnvelope<ArchitectureAdvisorAssessment>
         >(
-            `/api/repositories/${repositoryId}/advisor`
+            `/repositories/${repositoryId}/advisor`
         );
 
         return unwrapApiData(response.data);
@@ -66,7 +66,7 @@ export const architectureAdvisorService = {
         const response = await api.post<
             ApiEnvelope<ArchitectureAdvisorAssessment>
         >(
-            `/api/repositories/${repositoryId}/advisor/refresh`
+            `/repositories/${repositoryId}/advisor/refresh`
         );
 
         return unwrapApiData(response.data);
@@ -81,7 +81,7 @@ export const architectureAdvisorService = {
                 AdvisorHistoryItem[]
             >
         >(
-            `/api/repositories/${repositoryId}/advisor/history`
+            `/repositories/${repositoryId}/advisor/history`
         );
 
         return normalizeHistory(
