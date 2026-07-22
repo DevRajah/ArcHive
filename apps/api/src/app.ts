@@ -20,6 +20,7 @@ import { portfolioKnowledgeGraphRoutes } from "./routes/portfolio-knowledge-grap
 import { technologyIntelligenceRoutes } from "./routes/technology-intelligence.routes";
 import { dependencyIntelligenceRoutes } from "./routes/dependency-intelligence.routes";
 import { architectureAdvisorRoutes } from "./routes/architecture-advisor.routes";
+import { healthTrendsRoutes } from "./routes/health-trends.routes";
 
 // This makes future testing easier because I can import the app without starting the port.
 export const buildApp = async () => {
@@ -68,6 +69,10 @@ export const buildApp = async () => {
 
 
   await app.register(architectureAdvisorRoutes, {
+    prefix: "/api/repositories",
+  });
+
+  app.register(healthTrendsRoutes, {
     prefix: "/api/repositories",
   });
 
