@@ -66,9 +66,6 @@ export const buildApp = async () => {
     prefix: "/api/repositories",
   });
 
-  await app.register(repositoryRoutes, {
-    prefix: "/api/repositories",
-  });
 
   await app.register(architectureAdvisorRoutes, {
     prefix: "/api/repositories",

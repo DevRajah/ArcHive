@@ -43,5 +43,5 @@ export const navigationItems = [
     label: "Settings",
     href: "/settings",
     icon: Settings,
-  }
+  },
 ];
