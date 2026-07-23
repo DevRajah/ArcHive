@@ -58,6 +58,7 @@ import { normalizeHealthScore } from "@/utils/repository-health-trends";
 
 import type {
     RepositoryHealthMetric,
+    RepositoryHealthSnapshot,
     RepositoryHealthSummary,
 } from "@/types/repository-health-trends.types";
 
@@ -79,12 +80,19 @@ type HealthMetricKey =
     | "health";
 
 interface BackendHealthSummary {
-    direction: string;
+    direction:
+    | "IMPROVING"
+    | "DECLINING"
+    | "STABLE";
     healthScore: number;
     previousHealthScore: number | null;
     healthScoreChange: number | null;
     maturity: string;
-    riskLevel: string;
+    riskLevel:
+    | "LOW"
+    | "MEDIUM"
+    | "HIGH"
+    | "CRITICAL";
     confidenceScore: number;
     snapshotCount: number;
     firstRecordedAt: string | null;
@@ -159,13 +167,13 @@ function buildHealthMetric(
 
     const previousScore =
         trend?.previous === null ||
-        trend?.previous === undefined
+            trend?.previous === undefined
             ? null
             : normalizeHealthScore(trend.previous);
 
     const delta =
         trend?.change === null ||
-        trend?.change === undefined
+            trend?.change === undefined
             ? previousScore === null
                 ? null
                 : score - previousScore
@@ -176,6 +184,24 @@ function buildHealthMetric(
         previousScore,
         delta,
     };
+}
+
+function unwrapData<T>(value: unknown): T | undefined {
+    if (!value || typeof value !== "object") {
+        return undefined;
+    }
+
+    const record = value as Record<string, unknown>;
+
+    if (
+        "data" in record &&
+        record.data &&
+        typeof record.data === "object"
+    ) {
+        return record.data as T;
+    }
+
+    return value as T;
 }
 
 function getHttpStatus(error: unknown) {
@@ -302,7 +328,7 @@ export default function RepositoryHealthTrendsPage({
 
             confidence: buildHealthMetric(
                 latestScores?.confidence ??
-                    summary?.confidenceScore,
+                summary?.confidenceScore,
                 trends.confidence,
             ),
 
@@ -313,7 +339,7 @@ export default function RepositoryHealthTrendsPage({
 
             overallHealth: buildHealthMetric(
                 latestScores?.health ??
-                    summary?.healthScore,
+                summary?.healthScore,
                 trends.health,
             ),
         }),
@@ -326,10 +352,15 @@ export default function RepositoryHealthTrendsPage({
             snapshotCount?: number;
         }>(historyQuery.data);
 
-    const history =
-        historyResponse?.history ??
-        trendsPayload?.history ??
-        [];
+    const historyPayload = unwrapData<{
+        history?: RepositoryHealthSnapshot[];
+        snapshotCount?: number;
+    }>(historyQuery.data);
+
+    const history: RepositoryHealthSnapshot[] =
+        (historyPayload?.history ??
+            trendsPayload?.history ??
+            []) as RepositoryHealthSnapshot[];
 
     const insights = trendsPayload?.insights ?? [];
 
