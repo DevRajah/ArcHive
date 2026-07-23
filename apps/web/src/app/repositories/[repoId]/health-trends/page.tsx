@@ -14,7 +14,6 @@ import {
     Layers3,
     Rocket,
     ShieldAlert,
-    Target,
     TriangleAlert,
     X,
 } from "lucide-react";
@@ -55,14 +54,10 @@ import {
 } from "@/hooks/useRepositoryHealthTrends";
 import { useRepositoryOverview } from "@/hooks/useRepositoryOverview";
 
-import {
-    createFallbackMetric,
-    normalizeHealthScore,
-} from "@/utils/repository-health-trends";
+import { normalizeHealthScore } from "@/utils/repository-health-trends";
 
 import type {
     RepositoryHealthMetric,
-    RepositoryHealthScoreBreakdown,
     RepositoryHealthSummary,
 } from "@/types/repository-health-trends.types";
 
@@ -70,6 +65,117 @@ interface RepositoryHealthTrendsPageProps {
     params: Promise<{
         repoId: string;
     }>;
+}
+
+
+type HealthMetricKey =
+    | "architecture"
+    | "engineeringQuality"
+    | "productionReadiness"
+    | "capability"
+    | "maturity"
+    | "confidence"
+    | "risk"
+    | "health";
+
+interface BackendHealthSummary {
+    direction: string;
+    healthScore: number;
+    previousHealthScore: number | null;
+    healthScoreChange: number | null;
+    maturity: string;
+    riskLevel: string;
+    confidenceScore: number;
+    snapshotCount: number;
+    firstRecordedAt: string | null;
+    lastRecordedAt: string | null;
+    hasEnoughHistory?: boolean;
+}
+
+interface BackendLatestScores {
+    architecture: number;
+    engineeringQuality: number;
+    productionReadiness: number;
+    capability: number;
+    maturity: number;
+    confidence: number;
+    risk: number;
+    health: number;
+}
+
+interface BackendMetricTrend {
+    current: number;
+    previous: number | null;
+    change: number | null;
+    percentageChange?: number | null;
+    direction?: string;
+    status?: string;
+}
+
+type BackendMetricTrends = Partial<
+    Record<HealthMetricKey, BackendMetricTrend>
+>;
+
+interface BackendHealthTrendsPayload {
+    repository?: {
+        id?: string;
+        name?: string;
+        fullName?: string;
+    };
+    repositoryName?: string;
+    summary?: BackendHealthSummary;
+    latestScores?: BackendLatestScores;
+    trends?: BackendMetricTrends;
+    history?: unknown[];
+    changes?: unknown[];
+    insights?: RepositoryHealthSummary["insights"];
+    generatedAt?: string;
+}
+
+function unwrapResponseData<T>(value: unknown): T | undefined {
+    if (!value || typeof value !== "object") {
+        return undefined;
+    }
+
+    const record = value as Record<string, unknown>;
+
+    if (
+        record.data &&
+        typeof record.data === "object"
+    ) {
+        return record.data as T;
+    }
+
+    return value as T;
+}
+
+function buildHealthMetric(
+    current: number | null | undefined,
+    trend: BackendMetricTrend | undefined,
+): RepositoryHealthMetric {
+    const score = normalizeHealthScore(
+        current ?? trend?.current ?? 0,
+    );
+
+    const previousScore =
+        trend?.previous === null ||
+        trend?.previous === undefined
+            ? null
+            : normalizeHealthScore(trend.previous);
+
+    const delta =
+        trend?.change === null ||
+        trend?.change === undefined
+            ? previousScore === null
+                ? null
+                : score - previousScore
+            : trend.change;
+
+    return {
+        score,
+        previousScore,
+        delta,
+    };
 }
 
 function getHttpStatus(error: unknown) {
@@ -103,6 +209,8 @@ export default function RepositoryHealthTrendsPage({
     const changesQuery =
         useRepositoryHealthChanges(repoId);
 
+    void changesQuery;
+
     const repositoryOverviewQuery =
         useRepositoryOverview(repoId);
 
@@ -132,29 +240,103 @@ export default function RepositoryHealthTrendsPage({
         return () => window.clearTimeout(timer);
     }, [showSuccessToast]);
 
-    const summary = useMemo(() => {
-        return resolveHealthSummary(
-            summaryQuery.data,
-            trendsQuery.data?.summary,
-        );
-    }, [
-        summaryQuery.data,
-        trendsQuery.data?.summary,
-    ]);
+    /*
+     * The service may return either the inner `data` object or the complete
+     * API envelope. This helper supports both without inventing another
+     * frontend response contract.
+     */
+    const trendsPayload = useMemo(
+        () =>
+            unwrapResponseData<BackendHealthTrendsPayload>(
+                trendsQuery.data,
+            ),
+        [trendsQuery.data],
+    );
+
+    const directSummary = useMemo(
+        () =>
+            unwrapResponseData<BackendHealthSummary>(
+                summaryQuery.data,
+            ),
+        [summaryQuery.data],
+    );
+
+    const summary =
+        directSummary ?? trendsPayload?.summary ?? null;
+
+    const latestScores =
+        trendsPayload?.latestScores;
+
+    const trends = trendsPayload?.trends ?? {};
+
+    /*
+     * Current scores come from `latestScores`.
+     * Previous scores and deltas come from the matching entry in `trends`.
+     */
+    const metrics = useMemo(
+        () => ({
+            architecture: buildHealthMetric(
+                latestScores?.architecture,
+                trends.architecture,
+            ),
+
+            engineeringQuality: buildHealthMetric(
+                latestScores?.engineeringQuality,
+                trends.engineeringQuality,
+            ),
+
+            productionReadiness: buildHealthMetric(
+                latestScores?.productionReadiness,
+                trends.productionReadiness,
+            ),
+
+            capability: buildHealthMetric(
+                latestScores?.capability,
+                trends.capability,
+            ),
+
+            maturity: buildHealthMetric(
+                latestScores?.maturity,
+                trends.maturity,
+            ),
+
+            confidence: buildHealthMetric(
+                latestScores?.confidence ??
+                    summary?.confidenceScore,
+                trends.confidence,
+            ),
+
+            risk: buildHealthMetric(
+                latestScores?.risk,
+                trends.risk,
+            ),
+
+            overallHealth: buildHealthMetric(
+                latestScores?.health ??
+                    summary?.healthScore,
+                trends.health,
+            ),
+        }),
+        [latestScores, summary, trends],
+    );
+
+    const historyResponse =
+        unwrapResponseData<{
+            history?: unknown[];
+            snapshotCount?: number;
+        }>(historyQuery.data);
 
     const history =
-        historyQuery.data?.history ??
-        trendsQuery.data?.history ??
+        historyResponse?.history ??
+        trendsPayload?.history ??
         [];
 
-    const insights =
-        summary?.insights?.length
-            ? summary.insights
-            : trendsQuery.data?.insights ?? [];
+    const insights = trendsPayload?.insights ?? [];
 
     const repositoryName =
-        summary?.repositoryName ??
-        trendsQuery.data?.repositoryName ??
+        trendsPayload?.repository?.fullName ??
+        trendsPayload?.repository?.name ??
+        trendsPayload?.repositoryName ??
         repositoryOverviewQuery.data?.repository
             ?.fullName ??
         repositoryOverviewQuery.data?.repository
@@ -163,16 +345,9 @@ export default function RepositoryHealthTrendsPage({
 
     const snapshotCount =
         summary?.snapshotCount ??
-        historyQuery.data?.snapshotCount ??
-        historyQuery.data?.history.length ??
-        trendsQuery.data?.history?.length ??
-        0;
+        historyResponse?.snapshotCount ??
+        history.length;
 
-    /*
-     * A single snapshot can show the repository's current condition, but
-     * cannot establish a historical direction. The backend may explicitly
-     * provide hasEnoughHistory, otherwise we derive it from snapshot count.
-     */
     const hasEnoughHistory =
         summary?.hasEnoughHistory ??
         snapshotCount > 1;
@@ -328,18 +503,17 @@ export default function RepositoryHealthTrendsPage({
                         <RepositoryHealthHero
                             repositoryName={repositoryName}
                             overallHealthScore={
-                                summary.overallHealthScore
+                                metrics.overallHealth.score
                             }
                             direction={summary.direction}
                             confidenceScore={
                                 summary.confidenceScore
                             }
-                            riskScore={summary.riskScore}
+                            riskScore={metrics.risk.score}
                             riskLevel={summary.riskLevel}
                             lastUpdatedAt={
-                                summary.lastUpdatedAt ??
-                                summary.generatedAt ??
-                                trendsQuery.data?.generatedAt
+                                summary.lastRecordedAt ??
+                                trendsPayload?.generatedAt
                             }
                             isRefreshing={
                                 refreshMutation.isPending
@@ -389,8 +563,7 @@ export default function RepositoryHealthTrendsPage({
                                     title="Architecture"
                                     description="Structural quality, architecture coherence, and detected architecture maturity."
                                     metric={
-                                        summary.scoreBreakdown
-                                            .architecture
+                                        metrics.architecture
                                     }
                                     icon={Layers3}
                                     index={0}
@@ -400,8 +573,7 @@ export default function RepositoryHealthTrendsPage({
                                     title="Engineering Quality"
                                     description="Maintainability, implementation discipline, and engineering practice quality."
                                     metric={
-                                        summary.scoreBreakdown
-                                            .engineeringQuality
+                                        metrics.engineeringQuality
                                     }
                                     icon={Code2}
                                     index={1}
@@ -411,8 +583,7 @@ export default function RepositoryHealthTrendsPage({
                                     title="Production Readiness"
                                     description="Operational resilience, production safety, observability, and deployment readiness."
                                     metric={
-                                        summary.scoreBreakdown
-                                            .productionReadiness
+                                        metrics.productionReadiness
                                     }
                                     icon={Rocket}
                                     index={2}
@@ -422,8 +593,7 @@ export default function RepositoryHealthTrendsPage({
                                     title="Capability"
                                     description="Breadth and strength of meaningful engineering capabilities detected by ArcHive."
                                     metric={
-                                        summary.scoreBreakdown
-                                            .capability
+                                        metrics.capability
                                     }
                                     icon={Blocks}
                                     index={3}
@@ -433,8 +603,7 @@ export default function RepositoryHealthTrendsPage({
                                     title="Maturity"
                                     description="The repository's overall engineering maturity based on available intelligence evidence."
                                     metric={
-                                        summary.scoreBreakdown
-                                            .maturity
+                                        metrics.maturity
                                     }
                                     icon={Award}
                                     index={4}
@@ -444,8 +613,7 @@ export default function RepositoryHealthTrendsPage({
                                     title="Confidence"
                                     description="How strongly the available evidence supports the repository health assessment."
                                     metric={
-                                        summary.scoreBreakdown
-                                            .confidence
+                                        metrics.confidence
                                     }
                                     icon={Gauge}
                                     index={5}
@@ -455,7 +623,7 @@ export default function RepositoryHealthTrendsPage({
                                     title="Risk"
                                     description="The repository's current engineering and production risk exposure. Lower is healthier."
                                     metric={
-                                        summary.scoreBreakdown.risk
+                                        metrics.risk
                                     }
                                     icon={ShieldAlert}
                                     index={6}
@@ -466,8 +634,7 @@ export default function RepositoryHealthTrendsPage({
                                     title="Overall Health"
                                     description="The combined ArcHive repository health score across architecture, quality, readiness, capability, confidence, and risk."
                                     metric={
-                                        summary.scoreBreakdown
-                                            .overallHealth
+                                        metrics.overallHealth
                                     }
                                     icon={HeartPulse}
                                     index={7}
@@ -477,9 +644,9 @@ export default function RepositoryHealthTrendsPage({
 
                         <RepositoryDirectionPanel
                             direction={summary.direction}
-                            overallDelta={summary.overallHealthDelta}
+                            overallDelta={summary.healthScoreChange}
                             confidenceScore={summary.confidenceScore}
-                            riskScore={summary.riskScore}
+                            riskScore={metrics.risk.score}
                         />
 
                         {!hasEnoughHistory && (
@@ -632,230 +799,6 @@ function InlineQueryError({
             </Button>
         </div>
     );
-}
-
-function resolveHealthSummary(
-    directSummary:
-        | RepositoryHealthSummary
-        | undefined,
-    trendsSummary:
-        | RepositoryHealthSummary
-        | undefined,
-) {
-    const source =
-        directSummary ?? trendsSummary;
-
-    if (!source) {
-        return null;
-    }
-
-    /*
-     * Some backend implementations may provide the headline values while
-     * omitting a fully expanded scoreBreakdown. These fallbacks keep the
-     * page safe while still respecting the existing backend response.
-     */
-    const scoreBreakdown =
-        source.scoreBreakdown ??
-        createFallbackScoreBreakdown(source);
-
-    return {
-        ...source,
-        overallHealthScore:
-            normalizeHealthScore(
-                source.overallHealthScore,
-            ),
-
-        previousOverallHealthScore:
-            source.previousOverallHealthScore ===
-                null ||
-                source.previousOverallHealthScore ===
-                undefined
-                ? null
-                : normalizeHealthScore(
-                    source.previousOverallHealthScore,
-                ),
-
-        confidenceScore:
-            normalizeHealthScore(
-                source.confidenceScore,
-            ),
-
-        riskScore:
-            normalizeHealthScore(source.riskScore),
-
-        scoreBreakdown,
-        insights: source.insights ?? [],
-    };
-}
-
-function createFallbackScoreBreakdown(
-    summary: RepositoryHealthSummary,
-): RepositoryHealthScoreBreakdown {
-    return {
-        architecture: resolveMetric(
-            summary,
-            "architecture",
-        ),
-
-        engineeringQuality: resolveMetric(
-            summary,
-            "engineeringQuality",
-        ),
-
-        productionReadiness: resolveMetric(
-            summary,
-            "productionReadiness",
-        ),
-
-        capability: resolveMetric(
-            summary,
-            "capability",
-        ),
-
-        maturity: resolveMetric(
-            summary,
-            "maturity",
-        ),
-
-        confidence: createFallbackMetric(
-            summary.confidenceScore,
-        ),
-
-        risk: createFallbackMetric(
-            summary.riskScore,
-        ),
-
-        overallHealth: createFallbackMetric(
-            summary.overallHealthScore,
-            summary.previousOverallHealthScore,
-            summary.overallHealthDelta,
-        ),
-    };
-}
-
-function resolveMetric(
-    summary: RepositoryHealthSummary,
-    key:
-        | "architecture"
-        | "engineeringQuality"
-        | "productionReadiness"
-        | "capability"
-        | "maturity",
-): RepositoryHealthMetric {
-    const summaryRecord =
-        summary as unknown as Record<
-            string,
-            unknown
-        >;
-
-    const scoreAliases: Record<
-        typeof key,
-        string[]
-    > = {
-        architecture: [
-            "architectureScore",
-            "architecture",
-        ],
-
-        engineeringQuality: [
-            "engineeringQualityScore",
-            "engineeringQuality",
-        ],
-
-        productionReadiness: [
-            "productionReadinessScore",
-            "productionReadiness",
-        ],
-
-        capability: [
-            "capabilityScore",
-            "capability",
-        ],
-
-        maturity: [
-            "maturityScore",
-            "maturity",
-        ],
-    };
-
-    const previousAliases: Record<
-        typeof key,
-        string[]
-    > = {
-        architecture: [
-            "previousArchitectureScore",
-        ],
-
-        engineeringQuality: [
-            "previousEngineeringQualityScore",
-        ],
-
-        productionReadiness: [
-            "previousProductionReadinessScore",
-        ],
-
-        capability: [
-            "previousCapabilityScore",
-        ],
-
-        maturity: [
-            "previousMaturityScore",
-        ],
-    };
-
-    const deltaAliases: Record<
-        typeof key,
-        string[]
-    > = {
-        architecture: ["architectureDelta"],
-
-        engineeringQuality: [
-            "engineeringQualityDelta",
-        ],
-
-        productionReadiness: [
-            "productionReadinessDelta",
-        ],
-
-        capability: ["capabilityDelta"],
-
-        maturity: ["maturityDelta"],
-    };
-
-    return createFallbackMetric(
-        readNumber(
-            summaryRecord,
-            scoreAliases[key],
-        ),
-
-        readNumber(
-            summaryRecord,
-            previousAliases[key],
-        ),
-
-        readNumber(
-            summaryRecord,
-            deltaAliases[key],
-        ),
-    );
-}
-
-function readNumber(
-    source: Record<string, unknown>,
-    keys: string[],
-) {
-    for (const key of keys) {
-        const value = source[key];
-
-        if (
-            typeof value === "number" &&
-            Number.isFinite(value)
-        ) {
-            return value;
-        }
-    }
-
-    return null;
 }
 
 function SectionHeading({
