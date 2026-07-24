@@ -63,24 +63,19 @@ export interface RepositoryHealthInsight {
 }
 
 export interface RepositoryHealthSnapshot {
-  id?: string;
-  repositoryId?: string;
+  snapshotId: string;
+  advisorSnapshotId: string | null;
 
-  overallHealthScore: number;
-  architectureScore: number;
-  engineeringQualityScore: number;
-  productionReadinessScore: number;
-  capabilityScore: number;
-  maturityScore: number;
-  confidenceScore: number;
-  riskScore: number;
+  recordedAt: string;
 
-  direction: RepositoryHealthDirection;
-  riskLevel: RepositoryHealthRiskLevel;
-
-  generatedAt?: string;
-  createdAt?: string;
-  capturedAt?: string;
+  architecture: number;
+  engineeringQuality: number;
+  productionReadiness: number;
+  capability: number;
+  maturity: number;
+  confidence: number;
+  risk: number;
+  health: number;
 }
 
 export interface RepositoryHealthSummary {

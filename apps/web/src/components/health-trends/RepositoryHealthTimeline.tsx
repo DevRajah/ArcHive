@@ -42,7 +42,7 @@ export function RepositoryHealthTimeline({
             getSnapshotDate(snapshot),
           ),
           health: normalizeHealthScore(
-            snapshot.overallHealthScore,
+            snapshot.health,
           ),
         })),
     [history],

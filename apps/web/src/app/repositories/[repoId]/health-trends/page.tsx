@@ -364,10 +364,10 @@ export default function RepositoryHealthTrendsPage({
     //         trendsPayload?.history ??
     //         []) as RepositoryHealthSnapshot[];
 
-   const history: RepositoryHealthSnapshot[] =
-    historyQuery.data?.history ??
-    (trendsPayload?.history as RepositoryHealthSnapshot[] | undefined) ??
-    [];
+    const history: RepositoryHealthSnapshot[] =
+        historyQuery.data?.history ??
+        (trendsPayload?.history as RepositoryHealthSnapshot[] | undefined) ??
+        [];
 
     const insights = trendsPayload?.insights ?? [];
 

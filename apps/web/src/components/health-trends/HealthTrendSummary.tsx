@@ -31,14 +31,14 @@ interface MetricDefinition {
 }
 
 const metricDefinitions: MetricDefinition[] = [
-  { key: "overallHealth", label: "Overall Health", field: "overallHealthScore" },
-  { key: "architecture", label: "Architecture", field: "architectureScore" },
-  { key: "engineeringQuality", label: "Engineering Quality", field: "engineeringQualityScore" },
-  { key: "productionReadiness", label: "Production Readiness", field: "productionReadinessScore" },
-  { key: "capability", label: "Capability", field: "capabilityScore" },
-  { key: "maturity", label: "Maturity", field: "maturityScore" },
-  { key: "confidence", label: "Confidence", field: "confidenceScore" },
-  { key: "risk", label: "Risk", field: "riskScore", inverse: true },
+  { key: "overallHealth", label: "Overall Health", field: "health" },
+  { key: "architecture", label: "Architecture", field: "architecture" },
+  { key: "engineeringQuality", label: "Engineering Quality", field: "engineeringQuality" },
+  { key: "productionReadiness", label: "Production Readiness", field: "productionReadiness" },
+  { key: "capability", label: "Capability", field: "capability" },
+  { key: "maturity", label: "Maturity", field: "maturity" },
+  { key: "confidence", label: "Confidence", field: "confidence" },
+  { key: "risk", label: "Risk", field: "risk", inverse: true },
 ];
 
 export function HealthTrendSummary({
@@ -194,11 +194,9 @@ function calculateTrendSummary(
     },
   );
 
-  const healthValues = history.map((snapshot) =>
-    normalizeHealthScore(
-      snapshot.overallHealthScore,
-    ),
-  );
+ const healthValues = history.map((snapshot) =>
+  normalizeHealthScore(snapshot.health),
+);
 
   const averageHealth = Math.round(
     healthValues.reduce(

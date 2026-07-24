@@ -163,17 +163,17 @@ export function createFallbackMetric(
   };
 }
 
-export function getSnapshotDate(
-  snapshot: {
+export function getSnapshotDate(snapshot: {
+    recordedAt?: string;
     generatedAt?: string;
     createdAt?: string;
     capturedAt?: string;
-  },
-) {
-  return (
-    snapshot.generatedAt ??
-    snapshot.capturedAt ??
-    snapshot.createdAt ??
-    ""
-  );
+}) {
+    return (
+        snapshot.recordedAt ??
+        snapshot.generatedAt ??
+        snapshot.createdAt ??
+        snapshot.capturedAt ??
+        new Date().toISOString()
+    );
 }
