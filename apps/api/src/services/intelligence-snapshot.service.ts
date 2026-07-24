@@ -98,7 +98,8 @@ export const createRepositoryIntelligenceSnapshot = async ({
       | numerical score. The field remains available for a future engine update
       | without inventing a misleading value today.
       */
-      architectureScore: null,
+      architectureScore:
+        fingerprint.architectureQuality.score,
 
       capabilityScore: calculateCapabilityScore(fingerprint.capabilities),
       engineeringQualityScore: fingerprint.engineeringQuality.overallScore,

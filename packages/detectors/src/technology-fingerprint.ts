@@ -28,6 +28,11 @@ import {
 } from "./evidence";
 
 import {
+    buildArchitectureQuality,
+    ArchitectureQuality,
+} from "./architecture-quality";
+
+import {
     ArchitectureDomains,
     EngineeringSignals,
     RepositoryTypes,
@@ -124,6 +129,7 @@ export type TechnologyFingerprintResult = {
     weaknessReport: WeaknessReport;
     recommendationReport: RecommendationReport;
     repositoryHealth: RepositoryHealth;
+    architectureQuality: ArchitectureQuality;
     architectureDrift: ArchitectureDriftReport;
     evolutionInsights: EvolutionInsightsReport;
     repositoryIntelligence: RepositoryIntelligenceReport;
@@ -967,6 +973,36 @@ export const detectTechnologyFingerprint = (
         weaknessReport,
     });
 
+
+    const architectureQuality =
+        buildArchitectureQuality({
+            architectureDomains:
+                Array.from(
+                    architectureDomains
+                ),
+
+            technologies:
+                Array.from(
+                    technologies
+                ),
+
+            engineeringSignals:
+                Array.from(
+                    engineeringSignals
+                ),
+
+            repositoryTypes:
+                Array.from(
+                    repositoryTypes
+                ),
+
+            capabilities,
+
+            repositoryDNA,
+
+            engineeringQuality,
+        });
+
     const architectureDrift = buildArchitectureDriftReport({
         architectureDomains: Array.from(architectureDomains),
         repositoryTypes: Array.from(repositoryTypes),
@@ -1099,6 +1135,7 @@ export const detectTechnologyFingerprint = (
         weaknessReport,
         recommendationReport,
         repositoryHealth,
+        architectureQuality,
         architectureDrift,
         evolutionInsights,
         repositoryIntelligence,
