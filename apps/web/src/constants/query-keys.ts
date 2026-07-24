@@ -8,6 +8,7 @@ export const QUERY_KEYS = {
   INTELLIGENCE_OVERVIEW: [
     "intelligence-overview",
   ],
+  
 
   INTELLIGENCE_SEARCH: (params: {
     query?: string;
