@@ -58,7 +58,9 @@ import { normalizeHealthScore } from "@/utils/repository-health-trends";
 
 import type {
     RepositoryHealthMetric,
+    RepositoryHealthChange,
     RepositoryHealthSnapshot,
+    RepositoryHealthScoreBreakdown,
     RepositoryHealthSummary,
 } from "@/types/repository-health-trends.types";
 
@@ -135,7 +137,7 @@ interface BackendHealthTrendsPayload {
     latestScores?: BackendLatestScores;
     trends?: BackendMetricTrends;
     history?: unknown[];
-    changes?: unknown[];
+    changes?: RepositoryHealthChange[];
     insights?: RepositoryHealthSummary["insights"];
     generatedAt?: string;
 }
@@ -352,15 +354,20 @@ export default function RepositoryHealthTrendsPage({
             snapshotCount?: number;
         }>(historyQuery.data);
 
-    const historyPayload = unwrapData<{
-        history?: RepositoryHealthSnapshot[];
-        snapshotCount?: number;
-    }>(historyQuery.data);
+    // const historyPayload = unwrapData<{
+    //     history?: RepositoryHealthSnapshot[];
+    //     snapshotCount?: number;
+    // }>(historyQuery.data);
 
-    const history: RepositoryHealthSnapshot[] =
-        (historyPayload?.history ??
-            trendsPayload?.history ??
-            []) as RepositoryHealthSnapshot[];
+    // const history: RepositoryHealthSnapshot[] =
+    //     (historyPayload?.history ??
+    //         trendsPayload?.history ??
+    //         []) as RepositoryHealthSnapshot[];
+
+   const history: RepositoryHealthSnapshot[] =
+    historyQuery.data?.history ??
+    (trendsPayload?.history as RepositoryHealthSnapshot[] | undefined) ??
+    [];
 
     const insights = trendsPayload?.insights ?? [];
 
