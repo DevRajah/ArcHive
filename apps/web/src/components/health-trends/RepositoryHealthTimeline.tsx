@@ -48,6 +48,7 @@ export function RepositoryHealthTimeline({
     [history],
   );
 
+
   if (chartData.length < 2) {
     return (
       <div className="grid min-h-80 place-items-center rounded-xl border border-dashed border-border bg-card p-8 text-center">
@@ -102,31 +103,30 @@ export function RepositoryHealthTimeline({
             data={chartData}
             margin={{ top: 10, right: 12, left: -12, bottom: 4 }}
           >
-            <defs>
+            {/* <defs>
               <linearGradient
                 id="repositoryHealthArea"
                 x1="0"
                 y1="0"
                 x2="0"
                 y2="1"
-              >
-                <stop
-                  offset="5%"
-                  stopColor="hsl(var(--primary))"
-                  stopOpacity={0.28}
-                />
-                <stop
-                  offset="95%"
-                  stopColor="hsl(var(--primary))"
-                  stopOpacity={0}
-                />
-              </linearGradient>
-            </defs>
+              > */}
+            <stop
+              offset="5%"
+              stopColor="var(--primary)"
+              stopOpacity={0.28}
+            />
+
+            <stop
+              offset="95%"
+              stopColor="var(--primary)"
+              stopOpacity={0}
+            />
 
             <CartesianGrid
               strokeDasharray="3 3"
               vertical={false}
-              stroke="hsl(var(--border))"
+              stroke="var(--border)"
             />
 
             <XAxis
@@ -135,7 +135,7 @@ export function RepositoryHealthTimeline({
               tickLine={false}
               axisLine={false}
               tick={{
-                fill: "hsl(var(--muted-foreground))",
+                fill: "var(--muted-foreground)",
                 fontSize: 12,
               }}
             />
@@ -146,14 +146,14 @@ export function RepositoryHealthTimeline({
               tickLine={false}
               axisLine={false}
               tick={{
-                fill: "hsl(var(--muted-foreground))",
+                fill: "var(--muted-foreground)",
                 fontSize: 12,
               }}
             />
 
             <Tooltip
               cursor={{
-                stroke: "hsl(var(--border))",
+                stroke: "var(--border)",
                 strokeDasharray: "4 4",
               }}
               content={<HealthTimelineTooltip />}
@@ -162,14 +162,14 @@ export function RepositoryHealthTimeline({
             <Area
               type="monotone"
               dataKey="health"
-              stroke="hsl(var(--primary))"
+              stroke="var(--primary)"
               strokeWidth={3}
               fill="url(#repositoryHealthArea)"
               activeDot={{
                 r: 6,
                 strokeWidth: 3,
-                fill: "hsl(var(--background))",
-                stroke: "hsl(var(--primary))",
+                fill: "var(--background)",
+                stroke: "var(--primary)",
               }}
             />
           </AreaChart>

@@ -146,6 +146,7 @@ export function MultiMetricTrendChart({
     [history, selectedMetric.snapshotField],
   );
 
+
   const SelectedIcon = selectedMetric.icon;
 
   return (
@@ -214,7 +215,7 @@ export function MultiMetricTrendChart({
               <CartesianGrid
                 strokeDasharray="3 3"
                 vertical={false}
-                stroke="hsl(var(--border))"
+                stroke="var(--border)"
               />
 
               <XAxis
@@ -223,7 +224,7 @@ export function MultiMetricTrendChart({
                 tickLine={false}
                 axisLine={false}
                 tick={{
-                  fill: "hsl(var(--muted-foreground))",
+                  fill: "var(--muted-foreground)",
                   fontSize: 12,
                 }}
               />
@@ -234,35 +235,26 @@ export function MultiMetricTrendChart({
                 tickLine={false}
                 axisLine={false}
                 tick={{
-                  fill: "hsl(var(--muted-foreground))",
+                  fill: "var(--muted-foreground)",
                   fontSize: 12,
                 }}
-              />
-
-              <Tooltip
-                content={
-                  <MetricTrendTooltip
-                    label={selectedMetric.label}
-                    inverse={selectedMetric.inverse}
-                  />
-                }
               />
 
               <Line
                 type="monotone"
                 dataKey="value"
-                stroke="hsl(var(--primary))"
+                stroke="var(--primary)"
                 strokeWidth={3}
                 dot={{
-                  r: 3,
-                  fill: "hsl(var(--primary))",
+                  r: 4,
+                  fill: "var(--primary)",
                   strokeWidth: 0,
                 }}
                 activeDot={{
                   r: 6,
                   strokeWidth: 3,
-                  fill: "hsl(var(--background))",
-                  stroke: "hsl(var(--primary))",
+                  fill: "var(--background)",
+                  stroke: "var(--primary)",
                 }}
               />
             </LineChart>
