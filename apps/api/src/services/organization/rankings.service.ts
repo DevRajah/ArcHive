@@ -1,12 +1,12 @@
 import {
-  OrganizationQueryOptions,
-  OrganizationRepositoryScore,
+    OrganizationQueryOptions,
+    OrganizationRepositoryScore,
 } from "../../types/organization.types";
 
 import {
-  latestAdvisor,
-  latestSnapshot,
-  loadOrganizationRepositories,
+    latestAdvisor,
+    latestSnapshot,
+    loadOrganizationRepositories,
 } from "./organization.utils";
 
 /**
@@ -16,100 +16,138 @@ import {
  * and weakest repositories across an organisation.
  */
 export const getRepositoryRankings = async (
-  options: OrganizationQueryOptions,
+    options: OrganizationQueryOptions,
 ): Promise<OrganizationRepositoryScore[]> => {
-  const repositories = await loadOrganizationRepositories(
-    options.userId,
-  );
-
-  const rankings: OrganizationRepositoryScore[] = [];
-
-  for (const repository of repositories) {
-    const snapshot = latestSnapshot(repository);
-    const advisor = latestAdvisor(repository);
-
-    const architectureScore =
-      snapshot?.architectureScore ?? 0;
-
-    const engineeringScore =
-      snapshot?.engineeringQualityScore ?? 0;
-
-    const productionScore =
-      snapshot?.productionReadinessScore ?? 0;
-
-    const maturityScore =
-      snapshot?.maturityScore ?? 0;
-
-    const confidenceScore =
-      snapshot?.confidenceScore ?? 0;
-
-    const riskScore =
-      advisor?.overallRiskScore ?? 100;
-
-    /**
-     * Overall score is simply the average of the
-     * positive engineering metrics.
-     *
-     * Risk is kept separate because a repository
-     * may have good engineering quality while still
-     * carrying architectural risk.
-     */
-    const overallScore = Number(
-      (
-        (
-          architectureScore +
-          engineeringScore +
-          productionScore +
-          maturityScore +
-          confidenceScore
-        ) / 5
-      ).toFixed(1),
+    const repositories = await loadOrganizationRepositories(
+        options.userId,
     );
 
-    rankings.push({
-      repositoryId: repository.id,
+    const rankings: OrganizationRepositoryScore[] = [];
 
-      repositoryName: repository.name,
+    for (const repository of repositories) {
+        const snapshot = latestSnapshot(repository);
+        const advisor = latestAdvisor(repository);
 
-      repositoryFullName: repository.fullName,
+        /**
+         * Has this repository been analysed yet?
+         */
+        const hasAnalysis = snapshot !== null;
 
-      language: repository.language,
+        const architectureScore =
+            snapshot?.architectureScore ?? null;
 
-      architectureScore,
+        const engineeringScore =
+            snapshot?.engineeringQualityScore ?? null;
 
-      engineeringQualityScore: engineeringScore,
+        const productionScore =
+            snapshot?.productionReadinessScore ?? null;
 
-      productionReadinessScore: productionScore,
+        const maturityScore =
+            snapshot?.maturityScore ?? null;
 
-      maturityScore,
+        const confidenceScore =
+            snapshot?.confidenceScore ?? null;
 
-      confidenceScore,
+        const riskScore =
+            advisor?.overallRiskScore ?? null;
 
-      riskScore,
+        /**
+         * Overall score is simply the average of the
+         * positive engineering metrics.
+         *
+         * Risk is kept separate because a repository
+         * may have good engineering quality while still
+         * carrying architectural risk.
+         */
 
-      overallScore,
-
-      recommendationCount:
-        repository.engineeringRecommendations.filter(
-          (recommendation) =>
-            recommendation.status === "ACTIVE",
-        ).length,
-
-      architectureChangeCount:
-        repository.architectureChanges.length,
-
-      engineeringEventCount:
-        repository.events.length,
-    });
-  }
-
-  /**
-   * Highest scoring repositories appear first.
+        /**
+   * Build a list of every score that actually exists.
+   *
+   * We intentionally ignore null values because
+   * a repository shouldn't be penalised simply because
+   * one metric hasn't been calculated yet.
    */
-  rankings.sort(
-    (left, right) =>
-      right.overallScore - left.overallScore,
-  );
+        const availableScores = [
+            architectureScore,
+            engineeringScore,
+            productionScore,
+            maturityScore,
+            confidenceScore,
+        ].filter(
+            (score): score is number => score !== null,
+        );
 
-  return rankings;
+        /**
+         * Overall score represents the average of every
+         * available engineering metric.
+         */
+        const overallScore =
+            availableScores.length > 0
+                ? Number(
+                    (
+                        availableScores.reduce(
+                            (total, score) => total + score,
+                            0,
+                        ) / availableScores.length
+                    ).toFixed(1),
+                )
+                : null;
+
+        rankings.push({
+            repositoryId: repository.id,
+
+            repositoryName: repository.name,
+
+            repositoryFullName: repository.fullName,
+
+            language: repository.language,
+
+            analysisStatus: hasAnalysis
+                ? "COMPLETED"
+                : "PENDING",
+
+            architectureScore,
+
+            engineeringQualityScore: engineeringScore,
+
+            productionReadinessScore: productionScore,
+
+            maturityScore,
+
+            confidenceScore,
+
+            riskScore,
+
+            overallScore,
+
+            recommendationCount:
+                repository.engineeringRecommendations.filter(
+                    (recommendation) =>
+                        recommendation.status === "ACTIVE",
+                ).length,
+
+            architectureChangeCount:
+                repository.architectureChanges.length,
+
+            engineeringEventCount:
+                repository.events.length,
+        });
+    }
+
+    /**
+     * Highest scoring repositories appear first.
+     */
+    rankings.sort((left, right) => {
+        if (left.overallScore === null) {
+            return 1;
+        }
+
+        if (right.overallScore === null) {
+            return -1;
+        }
+
+        return right.overallScore - left.overallScore;
+    });
+
+    return rankings;
 };

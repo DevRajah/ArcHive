@@ -33,19 +33,21 @@ export interface OrganizationRepositoryScore {
 
   language: string | null;
 
-  architectureScore: number;
+  analysisStatus: "COMPLETED" | "PENDING";
 
-  engineeringQualityScore: number;
+  architectureScore: number | null;
 
-  productionReadinessScore: number;
+  engineeringQualityScore: number | null;
 
-  maturityScore: number;
+  productionReadinessScore: number | null;
 
-  confidenceScore: number;
+  maturityScore: number | null;
 
-  riskScore: number;
+  confidenceScore: number | null;
 
-  overallScore: number;
+  riskScore: number | null;
+
+  overallScore: number | null;
 
   recommendationCount: number;
 
