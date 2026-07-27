@@ -1,13 +1,29 @@
 import {
-  OrganizationQueryOptions,
-  OrganizationTechnologyInventory,
-  OrganizationTechnologyItem,
+    OrganizationQueryOptions,
+    OrganizationTechnologyInventory,
+    OrganizationTechnologyItem,
 } from "../../types/organization.types";
 
 import {
-  latestSnapshot,
-  loadOrganizationRepositories,
+    latestSnapshot,
+    loadOrganizationRepositories,
 } from "./organization.utils";
+
+
+/**
+ * Different analyses may describe the same technology
+ * using slightly different names.
+ *
+ * We normalize them so the Technology Inventory
+ * reports one clean entry.
+ */
+const TECHNOLOGY_ALIASES: Record<string, string> = {
+    "Socket.IO / Realtime Events": "Socket.IO",
+
+    "React / Frontend UI": "React",
+
+    "Kubernetes / Helm": "Kubernetes",
+};
 
 /**
  * Builds an inventory of technologies used across all
@@ -22,123 +38,130 @@ import {
  * • Which technologies are only used once?
  */
 export const getTechnologyInventory = async (
-  options: OrganizationQueryOptions,
+    options: OrganizationQueryOptions,
 ): Promise<OrganizationTechnologyInventory> => {
-  const repositories = await loadOrganizationRepositories(
-    options.userId,
-  );
+    const repositories = await loadOrganizationRepositories(
+        options.userId,
+    );
 
-  const technologies = new Map<
-    string,
-    OrganizationTechnologyItem
-  >();
-
-  /**
-   * Adds a technology to the inventory.
-   *
-   * If we've seen it before we simply increase the usage
-   * count and remember which repository also uses it.
-   */
-  const addTechnology = (
-    technologyName: string,
-    repositoryName: string,
-  ) => {
-    const name = technologyName.trim();
-
-    if (!name) {
-      return;
-    }
-
-    const existing = technologies.get(name);
-
-    if (existing) {
-      existing.repositoryCount++;
-
-      if (!existing.repositories.includes(repositoryName)) {
-        existing.repositories.push(repositoryName);
-      }
-
-      return;
-    }
-
-    technologies.set(name, {
-      technology: name,
-      repositoryCount: 1,
-      repositories: [repositoryName],
-    });
-  };
-
-  for (const repository of repositories) {
-    /**
-     * Repository language reported directly by GitHub.
-     */
-    if (repository.language) {
-      addTechnology(
-        repository.language,
-        repository.name,
-      );
-    }
-
-    const snapshot = latestSnapshot(repository);
-
-    if (!snapshot) {
-      continue;
-    }
+    const technologies = new Map<
+        string,
+        OrganizationTechnologyItem
+    >();
 
     /**
-     * ArcHive stores technologies as JSON.
+     * Adds a technology to the inventory.
      *
-     * We support either:
-     *
-     * ["Redis","Docker"]
-     *
-     * or
-     *
-     * [
-     *   { name: "Redis" },
-     *   { name: "Docker" }
-     * ]
+     * If we've seen it before we simply increase the usage
+     * count and remember which repository also uses it.
      */
-    const technologiesJson = snapshot.technologies;
+    const addTechnology = (
+        technologyName: string,
+        repositoryName: string,
+    ) => {
+        const rawName = technologyName.trim();
 
-    if (!Array.isArray(technologiesJson)) {
-      continue;
+        const name =
+            TECHNOLOGY_ALIASES[rawName] ?? rawName;
+
+        if (!name) {
+            return;
+        }
+
+        const existing = technologies.get(name);
+
+        if (existing) {
+            // Only add this repository once.
+            if (!existing.repositories.includes(repositoryName)) {
+                existing.repositories.push(repositoryName);
+
+                // The repository count should always reflect
+                // the number of unique repositories.
+                existing.repositoryCount =
+                    existing.repositories.length;
+            }
+
+            return;
+        }
+
+        technologies.set(name, {
+            technology: name,
+            repositoryCount: 1,
+            repositories: [repositoryName],
+        });
+    };
+
+    for (const repository of repositories) {
+        /**
+         * Repository language reported directly by GitHub.
+         */
+        if (repository.language) {
+            addTechnology(
+                repository.language,
+                repository.name,
+            );
+        }
+
+        const snapshot = latestSnapshot(repository);
+
+        if (!snapshot) {
+            continue;
+        }
+
+        /**
+         * ArcHive stores technologies as JSON.
+         *
+         * We support either:
+         *
+         * ["Redis","Docker"]
+         *
+         * or
+         *
+         * [
+         *   { name: "Redis" },
+         *   { name: "Docker" }
+         * ]
+         */
+        const technologiesJson = snapshot.technologies;
+
+        if (!Array.isArray(technologiesJson)) {
+            continue;
+        }
+
+        for (const technology of technologiesJson) {
+            if (typeof technology === "string") {
+                addTechnology(
+                    technology,
+                    repository.name,
+                );
+
+                continue;
+            }
+
+            if (
+                technology &&
+                typeof technology === "object" &&
+                "name" in technology &&
+                typeof technology.name === "string"
+            ) {
+                addTechnology(
+                    technology.name,
+                    repository.name,
+                );
+            }
+        }
     }
 
-    for (const technology of technologiesJson) {
-      if (typeof technology === "string") {
-        addTechnology(
-          technology,
-          repository.name,
-        );
+    const inventory = Array.from(
+        technologies.values(),
+    ).sort(
+        (left, right) =>
+            right.repositoryCount - left.repositoryCount,
+    );
 
-        continue;
-      }
+    return {
+        totalTechnologies: inventory.length,
 
-      if (
-        technology &&
-        typeof technology === "object" &&
-        "name" in technology &&
-        typeof technology.name === "string"
-      ) {
-        addTechnology(
-          technology.name,
-          repository.name,
-        );
-      }
-    }
-  }
-
-  const inventory = Array.from(
-    technologies.values(),
-  ).sort(
-    (left, right) =>
-      right.repositoryCount - left.repositoryCount,
-  );
-
-  return {
-    totalTechnologies: inventory.length,
-
-    technologies: inventory,
-  };
+        technologies: inventory,
+    };
 };
