@@ -21,6 +21,7 @@ import { technologyIntelligenceRoutes } from "./routes/technology-intelligence.r
 import { dependencyIntelligenceRoutes } from "./routes/dependency-intelligence.routes";
 import { architectureAdvisorRoutes } from "./routes/architecture-advisor.routes";
 import { healthTrendsRoutes } from "./routes/health-trends.routes";
+import organizationRoutes from "./routes/organization.routes";
 
 // This makes future testing easier because I can import the app without starting the port.
 export const buildApp = async () => {
@@ -45,6 +46,10 @@ export const buildApp = async () => {
   // I keep routes modular so ArcHive does not become messy as it grows.
   await app.register(healthRoutes, {
     prefix: "/api/health",
+  });
+
+  await app.register(organizationRoutes, {
+    prefix: "/api",
   });
 
   app.register(adminRoutes, {
