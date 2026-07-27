@@ -1003,6 +1003,9 @@ export const detectTechnologyFingerprint = (
             engineeringQuality,
         });
 
+    console.log("Architecture Quality:", architectureQuality);
+    console.log("Architecture Score:", architectureQuality.score);
+
     const architectureDrift = buildArchitectureDriftReport({
         architectureDomains: Array.from(architectureDomains),
         repositoryTypes: Array.from(repositoryTypes),

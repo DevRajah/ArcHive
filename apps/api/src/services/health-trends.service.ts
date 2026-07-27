@@ -361,7 +361,7 @@ const loadRepositoryHistory = async (
 
                 intelligenceSnapshots: {
                     orderBy: {
-                        createdAt: "asc",
+                        createdAt: "desc",
                     },
 
                     take: HISTORY.maximumSnapshots,
@@ -409,8 +409,11 @@ const loadRepositoryHistory = async (
         return null;
     }
 
-    return repository.intelligenceSnapshots.map(
-        (snapshot) => {
+    // Prisma returned the newest snapshots first.
+    // I Reverse them so trend calculations still run from oldest to newest.
+    return [...repository.intelligenceSnapshots]
+        .reverse()
+        .map((snapshot) => {
             /*
              * Find the newest advisor snapshot that existed when this
              * intelligence snapshot was generated.
@@ -429,7 +432,7 @@ const loadRepositoryHistory = async (
                 advisor,
             };
         }
-    );
+        );
 };
 
 const buildChanges = (

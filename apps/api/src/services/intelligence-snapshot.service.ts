@@ -74,6 +74,7 @@ export const createRepositoryIntelligenceSnapshot = async ({
   | the immediately previous result.
   |--------------------------------------------------------------------------
   */
+
   return tx.repositoryIntelligenceSnapshot.create({
     data: {
       repositoryId,
