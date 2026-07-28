@@ -1,241 +1,564 @@
 "use client";
 
-import AnalysisCoverageCard from "@/components/organization/AnalysisCoverageCard";
-import OverviewMetricCard from "@/components/organization/OverviewMetricCard";
+import {
+  useEffect,
+  useState,
+} from "react";
 
 import {
-    Boxes,
-    ShieldAlert,
-    GitBranch,
-    Activity,
-    ShieldCheck,
-    BrainCircuit,
-    Layers3
+  Activity,
+  Boxes,
+  BrainCircuit,
+  GitBranch,
+  Layers3,
+  RefreshCcw,
+  ShieldAlert,
+  ShieldCheck,
+  Sparkles,
 } from "lucide-react";
 
-import RepositoryRankings from "@/components/organization/RepositoryRankings";
-import TechnologyInventory from "@/components/organization/TechnologyInventory";
-import RiskOverview from "@/components/organization/RiskOverview";
+import { AppShell } from "@/components/layout/AppShell";
+
+import AnalysisCoverageCard from "@/components/organization/AnalysisCoverageCard";
+import OrganizationActivityTimeline from "@/components/organization/OrganizationActivityTimeline";
+import OrganizationDashboardSkeleton from "@/components/organization/OrganizationDashboardSkeleton";
+import OrganizationIntervalSelector, {
+  type OrganizationInterval,
+} from "@/components/organization/OrganizationIntervalSelector";
 import OrganizationRecommendations from "@/components/organization/OrganizationRecommendations";
 import OrganizationTrends from "@/components/organization/OrganizationTrends";
-import OrganizationActivityTimeline from "@/components/organization/OrganizationActivityTimeline";
+import OverviewMetricCard from "@/components/organization/OverviewMetricCard";
+import RepositoryRankings from "@/components/organization/RepositoryRankings";
+import RiskOverview from "@/components/organization/RiskOverview";
+import TechnologyInventory from "@/components/organization/TechnologyInventory";
 
-import { RefreshCcw, Sparkles } from "lucide-react";
-
-import { AppShell } from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/button";
 
 import {
-    useOrganizationIntelligence,
-    useReprocessRepositories,
+  useOrganizationIntelligence,
+  useReprocessRepositories,
 } from "@/hooks/useOrganization";
 
 export default function OrganizationPage() {
-    const userId =
-        typeof window !== "undefined"
-            ? localStorage.getItem("userId") ?? ""
-            : "";
+  const [interval, setInterval] =
+    useState<OrganizationInterval>("MONTH");
 
-    const {
-        data,
-        isLoading,
-        isError,
-        error,
-        refetch,
-    } = useOrganizationIntelligence({
-        userId: userId,
-        enabled: !!userId,
+  const [userId, setUserId] =
+    useState("");
+
+  const [
+    hasLoadedStoredUser,
+    setHasLoadedStoredUser,
+  ] = useState(false);
+
+  const [
+    reprocessMessage,
+    setReprocessMessage,
+  ] = useState<string | null>(null);
+
+  const [
+    reprocessMessageType,
+    setReprocessMessageType,
+  ] = useState<"success" | "error">(
+    "success",
+  );
+
+  /*
+   * Read the logged-in user's ID after the browser loads.
+   *
+   * We do this inside useEffect because localStorage does not
+   * exist while Next.js is rendering on the server.
+   */
+  useEffect(() => {
+    const storedUserId =
+      window.localStorage.getItem(
+        "userId",
+      );
+
+    if (storedUserId) {
+      setUserId(storedUserId);
+    }
+
+    setHasLoadedStoredUser(true);
+  }, []);
+
+  /*
+   * Success and error messages should disappear after
+   * five seconds so they do not remain stuck on the page.
+   */
+  useEffect(() => {
+    if (!reprocessMessage) {
+      return;
+    }
+
+    const timeoutId =
+      window.setTimeout(() => {
+        setReprocessMessage(null);
+      }, 5000);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [reprocessMessage]);
+
+  /*
+   * The hook accepts:
+   *
+   * {
+   *   userId,
+   *   query: {
+   *     interval
+   *   },
+   *   enabled
+   * }
+   *
+   * Interval must therefore be placed inside query.
+   */
+  const {
+    data,
+    isLoading,
+    isFetching,
+    isError,
+    error,
+    refetch,
+  } = useOrganizationIntelligence({
+    userId,
+
+    query: {
+      interval,
+    },
+
+    enabled: hasLoadedStoredUser && !!userId,
+  });
+
+  /*
+   * Pass the same query into the reprocess hook.
+   *
+   * This ensures the correct Organization Intelligence
+   * query is invalidated after reprocessing succeeds.
+   */
+  const reprocessMutation =
+    useReprocessRepositories(userId, {
+      interval,
     });
 
-    const reprocessMutation = useReprocessRepositories(
-        userId
-    );
+  const handleReprocessRepositories =
+    () => {
+      setReprocessMessage(null);
 
-    if (isLoading) {
-        return (
-            <AppShell>
-                <div className="space-y-6 p-6">
-                    <div className="h-8 w-72 animate-pulse rounded bg-muted" />
-                    <div className="h-4 w-[520px] animate-pulse rounded bg-muted" />
+      reprocessMutation.mutate(
+        undefined,
+        {
+          onSuccess: async (
+            response,
+          ) => {
+            const processedCount =
+              "processedRepositories" in
+                response &&
+              typeof response.processedRepositories ===
+                "number"
+                ? response.processedRepositories
+                : null;
 
-                    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                        {Array.from({ length: 8 }).map((_, index) => (
-                            <div
-                                key={index}
-                                className="h-36 animate-pulse rounded-xl border bg-muted/30"
-                            />
-                        ))}
-                    </div>
-                </div>
-            </AppShell>
-        );
-    }
+            setReprocessMessageType(
+              "success",
+            );
 
-    if (isError) {
-        return (
-            <AppShell>
-                <div className="flex h-[60vh] flex-col items-center justify-center gap-4">
-                    <h2 className="text-2xl font-bold">
-                        Unable to load Organization Intelligence
-                    </h2>
+            setReprocessMessage(
+              processedCount !== null
+                ? `${processedCount} repositories were queued for reprocessing successfully.`
+                : "Repository reprocessing started successfully.",
+            );
 
-                    <p className="text-muted-foreground">
-                        {error instanceof Error
-                            ? error.message
-                            : "Something went wrong."}
-                    </p>
+            /*
+             * The mutation hook already invalidates the query.
+             * Refetching here gives the page an immediate refresh.
+             */
+            await refetch();
+          },
 
-                    <Button onClick={() => refetch()}>
-                        Try Again
-                    </Button>
-                </div>
-            </AppShell>
-        );
-    }
+          onError: (
+            mutationError,
+          ) => {
+            setReprocessMessageType(
+              "error",
+            );
 
-    if (!data) return null;
+            setReprocessMessage(
+              mutationError instanceof
+                Error
+                ? mutationError.message
+                : "Failed to reprocess repositories.",
+            );
+          },
+        },
+      );
+    };
 
+  /*
+   * Wait until localStorage has been checked before deciding
+   * whether the page can request organization data.
+   */
+  if (
+    !hasLoadedStoredUser ||
+    (userId && isLoading)
+  ) {
     return (
-        <AppShell>
-            <div className="space-y-8 p-6">
-
-                {/* =====================================================
-            Page Header
-        ====================================================== */}
-
-                <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-
-                    <div>
-                        <div className="mb-2 flex items-center gap-2">
-                            <Sparkles className="h-6 w-6 text-primary" />
-
-                            <h1 className="text-3xl font-bold tracking-tight">
-                                Organization Intelligence
-                            </h1>
-                        </div>
-
-                        <p className="max-w-3xl text-muted-foreground">
-                            Portfolio-wide engineering health, architecture quality,
-                            technology usage, repository rankings, engineering activity,
-                            recommendations, and organization risk.
-                        </p>
-                    </div>
-
-                    <div className="flex gap-3">
-
-                        <Button
-                            variant="outline"
-                            onClick={() => refetch()}
-                        >
-                            <RefreshCcw className="mr-2 h-4 w-4" />
-                            Refresh Dashboard
-                        </Button>
-
-                        <Button
-                            disabled={reprocessMutation.isPending}
-                            onClick={() => reprocessMutation.mutate()}
-                        >
-                            <RefreshCcw className="mr-2 h-4 w-4" />
-
-                            {reprocessMutation.isPending
-                                ? "Reprocessing..."
-                                : "Reprocess All Repositories"}
-                        </Button>
-
-                    </div>
-                </div>
-
-                {/* =====================================================
-            NEXT SECTION
-        ====================================================== */}
-
-                <AnalysisCoverageCard
-                    analyzedRepositories={
-                        data.overview.analyzedRepositories
-                    }
-                    unanalyzedRepositories={
-                        data.overview.unanalyzedRepositories
-                    }
-                    coverage={
-                        data.overview.analysisCoveragePercentage
-                    }
-                />
-
-                <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-
-                    <OverviewMetricCard
-                        title="Repositories"
-                        value={data.overview.totalRepositories}
-                        icon={<Boxes className="h-6 w-6 text-blue-500" />}
-                    />
-
-                    <OverviewMetricCard
-                        title="Architecture"
-                        value={data.overview.averageArchitectureScore}
-                        icon={<GitBranch className="h-6 w-6 text-violet-500" />}
-                    />
-
-                    <OverviewMetricCard
-                        title="Engineering Quality"
-                        value={data.overview.averageEngineeringQualityScore}
-                        icon={<BrainCircuit className="h-6 w-6 text-cyan-500" />}
-                    />
-
-                    <OverviewMetricCard
-                        title="Production Readiness"
-                        value={data.overview.averageProductionReadinessScore}
-                        icon={<ShieldCheck className="h-6 w-6 text-green-500" />}
-                    />
-
-                    <OverviewMetricCard
-                        title="Maturity"
-                        value={data.overview.averageMaturityScore}
-                        icon={<Layers3 className="h-6 w-6 text-orange-500" />}
-                    />
-
-                    <OverviewMetricCard
-                        title="Average Risk"
-                        value={data.overview.averageRiskScore}
-                        icon={<ShieldAlert className="h-6 w-6 text-red-500" />}
-                    />
-
-                    <OverviewMetricCard
-                        title="Overall Risk Level"
-                        value={data.overview.overallRiskLevel}
-                        icon={<Activity className="h-6 w-6 text-red-400" />}
-                    />
-
-                    <OverviewMetricCard
-                        title="Healthy Repositories"
-                        value={data.overview.healthyRepositories}
-                        icon={<ShieldCheck className="h-6 w-6 text-emerald-500" />}
-                    />
-
-                </div>
-
-                <RepositoryRankings
-                    repositories={data.rankings}
-                />
-
-
-                <div className="grid gap-6 xl:grid-cols-2">
-                    <TechnologyInventory technology={data.technology} />
-
-                    <RiskOverview risks={data.risks} />
-                </div>
-
-                <OrganizationRecommendations
-                    recommendations={data.recommendations}
-                />
-                <OrganizationTrends
-                    points={data.trends.points}
-                />
-
-                <OrganizationActivityTimeline
-                    activity={data.activity}
-                />
-
-            </div>
-        </AppShell>
+      <AppShell>
+        <div className="p-6">
+          <OrganizationDashboardSkeleton />
+        </div>
+      </AppShell>
     );
+  }
+
+  /*
+   * This normally means the user reached the page without
+   * completing the GitHub connection or login flow.
+   */
+  if (!userId) {
+    return (
+      <AppShell>
+        <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 p-6 text-center">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted">
+            <ShieldAlert className="h-7 w-7 text-muted-foreground" />
+          </div>
+
+          <div className="space-y-2">
+            <h2 className="text-2xl font-bold">
+              User session not found
+            </h2>
+
+            <p className="max-w-md text-muted-foreground">
+              Connect your GitHub account
+              again so ArcHive can load
+              your Organization
+              Intelligence dashboard.
+            </p>
+          </div>
+        </div>
+      </AppShell>
+    );
+  }
+
+  if (isError) {
+    return (
+      <AppShell>
+        <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 p-6 text-center">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-destructive/10">
+            <ShieldAlert className="h-7 w-7 text-destructive" />
+          </div>
+
+          <div className="space-y-2">
+            <h2 className="text-2xl font-bold">
+              Unable to load
+              Organization Intelligence
+            </h2>
+
+            <p className="max-w-lg text-muted-foreground">
+              {error instanceof Error
+                ? error.message
+                : "Something went wrong while loading the organization dashboard."}
+            </p>
+          </div>
+
+          <Button
+            type="button"
+            onClick={() => refetch()}
+          >
+            <RefreshCcw className="mr-2 h-4 w-4" />
+            Try Again
+          </Button>
+        </div>
+      </AppShell>
+    );
+  }
+
+  if (!data) {
+    return (
+      <AppShell>
+        <div className="flex min-h-[60vh] items-center justify-center p-6">
+          <p className="text-muted-foreground">
+            No organization intelligence
+            data is currently available.
+          </p>
+        </div>
+      </AppShell>
+    );
+  }
+
+  return (
+    <AppShell>
+      <div className="space-y-8 p-6">
+        {/* =====================================================
+            Page header
+        ====================================================== */}
+
+        <header className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
+          <div>
+            <div className="mb-2 flex items-center gap-2">
+              <Sparkles className="h-6 w-6 text-primary" />
+
+              <h1 className="text-3xl font-bold tracking-tight">
+                Organization
+                Intelligence
+              </h1>
+            </div>
+
+            <p className="max-w-3xl text-muted-foreground">
+              Portfolio-wide engineering
+              health, architecture quality,
+              technology usage, repository
+              rankings, engineering activity,
+              recommendations, and
+              organization risk.
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+            <OrganizationIntervalSelector
+              value={interval}
+              onChange={setInterval}
+              disabled={
+                isFetching ||
+                reprocessMutation.isPending
+              }
+            />
+
+            <Button
+              type="button"
+              variant="outline"
+              disabled={
+                isFetching ||
+                reprocessMutation.isPending
+              }
+              onClick={() => refetch()}
+            >
+              <RefreshCcw
+                className={`mr-2 h-4 w-4 ${
+                  isFetching
+                    ? "animate-spin"
+                    : ""
+                }`}
+              />
+
+              {isFetching
+                ? "Refreshing..."
+                : "Refresh Dashboard"}
+            </Button>
+
+            <Button
+              type="button"
+              disabled={
+                reprocessMutation.isPending ||
+                isFetching
+              }
+              onClick={
+                handleReprocessRepositories
+              }
+            >
+              <RefreshCcw
+                className={`mr-2 h-4 w-4 ${
+                  reprocessMutation.isPending
+                    ? "animate-spin"
+                    : ""
+                }`}
+              />
+
+              {reprocessMutation.isPending
+                ? "Reprocessing..."
+                : "Reprocess All Repositories"}
+            </Button>
+          </div>
+        </header>
+
+        {/* =====================================================
+            Reprocess status message
+        ====================================================== */}
+
+        {reprocessMessage ? (
+          <div
+            role="status"
+            className={`rounded-lg border px-4 py-3 text-sm ${
+              reprocessMessageType ===
+              "success"
+                ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                : "border-destructive/30 bg-destructive/10 text-destructive"
+            }`}
+          >
+            {reprocessMessage}
+          </div>
+        ) : null}
+
+        {/* =====================================================
+            Analysis coverage
+        ====================================================== */}
+
+        <AnalysisCoverageCard
+          analyzedRepositories={
+            data.overview
+              .analyzedRepositories
+          }
+          unanalyzedRepositories={
+            data.overview
+              .unanalyzedRepositories
+          }
+          coverage={
+            data.overview
+              .analysisCoveragePercentage
+          }
+        />
+
+        {/* =====================================================
+            Organization summary metrics
+        ====================================================== */}
+
+        <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+          <OverviewMetricCard
+            title="Repositories"
+            value={
+              data.overview
+                .totalRepositories
+            }
+            icon={
+              <Boxes className="h-6 w-6 text-blue-500" />
+            }
+          />
+
+          <OverviewMetricCard
+            title="Architecture"
+            value={
+              data.overview
+                .averageArchitectureScore
+            }
+            icon={
+              <GitBranch className="h-6 w-6 text-violet-500" />
+            }
+          />
+
+          <OverviewMetricCard
+            title="Engineering Quality"
+            value={
+              data.overview
+                .averageEngineeringQualityScore
+            }
+            icon={
+              <BrainCircuit className="h-6 w-6 text-cyan-500" />
+            }
+          />
+
+          <OverviewMetricCard
+            title="Production Readiness"
+            value={
+              data.overview
+                .averageProductionReadinessScore
+            }
+            icon={
+              <ShieldCheck className="h-6 w-6 text-green-500" />
+            }
+          />
+
+          <OverviewMetricCard
+            title="Maturity"
+            value={
+              data.overview
+                .averageMaturityScore
+            }
+            icon={
+              <Layers3 className="h-6 w-6 text-orange-500" />
+            }
+          />
+
+          <OverviewMetricCard
+            title="Average Risk"
+            value={
+              data.overview
+                .averageRiskScore
+            }
+            icon={
+              <ShieldAlert className="h-6 w-6 text-red-500" />
+            }
+          />
+
+          <OverviewMetricCard
+            title="Overall Risk Level"
+            value={
+              data.overview
+                .overallRiskLevel
+            }
+            icon={
+              <Activity className="h-6 w-6 text-red-400" />
+            }
+          />
+
+          <OverviewMetricCard
+            title="Healthy Repositories"
+            value={
+              data.overview
+                .healthyRepositories
+            }
+            icon={
+              <ShieldCheck className="h-6 w-6 text-emerald-500" />
+            }
+          />
+        </section>
+
+        {/* =====================================================
+            Repository rankings
+        ====================================================== */}
+
+        <RepositoryRankings
+          repositories={
+            data.rankings
+          }
+        />
+
+        {/* =====================================================
+            Organization trends
+        ====================================================== */}
+
+        <OrganizationTrends
+          points={
+            data.trends.points
+          }
+        />
+
+        {/* =====================================================
+            Technology and risk
+        ====================================================== */}
+
+        <section className="grid gap-6 2xl:grid-cols-2">
+          <TechnologyInventory
+            technology={
+              data.technology
+            }
+          />
+
+          <RiskOverview
+            risks={data.risks}
+          />
+        </section>
+
+        {/* =====================================================
+            Recommendations
+        ====================================================== */}
+
+        <OrganizationRecommendations
+          recommendations={
+            data.recommendations
+          }
+        />
+
+        {/* =====================================================
+            Recent engineering activity
+        ====================================================== */}
+
+        <OrganizationActivityTimeline
+          activity={
+            data.activity
+          }
+        />
+      </div>
+    </AppShell>
+  );
 }
