@@ -38,6 +38,10 @@ import {
     useOrganizationIntelligence,
     useReprocessRepositories,
 } from "@/hooks/useOrganization";
+import ExecutiveSummaryHero from "@/components/organization/ExecutiveSummaryHero";
+import EngineeringScoreCard from "@/components/organization/EngineeringScoreCard";
+import OrganizationHighlights from "@/components/organization/OrganizationHighlights";
+import SmartInsights from "@/components/organization/SmartInsights";
 
 export default function OrganizationPage() {
     const [interval, setInterval] =
@@ -336,8 +340,8 @@ export default function OrganizationPage() {
                         >
                             <RefreshCcw
                                 className={`mr-2 h-4 w-4 ${isFetching
-                                        ? "animate-spin"
-                                        : ""
+                                    ? "animate-spin"
+                                    : ""
                                     }`}
                             />
 
@@ -358,8 +362,8 @@ export default function OrganizationPage() {
                         >
                             <RefreshCcw
                                 className={`mr-2 h-4 w-4 ${reprocessMutation.isPending
-                                        ? "animate-spin"
-                                        : ""
+                                    ? "animate-spin"
+                                    : ""
                                     }`}
                             />
 
@@ -378,14 +382,35 @@ export default function OrganizationPage() {
                     <div
                         role="status"
                         className={`rounded-lg border px-4 py-3 text-sm ${reprocessMessageType ===
-                                "success"
-                                ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
-                                : "border-destructive/30 bg-destructive/10 text-destructive"
+                            "success"
+                            ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                            : "border-destructive/30 bg-destructive/10 text-destructive"
                             }`}
                     >
                         {reprocessMessage}
                     </div>
                 ) : null}
+
+
+                <ExecutiveSummaryHero
+                    overview={data.overview}
+                />
+
+                <EngineeringScoreCard
+                    architecture={data.overview.averageArchitectureScore}
+                    engineering={data.overview.averageEngineeringQualityScore}
+                    production={data.overview.averageProductionReadinessScore}
+                    maturity={data.overview.averageMaturityScore}
+                    risk={data.overview.averageRiskScore}
+                />
+
+                <OrganizationHighlights
+                    repositories={data.rankings}
+                />
+
+                <SmartInsights
+                    overview={data.overview}
+                />
 
                 {/* =====================================================
             Analysis coverage
