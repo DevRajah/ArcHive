@@ -14,20 +14,27 @@ import {
 } from "lucide-react";
 
 import RepositoryRankings from "@/components/organization/RepositoryRankings";
+import TechnologyInventory from "@/components/organization/TechnologyInventory";
+import RiskOverview from "@/components/organization/RiskOverview";
+import OrganizationRecommendations from "@/components/organization/OrganizationRecommendations";
+import OrganizationTrends from "@/components/organization/OrganizationTrends";
+import OrganizationActivityTimeline from "@/components/organization/OrganizationActivityTimeline";
 
 import { RefreshCcw, Sparkles } from "lucide-react";
 
 import { AppShell } from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/button";
 
-import { useCurrentUser } from "@/hooks/useCurrentUser";
 import {
     useOrganizationIntelligence,
     useReprocessRepositories,
 } from "@/hooks/useOrganization";
 
 export default function OrganizationPage() {
-    const { user } = useCurrentUser();
+    const userId =
+        typeof window !== "undefined"
+            ? localStorage.getItem("userId") ?? ""
+            : "";
 
     const {
         data,
@@ -36,12 +43,12 @@ export default function OrganizationPage() {
         error,
         refetch,
     } = useOrganizationIntelligence({
-        userId: user?.id ?? "",
-        enabled: !!user,
+        userId: userId,
+        enabled: !!userId,
     });
 
     const reprocessMutation = useReprocessRepositories(
-        user?.id ?? ""
+        userId
     );
 
     if (isLoading) {
@@ -208,6 +215,24 @@ export default function OrganizationPage() {
 
                 <RepositoryRankings
                     repositories={data.rankings}
+                />
+
+
+                <div className="grid gap-6 xl:grid-cols-2">
+                    <TechnologyInventory technology={data.technology} />
+
+                    <RiskOverview risks={data.risks} />
+                </div>
+
+                <OrganizationRecommendations
+                    recommendations={data.recommendations}
+                />
+                <OrganizationTrends
+                    points={data.trends.points}
+                />
+
+                <OrganizationActivityTimeline
+                    activity={data.activity}
                 />
 
             </div>
