@@ -1003,8 +1003,6 @@ export const detectTechnologyFingerprint = (
             engineeringQuality,
         });
 
-    console.log("Architecture Quality:", architectureQuality);
-    console.log("Architecture Score:", architectureQuality.score);
 
     const architectureDrift = buildArchitectureDriftReport({
         architectureDomains: Array.from(architectureDomains),
@@ -1111,14 +1109,6 @@ export const detectTechnologyFingerprint = (
         weaknessReport,
         recommendationReport,
     });
-
-    console.log("=== FINGERPRINT DEBUG ===");
-    console.log("Repository Types:", Array.from(repositoryTypes));
-    console.log("Evidence Results:", evidenceResults);
-    console.log("Reasoning:", reasoningSignals);
-    console.log("=========================");
-
-
 
     return {
         technologies: Array.from(technologies),
