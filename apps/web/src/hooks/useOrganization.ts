@@ -28,16 +28,16 @@ interface UseOrganizationIntelligenceOptions {
  * - activity
  * - trends
  */
-export function useOrganizationIntelligence({
+export function useOrganizationDashboard({
   userId,
   query,
   enabled = true,
 }: UseOrganizationIntelligenceOptions) {
   return useQuery({
-    queryKey: QUERY_KEYS.ORGANIZATION_INTELLIGENCE(userId, query),
+    queryKey: QUERY_KEYS.ORGANIZATION_DASHBOARD(userId, query),
 
     queryFn: () =>
-      organizationService.getOrganizationIntelligence(userId, query),
+      organizationService.getOrganizationDashboard(userId),
 
     enabled: enabled && !!userId,
 
@@ -72,7 +72,7 @@ export function useReprocessRepositories(
 
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: QUERY_KEYS.ORGANIZATION_INTELLIGENCE(
+        queryKey: QUERY_KEYS.ORGANIZATION_DASHBOARD(
           userId,
           query
         ),

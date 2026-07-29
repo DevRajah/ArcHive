@@ -1,55 +1,52 @@
 import { api } from "@/lib/api";
 
 import type {
-  OrganizationIntelligenceQuery,
   OrganizationIntelligenceResponse,
   ReprocessAllRepositoriesResponse,
 } from "@/types/organization.types";
 
 class OrganizationService {
   /**
-   * Fetches the complete Organization Intelligence dashboard.
+   * Fetches the complete Organization Dashboard.
    *
-   * The backend returns:
+   * Backend endpoint:
+   * GET /users/:userId/organization/dashboard
+   *
+   * Returns:
    * - overview
    * - rankings
-   * - technology inventory
+   * - technology
    * - recommendations
    * - risks
-   * - activity timeline
+   * - activity
    * - trends
    */
-  async getOrganizationIntelligence(
+  async getOrganizationDashboard(
     userId: string,
-    query?: OrganizationIntelligenceQuery
   ): Promise<OrganizationIntelligenceResponse> {
-    const { data } = await api.get<OrganizationIntelligenceResponse>(
-      `/api/users/${userId}/organization-intelligence`,
-      {
-        params: query,
-      }
-    );
+    const { data } =
+      await api.get<OrganizationIntelligenceResponse>(
+        `/users/${userId}/organization/dashboard`,
+      );
 
     return data;
   }
 
   /**
-   * Reprocesses every tracked repository.
+   * Reprocess every tracked repository.
    *
-   * This regenerates repository intelligence across the user's portfolio.
-   *
-   * NOTE:
-   * This endpoint can be expensive.
-   * It should only be triggered when the user explicitly clicks
-   * "Reprocess All Repositories".
+   * This queues all repositories for fresh analysis so the
+   * Organization Dashboard reflects the latest engineering data.
    */
   async reprocessRepositories(): Promise<ReprocessAllRepositoriesResponse> {
-    const { data } = await api.post<ReprocessAllRepositoriesResponse>(
-      "/api/repositories/reprocess-all"
-    );
+    const { data } =
+      await api.post<ReprocessAllRepositoriesResponse>(
+        "/repositories/reprocess-all",
+      );
 
     return data;
   }
 }
 
-export const organizationService = new OrganizationService();
+export const organizationService =
+  new OrganizationService();

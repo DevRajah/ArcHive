@@ -35,7 +35,7 @@ import TechnologyInventory from "@/components/organization/TechnologyInventory";
 import { Button } from "@/components/ui/button";
 
 import {
-    useOrganizationIntelligence,
+    useOrganizationDashboard,
     useReprocessRepositories,
 } from "@/hooks/useOrganization";
 import ExecutiveSummaryHero from "@/components/organization/ExecutiveSummaryHero";
@@ -74,16 +74,36 @@ export default function OrganizationPage() {
      * exist while Next.js is rendering on the server.
      */
     useEffect(() => {
-        const storedUserId =
-            window.localStorage.getItem(
-                "userId",
+        try {
+            const storedSession =
+                window.localStorage.getItem(
+                    "archive_session",
+                );
+
+            if (!storedSession) {
+                setHasLoadedStoredUser(true);
+                return;
+            }
+
+            const parsedSession = JSON.parse(
+                storedSession,
+            ) as {
+                userId?: string;
+            };
+
+            if (parsedSession.userId) {
+                setUserId(
+                    parsedSession.userId,
+                );
+            }
+        } catch (error) {
+            console.error(
+                "Failed to read ArcHive session:",
+                error,
             );
-
-        if (storedUserId) {
-            setUserId(storedUserId);
+        } finally {
+            setHasLoadedStoredUser(true);
         }
-
-        setHasLoadedStoredUser(true);
     }, []);
 
     /*
@@ -125,13 +145,8 @@ export default function OrganizationPage() {
         isError,
         error,
         refetch,
-    } = useOrganizationIntelligence({
+    } = useOrganizationDashboard({
         userId,
-
-        query: {
-            interval,
-        },
-
         enabled: hasLoadedStoredUser && !!userId,
     });
 
@@ -142,9 +157,7 @@ export default function OrganizationPage() {
      * query is invalidated after reprocessing succeeds.
      */
     const reprocessMutation =
-        useReprocessRepositories(userId, {
-            interval,
-        });
+        useReprocessRepositories(userId);
 
     const handleReprocessRepositories =
         () => {

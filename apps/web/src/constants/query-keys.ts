@@ -181,11 +181,11 @@ export const QUERY_KEYS = {
       repositoryId,
     ],
 
-  ORGANIZATION_INTELLIGENCE: (
+  ORGANIZATION_DASHBOARD: (
     userId: string,
     query?: OrganizationIntelligenceQuery
   ) => [
-      "organization-intelligence",
+      "organization-dashboard",
       userId,
       query,
     ],
