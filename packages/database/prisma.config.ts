@@ -1,24 +1,45 @@
 import { config } from "dotenv";
 import { defineConfig, env } from "prisma/config";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 /*
- * Prisma commands are executed from the ArcHive project root.
+ * Get the directory containing this Prisma config file.
  *
- * ArcHive's DATABASE_URL currently lives inside apps/api/.env,
- * so we load that file explicitly before Prisma reads env("DATABASE_URL").
+ * We do not use process.cwd() because Prisma commands may be run from
+ * either the ArcHive root or packages/database.
  */
+const configDirectory = path.dirname(
+  fileURLToPath(import.meta.url),
+);
+
+/*
+ * prisma.config.ts lives at:
+ *
+ * packages/database/prisma.config.ts
+ *
+ * Going up two folders takes us back to the ArcHive project root.
+ */
+const projectRoot = path.resolve(
+  configDirectory,
+  "../..",
+);
+
+/*
+ * ArcHive keeps its backend environment variables in apps/api/.env.
+ */
+const environmentFile = path.join(
+  projectRoot,
+  "apps/api/.env",
+);
+
 config({
-  path: path.resolve(
-    process.cwd(),
-    "apps/api/.env"
-  ),
+  path: environmentFile,
 });
 
 export default defineConfig({
   /*
-   * These paths are relative to the location of this config file:
-   * packages/database/prisma.config.ts
+   * These paths are resolved relative to this Prisma config file.
    */
   schema: "prisma/schema.prisma",
 

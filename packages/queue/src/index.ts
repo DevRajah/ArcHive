@@ -29,3 +29,12 @@ export const repositoryReprocessQueue = new Queue(
     },
   }
 );
+
+export {
+  EXECUTIVE_REPORT_QUEUE_NAME,
+  executiveReportQueue,
+} from "./report.queue";
+
+export type {
+  GenerateExecutiveReportJob,
+} from "./report.queue";

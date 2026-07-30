@@ -53,6 +53,8 @@ model User {
 
   repositories Repository[]
 
+  reports Report[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -256,6 +258,44 @@ model ArchitectureAdvisorSnapshot {
   @@index([confidenceScore])
 }
 
+model Report {
+  id          String       @id @default(uuid())
+  userId      String
+
+  /// Human-friendly report title shown in the UI.
+  title       String
+
+  /// Optional description entered when generating the report.
+  description String?
+
+  /// Current generation state.
+  status      ReportStatus @default(QUEUED)
+
+  /// Immutable organization snapshot captured at generation time.
+  reportData  Json?
+
+  /// Generated PDF location.
+  pdfPath     String?
+
+  /// Generated CSV location.
+  csvPath     String?
+
+  /// If generation fails we keep the reason for debugging.
+  error       String?
+
+  /// When generation actually finished.
+  generatedAt DateTime?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+}
+
 enum ArchitectureAdvisorSeverity {
   INFO
   LOW
@@ -275,4 +315,11 @@ enum ArchitectureAdvisorCategory {
   DATA
   DELIVERY
   ENGINEERING_QUALITY
+}
+
+enum ReportStatus {
+  QUEUED
+  GENERATING
+  COMPLETED
+  FAILED
 }

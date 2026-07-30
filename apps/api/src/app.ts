@@ -22,6 +22,7 @@ import { dependencyIntelligenceRoutes } from "./routes/dependency-intelligence.r
 import { architectureAdvisorRoutes } from "./routes/architecture-advisor.routes";
 import { healthTrendsRoutes } from "./routes/health-trends.routes";
 import organizationRoutes from "./routes/organization.routes";
+import { reportRoutes } from "./routes/report.routes";
 
 // This makes future testing easier because I can import the app without starting the port.
 export const buildApp = async () => {
@@ -127,6 +128,10 @@ export const buildApp = async () => {
 
   await app.register(githubOAuthRoutes, {
     prefix: "/api/github/oauth",
+  });
+
+  await app.register(reportRoutes, {
+    prefix: "/api/reports",
   });
 
   return app;
