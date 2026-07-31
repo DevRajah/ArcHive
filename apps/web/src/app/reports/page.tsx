@@ -24,14 +24,17 @@ import { ReportsTable } from "@/components/reports/ReportsTable";
 import { reportService } from "@/services/report.service";
 import { Button } from "@/components/ui/button";
 
-import { useReports } from "@/hooks/useReports";
+import {
+    useDeleteReport,
+    useReport,
+    useReports,
+} from "@/hooks/useReports";
 
 import type { ExecutiveReport } from "@/types/report.types";
 import { ReportDetailsDrawer } from "@/components/reports/ReportDetailsDrawer";
 
 import { DeleteReportDialog } from "@/components/reports/DeleteReportDialog";
 
-import { useDeleteReport } from "@/hooks/useReports";
 
 import {
     ReportsToolbar,
@@ -88,6 +91,10 @@ export default function ReportsPage() {
     const [selectedReport, setSelectedReport] =
         useState<ExecutiveReport | null>(null);
 
+    const selectedReportQuery = useReport(
+        userId,
+        selectedReport?.id ?? "",
+    );
     const [reportToDelete, setReportToDelete] =
         useState<ExecutiveReport | null>(null);
 
@@ -534,7 +541,10 @@ export default function ReportsPage() {
                 />
 
                 <ReportDetailsDrawer
-                    report={selectedReport}
+                    report={
+                        selectedReportQuery.data ??
+                        selectedReport
+                    }
                     open={Boolean(selectedReport)}
                     onOpenChange={(open) => {
                         if (!open) {
@@ -542,6 +552,7 @@ export default function ReportsPage() {
                         }
                     }}
                 />
+                
                 <DeleteReportDialog
                     report={reportToDelete}
                     open={Boolean(reportToDelete)}
