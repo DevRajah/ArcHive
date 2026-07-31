@@ -1,143 +1,181 @@
 "use client";
 
-import Link from "next/link";
+import { useState } from "react";
 
 import {
-  FileText,
+  FileBarChart2,
   Plus,
 } from "lucide-react";
 
 import { AppShell } from "@/components/layout/AppShell";
 
-import ExecutiveReportHero from "@/components/reports/ExecutiveReportHero";
-import ExportActions from "@/components/reports/ExportActions";
-import ExecutiveReportPreview from "@/components/reports/ExecutiveReportPreview";
+import { ReportsEmptyState } from "@/components/reports/ReportsEmptyState";
+import { ReportsErrorState } from "@/components/reports/ReportsErrorState";
+import { ReportsPageSkeleton } from "@/components/reports/ReportsPageSkeleton";
+import { ReportsSummaryCards } from "@/components/reports/ReportsSummaryCards";
+import { ReportsTable } from "@/components/reports/ReportsTable";
 
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 
-import {
-  useGenerateReport,
-  useReports,
-} from "@/hooks/useReports";
+import { useReports } from "@/hooks/useReports";
+
+import type { ExecutiveReport } from "@/types/report.types";
 
 export default function ReportsPage() {
-  const reportsQuery =
-    useReports();
+  const reportsQuery = useReports();
 
-  const generateMutation =
-    useGenerateReport();
+  const [selectedReport, setSelectedReport] =
+    useState<ExecutiveReport | null>(null);
+
+  const [reportToDelete, setReportToDelete] =
+    useState<ExecutiveReport | null>(null);
+
+  const [isGenerateDialogOpen, setIsGenerateDialogOpen] =
+    useState(false);
+
+  const [downloadingReportId, setDownloadingReportId] =
+    useState<string | null>(null);
 
   const reports =
-    reportsQuery.data?.reports ??
-    [];
+    reportsQuery.data?.reports ?? [];
 
   function handleGenerateReport() {
-    generateMutation.mutate();
+    setIsGenerateDialogOpen(true);
+  }
+
+  function handleViewReport(report: ExecutiveReport) {
+    setSelectedReport(report);
+  }
+
+  async function handleDownloadPdf(
+    report: ExecutiveReport,
+  ) {
+    setDownloadingReportId(report.id);
+
+    /*
+     * The download request and toast will be connected
+     * when we complete the report actions batch.
+     */
+    setDownloadingReportId(null);
+  }
+
+  async function handleDownloadCsv(
+    report: ExecutiveReport,
+  ) {
+    setDownloadingReportId(report.id);
+
+    /*
+     * The download request and toast will be connected
+     * when we complete the report actions batch.
+     */
+    setDownloadingReportId(null);
+  }
+
+  function handleDeleteReport(
+    report: ExecutiveReport,
+  ) {
+    setReportToDelete(report);
   }
 
   return (
     <AppShell>
-      <div className="space-y-8 p-6">
-        <ExecutiveReportHero />
+      <main className="space-y-6 p-4 sm:p-6 lg:p-8">
+        {reportsQuery.isLoading ? (
+          <ReportsPageSkeleton />
+        ) : reportsQuery.isError ? (
+          <ReportsErrorState
+            isRetrying={reportsQuery.isFetching}
+            onRetry={() => reportsQuery.refetch()}
+          />
+        ) : (
+          <>
+            <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-start gap-3">
+                <div className="mt-1 hidden rounded-xl border bg-muted/40 p-2.5 sm:block">
+                  <FileBarChart2 className="h-5 w-5 text-muted-foreground" />
+                </div>
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 className="text-2xl font-bold">
-              Executive Reports
-            </h2>
+                <div>
+                  <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+                    Executive Reports
+                  </h1>
 
-            <p className="mt-2 text-muted-foreground">
-              Generate downloadable
-              engineering reports for
-              your organization.
-            </p>
-          </div>
-
-          <Button
-            onClick={
-              handleGenerateReport
-            }
-            disabled={
-              generateMutation.isPending
-            }
-          >
-            <Plus className="mr-2 h-4 w-4" />
-
-            {generateMutation.isPending
-              ? "Generating..."
-              : "Generate Report"}
-          </Button>
-        </div>
-
-        <ExportActions />
-
-        {reportsQuery.isLoading && (
-          <div className="grid gap-6 lg:grid-cols-2">
-            {[1, 2, 3, 4].map(
-              (item) => (
-                <Skeleton
-                  key={item}
-                  className="h-64 rounded-xl"
-                />
-              ),
-            )}
-          </div>
-        )}
-
-        {reportsQuery.isError && (
-          <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-6">
-            <p className="font-medium text-destructive">
-              Failed to load reports.
-            </p>
-          </div>
-        )}
-
-        {!reportsQuery.isLoading &&
-          !reports.length && (
-            <div className="rounded-xl border border-dashed p-12 text-center">
-              <FileText className="mx-auto h-12 w-12 text-muted-foreground" />
-
-              <h3 className="mt-4 text-xl font-semibold">
-                No reports yet
-              </h3>
-
-              <p className="mt-2 text-muted-foreground">
-                Generate your first
-                executive engineering
-                report.
-              </p>
+                  <p className="mt-1 text-sm text-muted-foreground sm:text-base">
+                    Generate professional engineering reports
+                    for leadership.
+                  </p>
+                </div>
+              </div>
 
               <Button
-                className="mt-6"
-                onClick={
-                  handleGenerateReport
-                }
+                className="w-full sm:w-auto"
+                onClick={handleGenerateReport}
               >
                 <Plus className="mr-2 h-4 w-4" />
-                Generate First
-                Report
+                Generate Report
               </Button>
-            </div>
-          )}
+            </header>
 
-        {reports.length > 0 && (
-          <div className="grid gap-6 lg:grid-cols-2">
-            {reports.map(
-              (report) => (
-                <Link
-                  key={report.id}
-                  href={`/reports/${report.id}`}
-                >
-                  <ExecutiveReportPreview
-                    report={report}
-                  />
-                </Link>
-              ),
+            {reports.length === 0 ? (
+              <ReportsEmptyState
+                onGenerate={handleGenerateReport}
+              />
+            ) : (
+              <>
+                <ReportsSummaryCards
+                  reports={reports}
+                />
+
+                <ReportsTable
+                  reports={reports}
+                  downloadingReportId={
+                    downloadingReportId
+                  }
+                  onView={handleViewReport}
+                  onDownloadPdf={handleDownloadPdf}
+                  onDownloadCsv={handleDownloadCsv}
+                  onDelete={handleDeleteReport}
+                />
+              </>
             )}
-          </div>
+          </>
         )}
-      </div>
+
+        {/*
+          Batch 3 will mount GenerateReportDialog here.
+
+          <GenerateReportDialog
+            open={isGenerateDialogOpen}
+            onOpenChange={setIsGenerateDialogOpen}
+          />
+        */}
+
+        {/*
+          Later batches will mount:
+
+          <ReportDetailsDrawer
+            report={selectedReport}
+            open={Boolean(selectedReport)}
+            onOpenChange={(open) => {
+              if (!open) setSelectedReport(null);
+            }}
+          />
+
+          <DeleteReportDialog
+            report={reportToDelete}
+            open={Boolean(reportToDelete)}
+            onOpenChange={(open) => {
+              if (!open) setReportToDelete(null);
+            }}
+          />
+        */}
+
+        <span className="hidden">
+          {String(isGenerateDialogOpen)}
+          {selectedReport?.id}
+          {reportToDelete?.id}
+        </span>
+      </main>
     </AppShell>
   );
 }

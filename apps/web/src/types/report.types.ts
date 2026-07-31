@@ -1,28 +1,33 @@
 export type ReportStatus =
+  | "QUEUED"
   | "GENERATING"
-  | "READY"
+  | "COMPLETED"
   | "FAILED";
 
 export interface ExecutiveReport {
   id: string;
+  userId: string;
+
   title: string;
-  generatedAt: string;
-  generatedBy: string;
+  description: string | null;
+
   status: ReportStatus;
 
-  summary: {
-    repositories: number;
-    engineeringScore: number;
-    architectureScore: number;
-    productionReadiness: number;
-    riskScore: number;
-  };
-}
-
-export interface GenerateReportResponse {
-  report: ExecutiveReport;
+  generatedAt: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface ReportsResponse {
   reports: ExecutiveReport[];
+}
+
+export interface GenerateReportPayload {
+  userId: string;
+  title: string;
+  description?: string;
+}
+
+export interface GenerateReportResponse {
+  report: ExecutiveReport;
 }
