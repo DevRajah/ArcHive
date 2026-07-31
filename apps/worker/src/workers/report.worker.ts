@@ -9,6 +9,9 @@ import {
     redisConnection,
 } from "@archive/queue";
 
+import { buildExecutiveKpis } from "../reports/kpi-builder";
+import { buildRiskBreakdown } from "../reports/risk-analysis";
+
 import type { GenerateExecutiveReportJob } from "@archive/queue";
 import path from "node:path";
 
@@ -23,6 +26,21 @@ import {
 import {
     generateReportPdf,
 } from "../reports/pdf-generator";
+
+
+import {
+    buildTechnologyAnalysis,
+} from "../reports/technology-analysis";
+
+import {
+    buildEngineeringTrendAnalysis,
+} from "../reports/trend-analysis";
+
+import {
+    buildRepositoryHighlights,
+} from "../reports/repository-highlights";
+
+type OrganizationDashboard = Record<string, unknown>;
 
 /**
  * The worker needs access to the ArcHive API because the API already owns
@@ -56,7 +74,7 @@ const toPrismaJson = (
  */
 const fetchOrganizationDashboard = async (
     userId: string,
-): Promise<Prisma.InputJsonValue> => {
+): Promise<OrganizationDashboard> => {
     const encodedUserId = encodeURIComponent(userId);
 
     const endpoint =
@@ -81,7 +99,7 @@ const fetchOrganizationDashboard = async (
 
     const dashboard = await response.json();
 
-    return dashboard as Prisma.InputJsonValue;
+    return dashboard as OrganizationDashboard;
 };
 
 /**
@@ -144,10 +162,37 @@ const generateExecutiveReport = async ({
 
     const executiveSummary =
         buildExecutiveSummary(
-            organizationDashboard as Record<
-                string,
-                any
-            >,
+            organizationDashboard 
+        );
+    /**
+     * These analytics are calculated once while the report is generated.
+     *
+     * This keeps business logic out of the frontend and preserves the exact
+     * analytical state that existed when this report was created.
+     */
+    const executiveKpis =
+        buildExecutiveKpis(
+            organizationDashboard,
+        );
+
+    const riskBreakdown =
+        buildRiskBreakdown(
+            organizationDashboard,
+        );
+
+    const technologyAnalysis =
+        buildTechnologyAnalysis(
+            organizationDashboard,
+        );
+
+    const trendAnalysis =
+        buildEngineeringTrendAnalysis(
+            organizationDashboard,
+        );
+
+    const repositoryHighlights =
+        buildRepositoryHighlights(
+            organizationDashboard,
         );
 
     const generatedAt = new Date();
@@ -169,7 +214,11 @@ const generateExecutiveReport = async ({
         );
 
     const reportSnapshot = {
-        schemaVersion: 1,
+        /**
+ * Incrementing this value allows future consumers to understand which
+ * report structure they are reading.
+ */
+        schemaVersion: 2,
         reportId,
         title: report.title,
         description:
@@ -177,6 +226,15 @@ const generateExecutiveReport = async ({
         generatedAt:
             generatedAt.toISOString(),
         executiveSummary,
+        executiveKpis,
+        riskBreakdown,
+        technologyAnalysis,
+        trendAnalysis,
+        repositoryHighlights,
+        /**
+     * We retain the raw Organization Intelligence snapshot so future report
+     * features can inspect the original data without recalculating it.
+     */
         organization:
             organizationDashboard,
     };
@@ -190,6 +248,11 @@ const generateExecutiveReport = async ({
                     report.description,
                 generatedAt,
                 executiveSummary,
+                executiveKpis,
+                riskBreakdown,
+                technologyAnalysis,
+                trendAnalysis,
+                repositoryHighlights,
                 organization:
                     organizationDashboard as Record<
                         string,
@@ -206,12 +269,6 @@ const generateExecutiveReport = async ({
                     reportOutputDirectory,
             }),
 
-            generateReportCsv({
-                reportId,
-                reportSnapshot,
-                outputDirectory:
-                    reportOutputDirectory,
-            }),
         ]);
 
     await prisma.report.update({
