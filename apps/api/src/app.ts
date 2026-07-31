@@ -23,6 +23,7 @@ import { architectureAdvisorRoutes } from "./routes/architecture-advisor.routes"
 import { healthTrendsRoutes } from "./routes/health-trends.routes";
 import organizationRoutes from "./routes/organization.routes";
 import { reportRoutes } from "./routes/report.routes";
+import { reportQueryRoutes } from "./routes/report-query.routes";
 
 // This makes future testing easier because I can import the app without starting the port.
 export const buildApp = async () => {
@@ -132,6 +133,10 @@ export const buildApp = async () => {
 
   await app.register(reportRoutes, {
     prefix: "/api/reports",
+  });
+
+  await app.register(reportQueryRoutes, {
+    prefix: "/api",
   });
 
   return app;
