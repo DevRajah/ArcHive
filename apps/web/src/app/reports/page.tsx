@@ -1,6 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import {
+    useEffect,
+    useMemo,
+    useState,
+} from "react";
 
 import {
     FileBarChart2,
@@ -28,6 +32,14 @@ import { ReportDetailsDrawer } from "@/components/reports/ReportDetailsDrawer";
 import { DeleteReportDialog } from "@/components/reports/DeleteReportDialog";
 
 import { useDeleteReport } from "@/hooks/useReports";
+
+import {
+    ReportsToolbar,
+    type ReportSortOption,
+    type ReportStatusFilter,
+} from "@/components/reports/ReportsToolbar";
+
+import { ReportsPagination } from "@/components/reports/ReportsPagination";
 
 interface ArcHiveSession {
     userId?: string;
@@ -84,15 +96,133 @@ export default function ReportsPage() {
         setDownloadingReportId,
     ] = useState<string | null>(null);
 
-    useEffect(() => {
-        setUserId(getStoredUserId());
-    }, []);
+    const [search, setSearch] =
+        useState("");
+
+    const [statusFilter, setStatusFilter] =
+        useState<ReportStatusFilter>("ALL");
+
+    const [sortOption, setSortOption] =
+        useState<ReportSortOption>("NEWEST");
+
+    const [page, setPage] =
+        useState(1);
+
+    const pageSize = 8;
 
     const deleteReportMutation =
         useDeleteReport();
 
+    useEffect(() => {
+        setUserId(getStoredUserId());
+    }, []);
+
+    useEffect(() => {
+        setPage(1);
+    }, [
+        search,
+        statusFilter,
+        sortOption,
+    ]);
+
     const reports =
         reportsQuery.data?.reports ?? [];
+
+    const filteredReports = useMemo(() => {
+        const normalisedSearch =
+            search.trim().toLowerCase();
+
+        const matchingReports =
+            reports.filter((report) => {
+                const matchesSearch =
+                    normalisedSearch.length === 0 ||
+                    report.title
+                        .toLowerCase()
+                        .includes(normalisedSearch) ||
+                    report.description
+                        ?.toLowerCase()
+                        .includes(normalisedSearch);
+
+                const matchesStatus =
+                    statusFilter === "ALL" ||
+                    report.status === statusFilter;
+
+                return (
+                    matchesSearch &&
+                    matchesStatus
+                );
+            });
+
+        return [...matchingReports].sort(
+            (firstReport, secondReport) => {
+                switch (sortOption) {
+                    case "OLDEST":
+                        return (
+                            new Date(
+                                firstReport.createdAt,
+                            ).getTime() -
+                            new Date(
+                                secondReport.createdAt,
+                            ).getTime()
+                        );
+
+                    case "TITLE_ASC":
+                        return firstReport.title.localeCompare(
+                            secondReport.title,
+                        );
+
+                    case "TITLE_DESC":
+                        return secondReport.title.localeCompare(
+                            firstReport.title,
+                        );
+
+                    case "NEWEST":
+                    default:
+                        return (
+                            new Date(
+                                secondReport.createdAt,
+                            ).getTime() -
+                            new Date(
+                                firstReport.createdAt,
+                            ).getTime()
+                        );
+                }
+            },
+        );
+    }, [
+        reports,
+        search,
+        statusFilter,
+        sortOption,
+    ]);
+
+    const totalPages = Math.max(
+        1,
+        Math.ceil(
+            filteredReports.length / pageSize,
+        ),
+    );
+
+    useEffect(() => {
+        if (page > totalPages) {
+            setPage(totalPages);
+        }
+    }, [page, totalPages]);
+
+    const paginatedReports = useMemo(() => {
+        const startIndex =
+            (page - 1) * pageSize;
+
+        return filteredReports.slice(
+            startIndex,
+            startIndex + pageSize,
+        );
+    }, [
+        filteredReports,
+        page,
+        pageSize,
+    ]);
+
 
     function handleGenerateReport() {
         if (!userId) {
@@ -241,24 +371,93 @@ export default function ReportsPage() {
                                     reports={reports}
                                 />
 
-                                <ReportsTable
-                                    reports={reports}
-                                    downloadingReportId={
-                                        downloadingReportId
+                                <ReportsToolbar
+                                    search={search}
+                                    status={statusFilter}
+                                    sort={sortOption}
+                                    resultCount={
+                                        filteredReports.length
                                     }
-                                    onView={
-                                        handleViewReport
+                                    onSearchChange={setSearch}
+                                    onStatusChange={
+                                        setStatusFilter
                                     }
-                                    onDownloadPdf={
-                                        handleDownloadPdf
+                                    onSortChange={
+                                        setSortOption
                                     }
-                                    onDownloadCsv={
-                                        handleDownloadCsv
-                                    }
-                                    onDelete={
-                                        handleDeleteReport
-                                    }
+                                    onReset={() => {
+                                        setSearch("");
+                                        setStatusFilter("ALL");
+                                        setSortOption("NEWEST");
+                                        setPage(1);
+                                    }}
                                 />
+
+                                {filteredReports.length === 0 ? (
+                                    <div className="rounded-xl border border-dashed bg-card px-6 py-16 text-center">
+                                        <h3 className="text-lg font-semibold">
+                                            No matching reports
+                                        </h3>
+
+                                        <p className="mt-2 text-sm text-muted-foreground">
+                                            Try changing your search term
+                                            or status filter.
+                                        </p>
+
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            className="mt-5"
+                                            onClick={() => {
+                                                setSearch("");
+                                                setStatusFilter("ALL");
+                                                setSortOption("NEWEST");
+                                            }}
+                                        >
+                                            Clear filters
+                                        </Button>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <ReportsTable
+                                            reports={
+                                                paginatedReports
+                                            }
+                                            downloadingReportId={
+                                                downloadingReportId
+                                            }
+                                            onView={
+                                                handleViewReport
+                                            }
+                                            onDownloadPdf={
+                                                handleDownloadPdf
+                                            }
+                                            onDownloadCsv={
+                                                handleDownloadCsv
+                                            }
+                                            onDelete={
+                                                handleDeleteReport
+                                            }
+                                        />
+
+                                        <ReportsPagination
+                                            page={page}
+                                            totalPages={totalPages}
+                                            totalItems={
+                                                filteredReports.length
+                                            }
+                                            pageSize={pageSize}
+                                            onPageChange={(nextPage) => {
+                                                setPage(nextPage);
+
+                                                window.scrollTo({
+                                                    top: 0,
+                                                    behavior: "smooth",
+                                                });
+                                            }}
+                                        />
+                                    </>
+                                )}
                             </>
                         )}
                     </>
