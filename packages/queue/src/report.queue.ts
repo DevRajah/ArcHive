@@ -1,5 +1,18 @@
 import { Queue } from "bullmq";
-import { redisConnection } from "./redis";
+import IORedis from "ioredis";
+
+/**
+ * Shared Redis connection for the Executive Report queue.
+ *
+ * We create it here because the queue package currently keeps
+ * its Redis connection inside index.ts, and importing it from
+ * there would create a circular dependency.
+ */
+const redisConnection = new IORedis({
+  host: process.env.REDIS_HOST || "localhost",
+  port: Number(process.env.REDIS_PORT) || 6381,
+  maxRetriesPerRequest: null,
+});
 
 /**
  * Data carried by every Executive Report generation job.
@@ -12,15 +25,13 @@ export interface GenerateExecutiveReportJob {
 /**
  * Shared queue name.
  *
- * Future me:
- * The API and worker must use this exact same queue name.
+ * The API and worker must use this exact same name.
  */
 export const EXECUTIVE_REPORT_QUEUE_NAME =
   "executive-report-generation";
 
 /**
- * The API uses this queue to send report-generation jobs
- * to the dedicated ArcHive worker application.
+ * Queue responsible for generating Executive Reports.
  */
 export const executiveReportQueue =
   new Queue<GenerateExecutiveReportJob>(
@@ -33,11 +44,11 @@ export const executiveReportQueue =
 
         backoff: {
           type: "exponential",
-          delay: 5_000,
+          delay: 5000,
         },
 
         removeOnComplete: 100,
         removeOnFail: 100,
       },
-    },
+    }
   );

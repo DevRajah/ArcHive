@@ -1,7 +1,7 @@
 import { ReportStatus } from "@prisma/client";
 import { executiveReportQueue } from "@archive/queue";
 
-import { prisma } from "../../lib/prisma";
+import { prisma } from "@archive/database";
 
 import type {
   GenerateReportRequest,
