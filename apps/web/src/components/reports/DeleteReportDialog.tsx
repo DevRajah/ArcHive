@@ -13,10 +13,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-import type { ExecutiveReport } from "@/types/report.types";
+import type {
+  ReportListItem,
+} from "@/types/report.types";
 
 interface DeleteReportDialogProps {
-  report: ExecutiveReport | null;
+  report: ReportListItem | null;
   open: boolean;
   loading?: boolean;
   onConfirm: () => void;

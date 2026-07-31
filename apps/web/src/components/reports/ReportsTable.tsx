@@ -35,18 +35,20 @@ import {
 
 import { ReportStatusBadge } from "@/components/reports/ReportStatusBadge";
 
-import type { ExecutiveReport } from "@/types/report.types";
+import type {
+  ReportListItem,
+} from "@/types/report.types";
 
 interface ReportsTableProps {
-  reports: ExecutiveReport[];
-  onView: (report: ExecutiveReport) => void;
-  onDownloadPdf: (report: ExecutiveReport) => void;
-  onDownloadCsv: (report: ExecutiveReport) => void;
-  onDelete: (report: ExecutiveReport) => void;
+  reports: ReportListItem[];
+  onView: (report: ReportListItem) => void;
+  onDownloadPdf: (report: ReportListItem) => void;
+  onDownloadCsv: (report: ReportListItem) => void;
+  onDelete: (report: ReportListItem) => void;
   downloadingReportId?: string | null;
 }
 
-function formatReportDate(report: ExecutiveReport) {
+function formatReportDate(report: ReportListItem) {
   const value =
     report.generatedAt ||
     report.createdAt;

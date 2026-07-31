@@ -29,8 +29,11 @@ import {
     useReport,
     useReports,
 } from "@/hooks/useReports";
+import type {
+    ReportListItem,
+} from "@/types/report.types";
 
-import type { ExecutiveReport } from "@/types/report.types";
+
 import { ReportDetailsDrawer } from "@/components/reports/ReportDetailsDrawer";
 
 import { DeleteReportDialog } from "@/components/reports/DeleteReportDialog";
@@ -89,14 +92,14 @@ export default function ReportsPage() {
     const deleteReportMutation =
         useDeleteReport(userId);
     const [selectedReport, setSelectedReport] =
-        useState<ExecutiveReport | null>(null);
+        useState<ReportListItem | null>(null);
 
     const selectedReportQuery = useReport(
         userId,
         selectedReport?.id ?? "",
     );
     const [reportToDelete, setReportToDelete] =
-        useState<ExecutiveReport | null>(null);
+        useState<ReportListItem | null>(null);
 
     const [
         isGenerateDialogOpen,
@@ -135,77 +138,87 @@ export default function ReportsPage() {
         statusFilter,
         sortOption,
     ]);
-
-    const reports =
+    const reports: ReportListItem[] =
         reportsQuery.data?.reports ?? [];
 
-    const filteredReports = useMemo(() => {
-        const normalisedSearch =
-            search.trim().toLowerCase();
+    const filteredReports: ReportListItem[] =
+        useMemo(() => {
+            const normalisedSearch =
+                search.trim().toLowerCase();
 
-        const matchingReports =
-            reports.filter((report) => {
-                const matchesSearch =
-                    normalisedSearch.length === 0 ||
-                    report.title
-                        .toLowerCase()
-                        .includes(normalisedSearch) ||
-                    report.description
-                        ?.toLowerCase()
-                        .includes(normalisedSearch);
+            const matchingReports =
+                reports.filter(
+                    (report: ReportListItem) => {
+                        const matchesSearch =
+                            normalisedSearch.length === 0 ||
+                            report.title
+                                .toLowerCase()
+                                .includes(normalisedSearch) ||
+                            Boolean(
+                                report.description
+                                    ?.toLowerCase()
+                                    .includes(
+                                        normalisedSearch,
+                                    ),
+                            );
 
-                const matchesStatus =
-                    statusFilter === "ALL" ||
-                    report.status === statusFilter;
+                        const matchesStatus =
+                            statusFilter === "ALL" ||
+                            report.status ===
+                            statusFilter;
 
-                return (
-                    matchesSearch &&
-                    matchesStatus
+                        return (
+                            matchesSearch &&
+                            matchesStatus
+                        );
+                    },
                 );
-            });
 
-        return [...matchingReports].sort(
-            (firstReport, secondReport) => {
-                switch (sortOption) {
-                    case "OLDEST":
-                        return (
-                            new Date(
-                                firstReport.createdAt,
-                            ).getTime() -
-                            new Date(
-                                secondReport.createdAt,
-                            ).getTime()
-                        );
+            return [...matchingReports].sort(
+                (
+                    firstReport: ReportListItem,
+                    secondReport: ReportListItem,
+                ) => {
+                    switch (sortOption) {
+                        case "OLDEST":
+                            return (
+                                new Date(
+                                    firstReport.createdAt,
+                                ).getTime() -
+                                new Date(
+                                    secondReport.createdAt,
+                                ).getTime()
+                            );
 
-                    case "TITLE_ASC":
-                        return firstReport.title.localeCompare(
-                            secondReport.title,
-                        );
+                        case "TITLE_ASC":
+                            return firstReport.title.localeCompare(
+                                secondReport.title,
+                            );
 
-                    case "TITLE_DESC":
-                        return secondReport.title.localeCompare(
-                            firstReport.title,
-                        );
+                        case "TITLE_DESC":
+                            return secondReport.title.localeCompare(
+                                firstReport.title,
+                            );
 
-                    case "NEWEST":
-                    default:
-                        return (
-                            new Date(
-                                secondReport.createdAt,
-                            ).getTime() -
-                            new Date(
-                                firstReport.createdAt,
-                            ).getTime()
-                        );
-                }
-            },
-        );
-    }, [
-        reports,
-        search,
-        statusFilter,
-        sortOption,
-    ]);
+                        case "NEWEST":
+                        default:
+                            return (
+                                new Date(
+                                    secondReport.createdAt,
+                                ).getTime() -
+                                new Date(
+                                    firstReport.createdAt,
+                                ).getTime()
+                            );
+                    }
+                },
+            );
+        }, [
+            reports,
+            search,
+            statusFilter,
+            sortOption,
+        ]);
 
     const totalPages = Math.max(
         1,
@@ -251,13 +264,13 @@ export default function ReportsPage() {
     }
 
     function handleViewReport(
-        report: ExecutiveReport,
+        report: ReportListItem,
     ) {
         setSelectedReport(report);
     }
 
     async function handleDownloadPdf(
-        report: ExecutiveReport,
+        report: ReportListItem,
     ) {
         if (!userId) {
             toast.error(
@@ -299,7 +312,7 @@ export default function ReportsPage() {
     }
 
     async function handleDownloadCsv(
-        report: ExecutiveReport,
+        report: ReportListItem,
     ) {
         if (!userId) {
             toast.error(
@@ -364,7 +377,7 @@ export default function ReportsPage() {
     }
 
     function handleDeleteReport(
-        report: ExecutiveReport,
+        report: ReportListItem,
     ) {
         setReportToDelete(report);
     }
@@ -541,10 +554,7 @@ export default function ReportsPage() {
                 />
 
                 <ReportDetailsDrawer
-                    report={
-                        selectedReportQuery.data ??
-                        selectedReport
-                    }
+                    report={selectedReportQuery.data ?? null}
                     open={Boolean(selectedReport)}
                     onOpenChange={(open) => {
                         if (!open) {
@@ -552,7 +562,7 @@ export default function ReportsPage() {
                         }
                     }}
                 />
-                
+
                 <DeleteReportDialog
                     report={reportToDelete}
                     open={Boolean(reportToDelete)}

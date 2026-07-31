@@ -10,7 +10,7 @@ import { reportService } from "@/services/report.service";
 
 import type {
   GenerateReportPayload,
-  ReportsResponse,
+  ListReportsResponse,
 } from "@/types/report.types";
 
 const REPORT_QUERY_KEYS = {
@@ -48,7 +48,7 @@ const REPORT_QUERY_KEYS = {
 export function useReports(
   userId: string,
 ) {
-  return useQuery<ReportsResponse>({
+  return useQuery<ListReportsResponse>({
     queryKey:
       REPORT_QUERY_KEYS.all(userId),
 

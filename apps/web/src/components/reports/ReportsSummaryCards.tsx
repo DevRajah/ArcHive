@@ -12,10 +12,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-import type { ExecutiveReport } from "@/types/report.types";
+import type {
+  ReportListItem,
+} from "@/types/report.types";
 
 interface ReportsSummaryCardsProps {
-  reports: ExecutiveReport[];
+  reports: ReportListItem[];
 }
 
 interface SummaryCardProps {
