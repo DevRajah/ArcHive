@@ -12,3 +12,6 @@ packages/*/.env
 coverage
 .next
 build
+
+apps/worker/storage/
+storage/reports/

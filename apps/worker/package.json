@@ -13,10 +13,12 @@
     "@archive/queue": "*",
     "bullmq": "latest",
     "dotenv": "latest",
-    "ioredis": "latest"
+    "ioredis": "latest",
+    "pdfkit": "^0.19.1"
   },
   "devDependencies": {
     "@types/node": "latest",
+    "@types/pdfkit": "^0.17.6",
     "tsx": "latest",
     "typescript": "latest"
   }

@@ -7,6 +7,10 @@ import {
   listUserReportsController,
 } from "../controllers/report-query.controller";
 
+import {
+  downloadReportController,
+} from "../controllers/report-download.controller";
+
 /**
  * Routes for browsing and managing generated Executive Reports.
  *
@@ -35,6 +39,14 @@ export const reportQueryRoutes = async (
     getReportStatusController,
   );
 
+    /**
+   * Downloads a generated Executive Report file.
+   */
+  app.get(
+    "/users/:userId/reports/:reportId/download/:fileType",
+    downloadReportController,
+  );
+
   /**
    * Returns one complete Executive Report.
    */
@@ -50,4 +62,6 @@ export const reportQueryRoutes = async (
     "/users/:userId/reports/:reportId",
     deleteReportController,
   );
+
+
 };
