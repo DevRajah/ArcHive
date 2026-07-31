@@ -40,6 +40,7 @@ import {
 } from "@/components/reports/ReportsToolbar";
 
 import { ReportsPagination } from "@/components/reports/ReportsPagination";
+import { downloadBlob } from "@/utils/downloadReport";
 
 interface ArcHiveSession {
     userId?: string;
@@ -75,11 +76,15 @@ function getStoredUserId() {
 }
 
 export default function ReportsPage() {
-    const reportsQuery = useReports();
+    //const reportsQuery = useReports();
 
     const [userId, setUserId] =
         useState("");
+    const reportsQuery =
+        useReports(userId);
 
+    const deleteReportMutation =
+        useDeleteReport(userId);
     const [selectedReport, setSelectedReport] =
         useState<ExecutiveReport | null>(null);
 
@@ -110,8 +115,7 @@ export default function ReportsPage() {
 
     const pageSize = 8;
 
-    const deleteReportMutation =
-        useDeleteReport();
+
 
     useEffect(() => {
         setUserId(getStoredUserId());
@@ -249,15 +253,38 @@ export default function ReportsPage() {
         report: ExecutiveReport,
     ) {
         if (!userId) {
+            toast.error(
+                "Your ArcHive session could not be found.",
+            );
+
             return;
         }
 
         try {
-            setDownloadingReportId(report.id);
-
-            await reportService.downloadPdf(
-                userId,
+            setDownloadingReportId(
                 report.id,
+            );
+
+            const blob =
+                await reportService.downloadPdf(
+                    userId,
+                    report.id,
+                );
+
+            downloadBlob(
+                blob,
+                `${report.title
+                    .trim()
+                    .replaceAll(/\s+/g, "-")
+                    .toLowerCase()}.pdf`,
+            );
+
+            toast.success(
+                "PDF downloaded successfully.",
+            );
+        } catch {
+            toast.error(
+                "The PDF could not be downloaded. It may still be generating.",
             );
         } finally {
             setDownloadingReportId(null);
@@ -268,15 +295,38 @@ export default function ReportsPage() {
         report: ExecutiveReport,
     ) {
         if (!userId) {
+            toast.error(
+                "Your ArcHive session could not be found.",
+            );
+
             return;
         }
 
         try {
-            setDownloadingReportId(report.id);
-
-            await reportService.downloadCsv(
-                userId,
+            setDownloadingReportId(
                 report.id,
+            );
+
+            const blob =
+                await reportService.downloadCsv(
+                    userId,
+                    report.id,
+                );
+
+            downloadBlob(
+                blob,
+                `${report.title
+                    .trim()
+                    .replaceAll(/\s+/g, "-")
+                    .toLowerCase()}.csv`,
+            );
+
+            toast.success(
+                "CSV downloaded successfully.",
+            );
+        } catch {
+            toast.error(
+                "The CSV could not be downloaded. It may still be generating.",
             );
         } finally {
             setDownloadingReportId(null);
@@ -294,7 +344,6 @@ export default function ReportsPage() {
 
         try {
             await deleteReportMutation.mutateAsync({
-                userId,
                 reportId: reportToDelete.id,
             });
 

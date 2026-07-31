@@ -1,3 +1,5 @@
+"use client";
+
 import {
   useMutation,
   useQuery,
@@ -11,22 +13,58 @@ import type {
   ReportsResponse,
 } from "@/types/report.types";
 
-export function useReports() {
+const REPORT_QUERY_KEYS = {
+  all: (userId: string) =>
+    ["reports", userId] as const,
+
+  detail: (
+    userId: string,
+    reportId: string,
+  ) =>
+    [
+      "reports",
+      userId,
+      reportId,
+    ] as const,
+
+  status: (
+    userId: string,
+    reportId: string,
+  ) =>
+    [
+      "reports",
+      userId,
+      reportId,
+      "status",
+    ] as const,
+};
+
+/**
+ * Fetch the current user's report history.
+ *
+ * Poll every five seconds only while at least one report is
+ * QUEUED or GENERATING.
+ */
+export function useReports(
+  userId: string,
+) {
   return useQuery<ReportsResponse>({
-    queryKey: ["reports"],
+    queryKey:
+      REPORT_QUERY_KEYS.all(userId),
 
     queryFn: () =>
-      reportService.getReports(),
+      reportService.getReports(
+        userId,
+      ),
 
-    /**
-     * Poll every five seconds while
-     * there are reports still being generated.
-     */
+    enabled: Boolean(userId),
+
     refetchInterval: (query) => {
       const reports =
-        query.state.data?.reports ?? [];
+        query.state.data?.reports ??
+        [];
 
-      const shouldPoll =
+      const hasActiveReport =
         reports.some(
           (report) =>
             report.status ===
@@ -35,29 +73,81 @@ export function useReports() {
               "GENERATING",
         );
 
-      return shouldPoll
+      return hasActiveReport
+        ? 5000
+        : false;
+    },
+
+    refetchOnWindowFocus: false,
+  });
+}
+
+/**
+ * Fetch one full report, including its stored analytics snapshot.
+ */
+export function useReport(
+  userId: string,
+  reportId: string,
+) {
+  return useQuery({
+    queryKey:
+      REPORT_QUERY_KEYS.detail(
+        userId,
+        reportId,
+      ),
+
+    queryFn: () =>
+      reportService.getReport(
+        userId,
+        reportId,
+      ),
+
+    enabled:
+      Boolean(userId) &&
+      Boolean(reportId),
+  });
+}
+
+/**
+ * Fetch only the lightweight generation status.
+ */
+export function useReportStatus(
+  userId: string,
+  reportId: string,
+) {
+  return useQuery({
+    queryKey:
+      REPORT_QUERY_KEYS.status(
+        userId,
+        reportId,
+      ),
+
+    queryFn: () =>
+      reportService.getReportStatus(
+        userId,
+        reportId,
+      ),
+
+    enabled:
+      Boolean(userId) &&
+      Boolean(reportId),
+
+    refetchInterval: (query) => {
+      const status =
+        query.state.data?.report
+          .status;
+
+      return status === "QUEUED" ||
+        status === "GENERATING"
         ? 5000
         : false;
     },
   });
 }
 
-export function useReport(
-  reportId: string,
+export function useGenerateReport(
+  userId: string,
 ) {
-  return useQuery({
-    queryKey: ["report", reportId],
-
-    queryFn: () =>
-      reportService.getReport(
-        reportId,
-      ),
-
-    enabled: !!reportId,
-  });
-}
-
-export function useGenerateReport() {
   const queryClient =
     useQueryClient();
 
@@ -71,21 +161,25 @@ export function useGenerateReport() {
 
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["reports"],
+        queryKey:
+          REPORT_QUERY_KEYS.all(
+            userId,
+          ),
       });
     },
   });
 }
 
-export function useDeleteReport() {
-  const queryClient = useQueryClient();
+export function useDeleteReport(
+  userId: string,
+) {
+  const queryClient =
+    useQueryClient();
 
   return useMutation({
     mutationFn: ({
-      userId,
       reportId,
     }: {
-      userId: string;
       reportId: string;
     }) =>
       reportService.deleteReport(
@@ -93,9 +187,23 @@ export function useDeleteReport() {
         reportId,
       ),
 
-    onSuccess: () => {
+    onSuccess: (
+      _response,
+      variables,
+    ) => {
+      queryClient.removeQueries({
+        queryKey:
+          REPORT_QUERY_KEYS.detail(
+            userId,
+            variables.reportId,
+          ),
+      });
+
       queryClient.invalidateQueries({
-        queryKey: ["reports"],
+        queryKey:
+          REPORT_QUERY_KEYS.all(
+            userId,
+          ),
       });
     },
   });

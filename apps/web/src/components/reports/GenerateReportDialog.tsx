@@ -46,7 +46,7 @@ export function GenerateReportDialog({
   onError,
 }: GenerateReportDialogProps) {
   const generateReportMutation =
-    useGenerateReport();
+    useGenerateReport(userId);
 
   const [title, setTitle] =
     useState("");

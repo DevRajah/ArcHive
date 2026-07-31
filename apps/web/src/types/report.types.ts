@@ -59,34 +59,71 @@ export interface ReportRepositoryHighlights {
   repositoriesRequiringAttention: ReportRepositoryHighlight[];
 }
 
+/*
+ * The backend currently describes these nested snapshot sections
+ * as unknown. These frontend shapes represent the contract used by
+ * the report drawer. They may need small adjustments after inspecting
+ * the first completed report payload.
+ */
 export interface ExecutiveReportSnapshot {
+  schemaVersion?: number;
+  reportId?: string;
+  title?: string;
+  description?: string | null;
+  generatedAt?: string;
+
   executiveSummary: string[];
   kpis: ReportKpis;
   riskBreakdown: ReportRiskBreakdown;
   technologyAnalysis: ReportTechnologyAnalysis;
   engineeringTrend: ReportEngineeringTrend;
   repositoryHighlights: ReportRepositoryHighlights;
+
+  organization?: Record<string, unknown>;
 }
 
 export interface ExecutiveReport {
   id: string;
-  userId: string;
+  userId?: string;
 
   title: string;
   description: string | null;
-
   status: ReportStatus;
+
+  /*
+   * List responses do not contain reportData.
+   * The full report endpoint does.
+   */
+  reportData?: ExecutiveReportSnapshot | null;
+
+  /*
+   * Normalized alias used by the existing details drawer.
+   */
+  snapshot?: ExecutiveReportSnapshot | null;
+
+  pdfPath?: string | null;
+  csvPath?: string | null;
+
+  error?: string | null;
+  failureReason?: string | null;
 
   generatedAt: string | null;
   createdAt: string;
   updatedAt: string;
 
-  snapshot?: ExecutiveReportSnapshot | null;
-  failureReason?: string | null;
+  hasPdf: boolean;
+  hasCsv: boolean;
 }
 
 export interface ReportsResponse {
+  success: true;
+  count: number;
   reports: ExecutiveReport[];
+}
+
+export interface GetReportResponse {
+  success: true;
+  report: ExecutiveReport;
 }
 
 export interface GenerateReportPayload {
@@ -96,5 +133,24 @@ export interface GenerateReportPayload {
 }
 
 export interface GenerateReportResponse {
-  report: ExecutiveReport;
+  success: true;
+  reportId: string;
+  status: ReportStatus;
+  message: string;
+}
+
+export interface DeleteReportResponse {
+  success: true;
+  reportId: string;
+  message: string;
+}
+
+export interface ReportStatusResponse {
+  success: true;
+  report: {
+    id: string;
+    status: ReportStatus;
+    generatedAt: string | null;
+    error: string | null;
+  };
 }
