@@ -78,8 +78,7 @@ export function useGenerateReport() {
 }
 
 export function useDeleteReport() {
-  const queryClient =
-    useQueryClient();
+  const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: ({

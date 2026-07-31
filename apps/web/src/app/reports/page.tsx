@@ -17,13 +17,17 @@ import { ReportsErrorState } from "@/components/reports/ReportsErrorState";
 import { ReportsPageSkeleton } from "@/components/reports/ReportsPageSkeleton";
 import { ReportsSummaryCards } from "@/components/reports/ReportsSummaryCards";
 import { ReportsTable } from "@/components/reports/ReportsTable";
-
+import { reportService } from "@/services/report.service";
 import { Button } from "@/components/ui/button";
 
 import { useReports } from "@/hooks/useReports";
 
 import type { ExecutiveReport } from "@/types/report.types";
 import { ReportDetailsDrawer } from "@/components/reports/ReportDetailsDrawer";
+
+import { DeleteReportDialog } from "@/components/reports/DeleteReportDialog";
+
+import { useDeleteReport } from "@/hooks/useReports";
 
 interface ArcHiveSession {
     userId?: string;
@@ -84,6 +88,9 @@ export default function ReportsPage() {
         setUserId(getStoredUserId());
     }, []);
 
+    const deleteReportMutation =
+        useDeleteReport();
+
     const reports =
         reportsQuery.data?.reports ?? [];
 
@@ -111,27 +118,63 @@ export default function ReportsPage() {
     async function handleDownloadPdf(
         report: ExecutiveReport,
     ) {
-        setDownloadingReportId(report.id);
+        if (!userId) {
+            return;
+        }
 
-        /*
-         * PDF download will be connected
-         * in the report actions batch.
-         */
+        try {
+            setDownloadingReportId(report.id);
 
-        setDownloadingReportId(null);
+            await reportService.downloadPdf(
+                userId,
+                report.id,
+            );
+        } finally {
+            setDownloadingReportId(null);
+        }
     }
 
     async function handleDownloadCsv(
         report: ExecutiveReport,
     ) {
-        setDownloadingReportId(report.id);
+        if (!userId) {
+            return;
+        }
 
-        /*
-         * CSV download will be connected
-         * in the report actions batch.
-         */
+        try {
+            setDownloadingReportId(report.id);
 
-        setDownloadingReportId(null);
+            await reportService.downloadCsv(
+                userId,
+                report.id,
+            );
+        } finally {
+            setDownloadingReportId(null);
+        }
+    }
+
+    async function confirmDeleteReport() {
+        if (!reportToDelete) {
+            return;
+        }
+
+        if (!userId) {
+            return;
+        }
+
+        try {
+            await deleteReportMutation.mutateAsync({
+                userId,
+                reportId: reportToDelete.id,
+            });
+
+            setReportToDelete(null);
+
+            toast.success("Report deleted successfully.");
+        } catch {
+            toast.error("Failed to delete report.");
+
+        }
     }
 
     function handleDeleteReport(
@@ -251,20 +294,17 @@ export default function ReportsPage() {
                         }
                     }}
                 />
-
-                {/*
-          Batch 5 will add deletion.
-
-          <DeleteReportDialog
-            report={reportToDelete}
-            open={Boolean(reportToDelete)}
-            onOpenChange={(open) => {
-              if (!open) {
-                setReportToDelete(null);
-              }
-            }}
-          />
-        */}
+                <DeleteReportDialog
+                    report={reportToDelete}
+                    open={Boolean(reportToDelete)}
+                    loading={deleteReportMutation.isPending}
+                    onConfirm={confirmDeleteReport}
+                    onOpenChange={(open) => {
+                        if (!open) {
+                            setReportToDelete(null);
+                        }
+                    }}
+                />
 
                 <span className="hidden">
                     {selectedReport?.id}
