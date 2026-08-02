@@ -55,6 +55,12 @@ model User {
 
   reports Report[]
 
+    createdTeams Team[] @relation("TeamCreator")
+
+  teamMemberships TeamMember[]
+
+  teamRepositoriesAdded TeamRepository[] @relation("TeamRepositoryAddedBy")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -79,6 +85,8 @@ model Repository {
   timelineEntries     TimelineEntry[]
   architectureChanges ArchitectureChange[]
 
+    teamRepositories TeamRepository[]
+
   engineeringRecommendations EngineeringRecommendation[]
 
   intelligenceSnapshots RepositoryIntelligenceSnapshot[]
@@ -92,6 +100,91 @@ model Repository {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model Team {
+  id          String  @id @default(uuid())
+  name        String
+  slug        String  @unique
+  description String?
+
+  createdById String
+
+  createdBy User @relation(
+    "TeamCreator",
+    fields: [createdById],
+    references: [id],
+    onDelete: Restrict
+  )
+
+  members      TeamMember[]
+  repositories TeamRepository[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([createdById])
+  @@index([createdAt])
+}
+
+model TeamMember {
+  id     String         @id @default(uuid())
+  teamId String
+  userId String
+  role   TeamMemberRole @default(MEMBER)
+
+  team Team @relation(
+    fields: [teamId],
+    references: [id],
+    onDelete: Cascade
+  )
+
+  user User @relation(
+    fields: [userId],
+    references: [id],
+    onDelete: Cascade
+  )
+
+  joinedAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([teamId, userId])
+  @@index([userId])
+  @@index([teamId])
+  @@index([teamId, role])
+}
+
+model TeamRepository {
+  id           String @id @default(uuid())
+  teamId       String
+  repositoryId String
+  addedById    String
+
+  team Team @relation(
+    fields: [teamId],
+    references: [id],
+    onDelete: Cascade
+  )
+
+  repository Repository @relation(
+    fields: [repositoryId],
+    references: [id],
+    onDelete: Cascade
+  )
+
+  addedBy User @relation(
+    "TeamRepositoryAddedBy",
+    fields: [addedById],
+    references: [id],
+    onDelete: Restrict
+  )
+
+  addedAt DateTime @default(now())
+
+  @@unique([teamId, repositoryId])
+  @@index([teamId])
+  @@index([repositoryId])
+  @@index([addedById])
 }
 
 model EngineeringEvent {
@@ -322,4 +415,11 @@ enum ReportStatus {
   GENERATING
   COMPLETED
   FAILED
+}
+
+enum TeamMemberRole {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
 }
