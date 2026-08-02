@@ -110,12 +110,7 @@ model Team {
 
   createdById String
 
-  createdBy User @relation(
-    "TeamCreator",
-    fields: [createdById],
-    references: [id],
-    onDelete: Restrict
-  )
+createdBy User @relation("TeamCreator", fields: [createdById], references: [id], onDelete: Restrict)
 
   members      TeamMember[]
   repositories TeamRepository[]
@@ -133,17 +128,9 @@ model TeamMember {
   userId String
   role   TeamMemberRole @default(MEMBER)
 
-  team Team @relation(
-    fields: [teamId],
-    references: [id],
-    onDelete: Cascade
-  )
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
 
-  user User @relation(
-    fields: [userId],
-    references: [id],
-    onDelete: Cascade
-  )
+ user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   joinedAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -160,24 +147,11 @@ model TeamRepository {
   repositoryId String
   addedById    String
 
-  team Team @relation(
-    fields: [teamId],
-    references: [id],
-    onDelete: Cascade
-  )
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
 
-  repository Repository @relation(
-    fields: [repositoryId],
-    references: [id],
-    onDelete: Cascade
-  )
+repository Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
 
-  addedBy User @relation(
-    "TeamRepositoryAddedBy",
-    fields: [addedById],
-    references: [id],
-    onDelete: Restrict
-  )
+ addedBy User @relation("TeamRepositoryAddedBy", fields: [addedById], references: [id], onDelete: Restrict)
 
   addedAt DateTime @default(now())
 

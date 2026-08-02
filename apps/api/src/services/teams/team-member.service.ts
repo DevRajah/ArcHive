@@ -84,12 +84,6 @@ export const addTeamMember = async ({
     allowedRoles: managementRoles,
   });
 
-  if (input.role === TeamMemberRole.OWNER) {
-    throw new TeamValidationError(
-      "A new owner cannot be assigned through the member endpoint.",
-    );
-  }
-
   const user = await prisma.user.findUnique({
     where: {
       id: input.userId,
