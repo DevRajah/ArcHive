@@ -1,134 +1,118 @@
 import {
-  Activity,
-  BarChart3,
-  FileText,
-  FolderGit2,
-  ShieldCheck,
-  Users,
+  RefreshCcw,
+  TriangleAlert,
 } from "lucide-react";
 
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 
-import type {
-  TeamDetails,
-} from "@/types/team.types";
+import { TeamDashboardMetrics } from "@/components/teams/dashboard/TeamDashboardMetrics";
+import { TeamDashboardSkeleton } from "@/components/teams/dashboard/TeamDashboardSkeleton";
+import { TeamRecommendations } from "@/components/teams/dashboard/TeamRecommendations";
+import { TeamRepositoryRankings } from "@/components/teams/dashboard/TeamRepositoryRankings";
+import { TeamRiskSummary } from "@/components/teams/dashboard/TeamRiskSummary";
+import { TeamTechnologyInventory } from "@/components/teams/dashboard/TeamTechnologyInventory";
+
+import { useTeamDashboard } from "@/hooks/useTeams";
 
 interface TeamWorkspaceOverviewProps {
-  team: TeamDetails;
-}
-
-interface OverviewCardProps {
-  title: string;
-  value: string | number;
-  description: string;
-  icon: React.ElementType;
-}
-
-function OverviewCard({
-  title,
-  value,
-  description,
-  icon: Icon,
-}: OverviewCardProps) {
-  return (
-    <Card>
-      <CardContent className="p-5">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-sm text-muted-foreground">
-              {title}
-            </p>
-
-            <p className="mt-2 text-3xl font-bold tracking-tight">
-              {value}
-            </p>
-
-            <p className="mt-2 text-xs leading-5 text-muted-foreground">
-              {description}
-            </p>
-          </div>
-
-          <div className="rounded-xl border bg-muted/40 p-2.5">
-            <Icon className="h-5 w-5 text-muted-foreground" />
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
+  teamId: string;
+  teamName: string;
 }
 
 export function TeamWorkspaceOverview({
-  team,
+  teamId,
+  teamName,
 }: TeamWorkspaceOverviewProps) {
+  const dashboardQuery =
+    useTeamDashboard(teamId);
+
+  if (dashboardQuery.isLoading) {
+    return (
+      <TeamDashboardSkeleton />
+    );
+  }
+
+  if (
+    dashboardQuery.isError ||
+    !dashboardQuery.data
+  ) {
+    return (
+      <Card className="flex min-h-[360px] items-center justify-center border-dashed">
+        <div className="max-w-md px-6 py-14 text-center">
+          <TriangleAlert className="mx-auto h-10 w-10 text-destructive" />
+
+          <h2 className="mt-4 text-xl font-semibold">
+            Unable to load Team Intelligence
+          </h2>
+
+          <p className="mt-2 text-sm text-muted-foreground">
+            ArcHive could not load this team&apos;s engineering dashboard.
+          </p>
+
+          <Button
+            variant="outline"
+            className="mt-6"
+            disabled={
+              dashboardQuery.isFetching
+            }
+            onClick={() =>
+              dashboardQuery.refetch()
+            }
+          >
+            <RefreshCcw
+              className={`mr-2 h-4 w-4 ${
+                dashboardQuery.isFetching
+                  ? "animate-spin"
+                  : ""
+              }`}
+            />
+
+            Retry
+          </Button>
+        </div>
+      </Card>
+    );
+  }
+
+  const dashboard =
+    dashboardQuery.data;
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div>
         <h2 className="text-2xl font-semibold">
-          Workspace Overview
+          Team Intelligence
         </h2>
 
         <p className="mt-2 text-muted-foreground">
-          Shared engineering intelligence for {team.name}.
+          Engineering health, technology, risks, and recommendations for {teamName}.
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <OverviewCard
-          title="Team Members"
-          value={team.memberCount}
-          description="People with access to this workspace."
-          icon={Users}
+      <TeamDashboardMetrics
+        dashboard={dashboard}
+      />
+
+      <TeamRepositoryRankings
+        rankings={dashboard.rankings}
+      />
+
+      <div className="grid gap-6 xl:grid-cols-2">
+        <TeamTechnologyInventory
+          inventory={dashboard.technology}
         />
 
-        <OverviewCard
-          title="Repositories"
-          value={team.repositoryCount}
-          description="Repositories attached to this team."
-          icon={FolderGit2}
-        />
-
-        <OverviewCard
-          title="Current Role"
-          value={team.currentUserRole}
-          description="Your permission level in this workspace."
-          icon={ShieldCheck}
-        />
-
-        <OverviewCard
-          title="Workspace Status"
-          value="Active"
-          description="This workspace is available for collaboration."
-          icon={Activity}
+        <TeamRiskSummary
+          risks={dashboard.risks}
         />
       </div>
 
-      <Card className="border-dashed">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <BarChart3 className="h-5 w-5" />
-            Team Intelligence Dashboard
-          </CardTitle>
-        </CardHeader>
-
-        <CardContent className="py-10 text-center">
-          <FileText className="mx-auto h-10 w-10 text-muted-foreground" />
-
-          <h3 className="mt-4 text-lg font-semibold">
-            Dashboard foundation ready
-          </h3>
-
-          <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
-            The next batch will connect repository rankings,
-            engineering health, technology inventory, risks, and
-            recommendations from the Team Dashboard endpoint.
-          </p>
-        </CardContent>
-      </Card>
+      <TeamRecommendations
+        recommendations={
+          dashboard.recommendations
+        }
+      />
     </div>
   );
 }

@@ -12,6 +12,7 @@ import type {
   CreateTeamPayload,
   CreateTeamResponse,
   ListTeamsResponse,
+  TeamDashboard,
   TeamDetailsResponse,
 } from "@/types/team.types";
 
@@ -149,5 +150,29 @@ export function useCreateTeam(
           ),
       });
     },
+  });
+}
+
+
+/**
+ * Load the complete Team Intelligence dashboard.
+ */
+export function useTeamDashboard(
+  teamId: string,
+) {
+  return useQuery<TeamDashboard>({
+    queryKey:
+      TEAM_QUERY_KEYS.dashboard(teamId),
+
+    queryFn: () =>
+      teamService.getTeamDashboard(
+        teamId,
+      ),
+
+    enabled: Boolean(teamId),
+
+    staleTime: 1000 * 60 * 2,
+
+    refetchOnWindowFocus: false,
   });
 }

@@ -1,14 +1,14 @@
 "use client";
 
 import {
-  useEffect,
-  useState,
+    useEffect,
+    useState,
 } from "react";
 
 import {
-  useParams,
-  useRouter,
-  useSearchParams,
+    useParams,
+    useRouter,
+    useSearchParams,
 } from "next/navigation";
 
 import { toast } from "sonner";
@@ -27,255 +27,256 @@ import { useTeam } from "@/hooks/useTeams";
 import { getTeamPermissions } from "@/lib/team-permissions";
 
 import type {
-  TeamWorkspaceTab,
+    TeamWorkspaceTab,
 } from "@/types/team-workspace.types";
 
 interface ArcHiveSession {
-  userId?: string;
-  username?: string;
-  avatarUrl?: string;
-  token?: string;
+    userId?: string;
+    username?: string;
+    avatarUrl?: string;
+    token?: string;
 }
 
 const validTabs: TeamWorkspaceTab[] = [
-  "overview",
-  "repositories",
-  "members",
-  "reports",
-  "settings",
+    "overview",
+    "repositories",
+    "members",
+    "reports",
+    "settings",
 ];
 
 function getStoredUserId() {
-  if (
-    typeof window === "undefined"
-  ) {
-    return "";
-  }
+    if (
+        typeof window === "undefined"
+    ) {
+        return "";
+    }
 
-  const storedSession =
-    window.localStorage.getItem(
-      "archive_session",
-    );
+    const storedSession =
+        window.localStorage.getItem(
+            "archive_session",
+        );
 
-  if (!storedSession) {
-    return "";
-  }
+    if (!storedSession) {
+        return "";
+    }
 
-  try {
-    const session =
-      JSON.parse(
-        storedSession,
-      ) as ArcHiveSession;
+    try {
+        const session =
+            JSON.parse(
+                storedSession,
+            ) as ArcHiveSession;
 
-    return session.userId ?? "";
-  } catch {
-    return "";
-  }
+        return session.userId ?? "";
+    } catch {
+        return "";
+    }
 }
 
 function isTeamWorkspaceTab(
-  value: string | null,
+    value: string | null,
 ): value is TeamWorkspaceTab {
-  return Boolean(
-    value &&
-      validTabs.includes(
-        value as TeamWorkspaceTab,
-      ),
-  );
+    return Boolean(
+        value &&
+        validTabs.includes(
+            value as TeamWorkspaceTab,
+        ),
+    );
 }
 
 export default function TeamWorkspacePage() {
-  const params =
-    useParams<{
-      teamId: string;
-    }>();
+    const params =
+        useParams<{
+            teamId: string;
+        }>();
 
-  const router = useRouter();
-  const searchParams =
-    useSearchParams();
+    const router = useRouter();
+    const searchParams =
+        useSearchParams();
 
-  const teamId = params.teamId;
+    const teamId = params.teamId;
 
-  const [userId, setUserId] =
-    useState("");
+    const [userId, setUserId] =
+        useState("");
 
-  const [
-    hasLoadedSession,
-    setHasLoadedSession,
-  ] = useState(false);
+    const [
+        hasLoadedSession,
+        setHasLoadedSession,
+    ] = useState(false);
 
-  useEffect(() => {
-    setUserId(
-      getStoredUserId(),
-    );
+    useEffect(() => {
+        setUserId(
+            getStoredUserId(),
+        );
 
-    setHasLoadedSession(true);
-  }, []);
+        setHasLoadedSession(true);
+    }, []);
 
-  const requestedTab =
-    searchParams.get("tab");
+    const requestedTab =
+        searchParams.get("tab");
 
-  const activeTab: TeamWorkspaceTab =
-    isTeamWorkspaceTab(
-      requestedTab,
-    )
-      ? requestedTab
-      : "overview";
+    const activeTab: TeamWorkspaceTab =
+        isTeamWorkspaceTab(
+            requestedTab,
+        )
+            ? requestedTab
+            : "overview";
 
-  const teamQuery =
-    useTeam(teamId, userId);
+    const teamQuery =
+        useTeam(teamId, userId);
 
-  const team =
-    teamQuery.data?.data;
+    const team =
+        teamQuery.data?.data;
 
-  const permissions = team
-    ? getTeamPermissions(
-        team.currentUserRole,
-      )
-    : null;
+    const permissions = team
+        ? getTeamPermissions(
+            team.currentUserRole,
+        )
+        : null;
 
-  useEffect(() => {
-    if (
-      activeTab === "settings" &&
-      permissions &&
-      !permissions.canManageSettings
+    useEffect(() => {
+        if (
+            activeTab === "settings" &&
+            permissions &&
+            !permissions.canManageSettings
+        ) {
+            router.replace(
+                `/teams/${teamId}?tab=overview`,
+            );
+
+            toast.warning(
+                "You do not have permission to manage workspace settings.",
+            );
+        }
+    }, [
+        activeTab,
+        permissions,
+        router,
+        teamId,
+    ]);
+
+    function handleTabChange(
+        tab: TeamWorkspaceTab,
     ) {
-      router.replace(
-        `/teams/${teamId}?tab=overview`,
-      );
+        if (
+            tab === "settings" &&
+            !permissions?.canManageSettings
+        ) {
+            toast.warning(
+                "You do not have permission to manage workspace settings.",
+            );
 
-      toast.warning(
-        "You do not have permission to manage workspace settings.",
-      );
+            return;
+        }
+
+        router.push(
+            `/teams/${teamId}?tab=${tab}`,
+        );
     }
-  }, [
-    activeTab,
-    permissions,
-    router,
-    teamId,
-  ]);
 
-  function handleTabChange(
-    tab: TeamWorkspaceTab,
-  ) {
     if (
-      tab === "settings" &&
-      !permissions?.canManageSettings
+        !hasLoadedSession ||
+        teamQuery.isLoading
     ) {
-      toast.warning(
-        "You do not have permission to manage workspace settings.",
-      );
-
-      return;
+        return (
+            <AppShell>
+                <main className="p-4 sm:p-6 lg:p-8">
+                    <TeamWorkspaceSkeleton />
+                </main>
+            </AppShell>
+        );
     }
 
-    router.push(
-      `/teams/${teamId}?tab=${tab}`,
-    );
-  }
+    if (!userId) {
+        return (
+            <AppShell>
+                <main className="p-4 sm:p-6 lg:p-8">
+                    <TeamWorkspaceError
+                        message="Your ArcHive session could not be found. Please reconnect your account."
+                        isRetrying={false}
+                        onRetry={() => {
+                            const storedUserId =
+                                getStoredUserId();
 
-  if (
-    !hasLoadedSession ||
-    teamQuery.isLoading
-  ) {
+                            setUserId(
+                                storedUserId,
+                            );
+
+                            if (!storedUserId) {
+                                toast.error(
+                                    "Your ArcHive session could not be found.",
+                                );
+                            }
+                        }}
+                    />
+                </main>
+            </AppShell>
+        );
+    }
+
+    if (
+        teamQuery.isError ||
+        !team ||
+        !permissions
+    ) {
+        return (
+            <AppShell>
+                <main className="p-4 sm:p-6 lg:p-8">
+                    <TeamWorkspaceError
+                        message={
+                            teamQuery.error instanceof
+                                Error
+                                ? teamQuery.error.message
+                                : undefined
+                        }
+                        isRetrying={
+                            teamQuery.isFetching
+                        }
+                        onRetry={() =>
+                            teamQuery.refetch()
+                        }
+                    />
+                </main>
+            </AppShell>
+        );
+    }
+
     return (
-      <AppShell>
-        <main className="p-4 sm:p-6 lg:p-8">
-          <TeamWorkspaceSkeleton />
-        </main>
-      </AppShell>
+        <AppShell>
+            <main className="space-y-6 p-4 sm:p-6 lg:p-8">
+                <TeamWorkspaceHeader
+                    team={team}
+                    canManageSettings={
+                        permissions.canManageSettings
+                    }
+                    onOpenSettings={() =>
+                        handleTabChange(
+                            "settings",
+                        )
+                    }
+                />
+
+                <TeamWorkspaceNavigation
+                    activeTab={activeTab}
+                    canViewSettings={
+                        permissions.canManageSettings
+                    }
+                    onTabChange={
+                        handleTabChange
+                    }
+                />
+
+                {activeTab === "overview" ? (
+                    <TeamWorkspaceOverview
+                        teamId={teamId}
+                        teamName={team.name}
+                    />
+                ) : (
+                    <TeamWorkspacePlaceholder
+                        tab={activeTab}
+                    />
+                )}
+            </main>
+        </AppShell>
     );
-  }
-
-  if (!userId) {
-    return (
-      <AppShell>
-        <main className="p-4 sm:p-6 lg:p-8">
-          <TeamWorkspaceError
-            message="Your ArcHive session could not be found. Please reconnect your account."
-            isRetrying={false}
-            onRetry={() => {
-              const storedUserId =
-                getStoredUserId();
-
-              setUserId(
-                storedUserId,
-              );
-
-              if (!storedUserId) {
-                toast.error(
-                  "Your ArcHive session could not be found.",
-                );
-              }
-            }}
-          />
-        </main>
-      </AppShell>
-    );
-  }
-
-  if (
-    teamQuery.isError ||
-    !team ||
-    !permissions
-  ) {
-    return (
-      <AppShell>
-        <main className="p-4 sm:p-6 lg:p-8">
-          <TeamWorkspaceError
-            message={
-              teamQuery.error instanceof
-              Error
-                ? teamQuery.error.message
-                : undefined
-            }
-            isRetrying={
-              teamQuery.isFetching
-            }
-            onRetry={() =>
-              teamQuery.refetch()
-            }
-          />
-        </main>
-      </AppShell>
-    );
-  }
-
-  return (
-    <AppShell>
-      <main className="space-y-6 p-4 sm:p-6 lg:p-8">
-        <TeamWorkspaceHeader
-          team={team}
-          canManageSettings={
-            permissions.canManageSettings
-          }
-          onOpenSettings={() =>
-            handleTabChange(
-              "settings",
-            )
-          }
-        />
-
-        <TeamWorkspaceNavigation
-          activeTab={activeTab}
-          canViewSettings={
-            permissions.canManageSettings
-          }
-          onTabChange={
-            handleTabChange
-          }
-        />
-
-        {activeTab === "overview" ? (
-          <TeamWorkspaceOverview
-            team={team}
-          />
-        ) : (
-          <TeamWorkspacePlaceholder
-            tab={activeTab}
-          />
-        )}
-      </main>
-    </AppShell>
-  );
 }

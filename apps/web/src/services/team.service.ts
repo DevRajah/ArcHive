@@ -4,6 +4,7 @@ import type {
   CreateTeamPayload,
   CreateTeamResponse,
   ListTeamsResponse,
+  TeamDashboard,
   TeamDetailsResponse,
 } from "@/types/team.types";
 
@@ -61,6 +62,31 @@ class TeamService {
 
     return data;
   }
+
+  /**
+ * Fetch the complete Team Intelligence dashboard.
+ *
+ */
+/**
+ * Fetch the complete Team Intelligence dashboard.
+ *
+ * Backend:
+ * GET /api/teams/:teamId/dashboard
+ *
+ * Important:
+ * The backend returns the raw TeamDashboard object.
+ * It is not wrapped inside { success, data }.
+ */
+async getTeamDashboard(
+  teamId: string,
+): Promise<TeamDashboard> {
+  const { data } =
+    await api.get<TeamDashboard>(
+      `/teams/${teamId}/dashboard`,
+    );
+
+  return data;
+}
 }
 
 export const teamService =
