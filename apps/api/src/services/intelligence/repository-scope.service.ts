@@ -1,8 +1,8 @@
 import { prisma } from "@archive/database";
 
 import {
-  RepositoryScope,
-  RepositoryScopeType,
+    RepositoryScope,
+    RepositoryScopeType,
 } from "../../types/repository-scope.types";
 
 /**
@@ -15,87 +15,104 @@ import {
  */
 
 const ensureValidScope = (scope: RepositoryScope) => {
-  switch (scope.type) {
-    case RepositoryScopeType.USER:
-      if (!scope.userId?.trim()) {
-        throw new Error(
-          "USER repository scope requires a userId.",
-        );
-      }
-      return;
+    switch (scope.type) {
+        case RepositoryScopeType.USER:
+            if (!scope.userId?.trim()) {
+                throw new Error(
+                    "USER repository scope requires a userId.",
+                );
+            }
+            return;
 
-    case RepositoryScopeType.TEAM:
-      if (!scope.teamId?.trim()) {
-        throw new Error(
-          "TEAM repository scope requires a teamId.",
-        );
-      }
-      return;
+        case RepositoryScopeType.TEAM:
+            if (!scope.teamId?.trim()) {
+                throw new Error(
+                    "TEAM repository scope requires a teamId.",
+                );
+            }
+            return;
 
-    default:
-      throw new Error(
-        "Unsupported repository scope.",
-      );
-  }
+        default:
+            throw new Error(
+                "Unsupported repository scope.",
+            );
+    }
 };
 
-export const getRepositoriesForScope = async (
-  scope: RepositoryScope,
-) => {
-  ensureValidScope(scope);
+import { Prisma } from "@prisma/client";
 
-  switch (scope.type) {
-    case RepositoryScopeType.USER:
-      return prisma.repository.findMany({
-        where: {
-          userId: scope.userId!,
-          isTracked: true,
-        },
-      });
+export const getRepositoriesForScope = async <
+    T extends Prisma.RepositoryFindManyArgs,
+>({
+    scope,
+    query,
+}: {
+    scope: RepositoryScope;
+    query?: T;
+}) => {
+    ensureValidScope(scope);
 
-    case RepositoryScopeType.TEAM: {
-      const repositories =
-        await prisma.teamRepository.findMany({
-          where: {
-            teamId: scope.teamId!,
-          },
+    switch (scope.type) {
+        case RepositoryScopeType.USER:
+            return prisma.repository.findMany({
+                ...query,
 
-          include: {
-            repository: true,
-          },
-        });
+                where: {
+                    ...(query?.where ?? {}),
+                    userId: scope.userId!,
+                    isTracked: true,
+                },
+            });
 
-      return repositories.map(
-        (item) => item.repository,
-      );
+        case RepositoryScopeType.TEAM: {
+            const teamRepositories =
+                await prisma.teamRepository.findMany({
+                    where: {
+                        teamId: scope.teamId!,
+                    },
+
+                    include: {
+                        repository: {
+                            ...(query ?? {}),
+                        },
+                    },
+                });
+
+            return teamRepositories.map(
+                (item) => item.repository,
+            );
+        }
     }
-  }
 };
 
 export const getRepositoryIdsForScope =
-  async (scope: RepositoryScope) => {
-    const repositories =
-      await getRepositoriesForScope(scope);
+    async (scope: RepositoryScope) => {
+        const repositories =
+            await getRepositoriesForScope({
+  scope,
+});
 
-    return repositories.map(
-      (repository) => repository.id,
-    );
-  };
+        return repositories.map(
+            (repository) => repository.id,
+        );
+    };
 
 export const getRepositoryCountForScope =
-  async (scope: RepositoryScope) => {
-    const repositoryIds =
-      await getRepositoryIdsForScope(scope);
+    async (scope: RepositoryScope) => {
+        const repositoryIds =
+            await getRepositoryIdsForScope(scope);
 
-    return repositoryIds.length;
-  };
+        return repositoryIds.length;
+    };
 
 export const getTrackedRepositoryCountForScope =
-  async (scope: RepositoryScope) => {
-    const repositories =
-      await getRepositoriesForScope(scope);
+    async (scope: RepositoryScope) => {
+        const repositories =
+            await getRepositoriesForScope({
+  scope,
+});
 
-    return repositories.filter(
-      (repository) => repository.isTracked,
-    ).length;
-  };
+        return repositories.filter(
+            (repository) => repository.isTracked,
+        ).length;
+    };

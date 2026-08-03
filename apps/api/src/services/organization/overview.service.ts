@@ -5,6 +5,15 @@ import {
   OrganizationRiskLevel,
 } from "../../types/organization.types";
 
+
+import {
+  getRepositoriesForScope,
+} from "../intelligence/repository-scope.service";
+
+import {
+  RepositoryScopeType,
+} from "../../types/repository-scope.types";
+
 /**
  * Returns a high-level engineering summary for all repositories
  * tracked by a single ArcHive user.
