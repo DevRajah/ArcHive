@@ -59,14 +59,28 @@ export function CreateTeamDialog({
   const isSubmitting =
     createTeamMutation.isPending;
 
+  /**
+   * Clear the form whenever the dialog closes.
+   *
+   * Important:
+   * Do not include the entire mutation object in this effect's
+   * dependency array. TanStack Query may return a new object
+   * reference during renders, which can create an infinite loop.
+   */
   useEffect(() => {
     if (!open) {
       setName("");
       setDescription("");
       setNameError("");
-      createTeamMutation.reset();
     }
-  }, [open, createTeamMutation]);
+  }, [open]);
+
+  function resetDialogState() {
+    setName("");
+    setDescription("");
+    setNameError("");
+    createTeamMutation.reset();
+  }
 
   function handleOpenChange(
     nextOpen: boolean,
@@ -75,7 +89,20 @@ export function CreateTeamDialog({
       return;
     }
 
+    if (!nextOpen) {
+      resetDialogState();
+    }
+
     onOpenChange(nextOpen);
+  }
+
+  function handleCancel() {
+    if (isSubmitting) {
+      return;
+    }
+
+    resetDialogState();
+    onOpenChange(false);
   }
 
   async function handleSubmit(
@@ -119,6 +146,7 @@ export function CreateTeamDialog({
           },
         );
 
+      resetDialogState();
       onOpenChange(false);
 
       toast.success(
@@ -139,7 +167,19 @@ export function CreateTeamDialog({
         handleOpenChange
       }
     >
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent
+        className="sm:max-w-lg"
+        onEscapeKeyDown={(event) => {
+          if (isSubmitting) {
+            event.preventDefault();
+          }
+        }}
+        onPointerDownOutside={(event) => {
+          if (isSubmitting) {
+            event.preventDefault();
+          }
+        }}
+      >
         <form
           onSubmit={handleSubmit}
         >
@@ -153,7 +193,9 @@ export function CreateTeamDialog({
             </DialogTitle>
 
             <DialogDescription>
-              Create a shared engineering intelligence workspace for your team.
+              Create a shared engineering
+              intelligence workspace for
+              your team.
             </DialogDescription>
           </DialogHeader>
 
@@ -161,6 +203,7 @@ export function CreateTeamDialog({
             <div className="space-y-2">
               <Label htmlFor="team-name">
                 Team Name
+
                 <span className="ml-1 text-destructive">
                   *
                 </span>
@@ -201,7 +244,9 @@ export function CreateTeamDialog({
                   </p>
                 ) : (
                   <p className="text-xs text-muted-foreground">
-                    Choose a clear name your team will recognise.
+                    Choose a clear name
+                    your team will
+                    recognise.
                   </p>
                 )}
 
@@ -214,6 +259,7 @@ export function CreateTeamDialog({
             <div className="space-y-2">
               <Label htmlFor="team-description">
                 Description
+
                 <span className="ml-1 font-normal text-muted-foreground">
                   Optional
                 </span>
@@ -236,14 +282,17 @@ export function CreateTeamDialog({
 
               <div className="flex justify-end">
                 <span className="text-xs text-muted-foreground">
-                  {description.length}/500
+                  {description.length}
+                  /500
                 </span>
               </div>
             </div>
 
             {createTeamMutation.isError ? (
               <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive">
-                Team creation failed. Review the form and try again.
+                Team creation failed.
+                Review the form and try
+                again.
               </div>
             ) : null}
           </div>
@@ -253,9 +302,7 @@ export function CreateTeamDialog({
               type="button"
               variant="outline"
               disabled={isSubmitting}
-              onClick={() =>
-                onOpenChange(false)
-              }
+              onClick={handleCancel}
             >
               Cancel
             </Button>
