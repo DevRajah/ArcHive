@@ -28,6 +28,9 @@ import { teamRoutes } from "./routes/team.routes";
 // import {
 //   teamOrganizationRoutes,
 // } from "./routes/team-organization.routes";
+import {
+  teamReportRoutes,
+} from "./routes/team-report.routes";
 
 // This makes future testing easier because I can import the app without starting the port.
 export const buildApp = async () => {
@@ -153,6 +156,13 @@ export const buildApp = async () => {
   //     prefix: "/api",
   //   },
   // );
+
+  await app.register(
+    teamReportRoutes,
+    {
+      prefix: "/api",
+    },
+  );
 
   return app;
 };

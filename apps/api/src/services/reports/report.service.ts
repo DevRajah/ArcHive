@@ -8,65 +8,112 @@ import type {
   GenerateReportResponse,
 } from "../../types/report.types";
 
+import {
+  ReportSourceType,
+} from "../../types/report-source.types";
+
 /**
- * Creates and queues a new Executive Report.
+ * Creates and queues a new personal Executive Report.
  *
  * Flow:
  *
- * 1. Confirm that the user exists.
- * 2. Create the Report row with QUEUED status.
- * 3. Add a BullMQ job.
- * 4. Return immediately to the frontend.
+ * 1. Validate the request.
+ * 2. Confirm that the user exists.
+ * 3. Create the Report row with QUEUED status.
+ * 4. Add a BullMQ job using a USER report source.
+ * 5. Return immediately to the frontend.
  */
 export async function createReport(
   request: GenerateReportRequest,
 ): Promise<GenerateReportResponse> {
-  const title = request.title.trim();
-  const description = request.description?.trim() || null;
+  const userId = request.userId?.trim();
+  const title = request.title?.trim();
+  const description =
+    request.description?.trim() || null;
 
-  if (!request.userId?.trim()) {
-    throw new Error("A userId is required to generate a report.");
+  if (!userId) {
+    throw new Error(
+      "A userId is required to generate a report.",
+    );
   }
 
   if (!title) {
-    throw new Error("A report title is required.");
+    throw new Error(
+      "A report title is required.",
+    );
   }
 
-  const user = await prisma.user.findUnique({
-    where: {
-      id: request.userId,
-    },
-    select: {
-      id: true,
-    },
-  });
+  const user =
+    await prisma.user.findUnique({
+      where: {
+        id: userId,
+      },
+
+      select: {
+        id: true,
+      },
+    });
 
   if (!user) {
-    throw new Error("The selected ArcHive user does not exist.");
+    throw new Error(
+      "The selected ArcHive user does not exist.",
+    );
   }
 
-  const report = await prisma.report.create({
-    data: {
-      userId: request.userId,
-      title,
-      description,
-      status: ReportStatus.QUEUED,
-    },
-  });
+  const report =
+    await prisma.report.create({
+      data: {
+        userId,
+
+        /**
+         * A personal report does not belong to a team.
+         */
+        teamId: null,
+
+        title,
+
+        description,
+
+        status:
+          ReportStatus.QUEUED,
+      },
+    });
 
   try {
+    /**
+     * Report.userId is optional in Prisma because Team Reports use teamId.
+     *
+     * For this personal-report service, it must always exist.
+     */
+    if (!report.userId) {
+      throw new Error(
+        "A personal Executive Report requires a userId.",
+      );
+    }
+
     await executiveReportQueue.add(
       "generate-executive-report",
+
       {
-        reportId: report.id,
-        userId: report.userId,
+        reportId:
+          report.id,
+
+        source: {
+          type:
+            ReportSourceType.USER,
+
+          userId:
+            report.userId,
+        },
       },
+
       {
         /**
          * Using the report ID as the BullMQ job ID prevents the same
          * report from accidentally being queued more than once.
          */
-        jobId: report.id,
+        jobId:
+          report.id,
       },
     );
   } catch (error) {
@@ -79,9 +126,13 @@ export async function createReport(
       where: {
         id: report.id,
       },
+
       data: {
-        status: ReportStatus.FAILED,
-        error: message,
+        status:
+          ReportStatus.FAILED,
+
+        error:
+          message,
       },
     });
 
@@ -90,8 +141,14 @@ export async function createReport(
 
   return {
     success: true,
-    reportId: report.id,
-    status: ReportStatus.QUEUED,
-    message: "Executive Report queued successfully.",
+
+    reportId:
+      report.id,
+
+    status:
+      ReportStatus.QUEUED,
+
+    message:
+      "Executive Report queued successfully.",
   };
 }

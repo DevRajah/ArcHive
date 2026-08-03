@@ -1,5 +1,8 @@
 import { Queue } from "bullmq";
 import IORedis from "ioredis";
+import {
+  ReportSource,
+} from "../../../apps/api/src/types/report-source.types";
 
 /**
  * Shared Redis connection for the Executive Report queue.
@@ -17,9 +20,12 @@ const redisConnection = new IORedis({
 /**
  * Data carried by every Executive Report generation job.
  */
+
+
 export interface GenerateExecutiveReportJob {
   reportId: string;
-  userId: string;
+
+  source: ReportSource;
 }
 
 /**

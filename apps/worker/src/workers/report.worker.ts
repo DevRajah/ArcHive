@@ -1,392 +1,651 @@
 import "dotenv/config";
 
+import path from "node:path";
+
 import { Worker } from "bullmq";
 import { Prisma, ReportStatus } from "@prisma/client";
 
 import { prisma } from "@archive/database";
+
 import {
-    EXECUTIVE_REPORT_QUEUE_NAME,
-    redisConnection,
+  EXECUTIVE_REPORT_QUEUE_NAME,
+  redisConnection,
 } from "@archive/queue";
 
-import { buildExecutiveKpis } from "../reports/kpi-builder";
-import { buildRiskBreakdown } from "../reports/risk-analysis";
-
-import type { GenerateExecutiveReportJob } from "@archive/queue";
-import path from "node:path";
+import type {
+  GenerateExecutiveReportJob,
+} from "@archive/queue";
 
 import {
-    buildExecutiveSummary,
+  buildExecutiveSummary,
 } from "../reports/executive-summary";
 
 import {
-    generateReportCsv,
-} from "../reports/csv-generator";
+  buildExecutiveKpis,
+} from "../reports/kpi-builder";
 
 import {
-    generateReportPdf,
-} from "../reports/pdf-generator";
-
+  buildRiskBreakdown,
+} from "../reports/risk-analysis";
 
 import {
-    buildTechnologyAnalysis,
+  buildTechnologyAnalysis,
 } from "../reports/technology-analysis";
 
 import {
-    buildEngineeringTrendAnalysis,
+  buildEngineeringTrendAnalysis,
 } from "../reports/trend-analysis";
 
 import {
-    buildRepositoryHighlights,
+  buildRepositoryHighlights,
 } from "../reports/repository-highlights";
 
-type OrganizationDashboard = Record<string, unknown>;
+import {
+  generateReportPdf,
+} from "../reports/pdf-generator";
+
+import {
+  generateReportCsv,
+} from "../reports/csv-generator";
 
 /**
- * The worker needs access to the ArcHive API because the API already owns
- * the complete Organization Intelligence dashboard service.
- *
- * Keeping one source of truth prevents the report worker from rebuilding
- * overview, rankings, risks, trends, and recommendations differently.
+ * Both the user Organization Dashboard and Team Dashboard return
+ * JSON objects that the report analytics builders can consume.
+ */
+type ReportDashboard = Record<string, unknown>;
+
+type ReportSource =
+  GenerateExecutiveReportJob["source"];
+
+/**
+ * The worker calls the ArcHive API because the API owns the dashboard
+ * services and repository intelligence queries.
  */
 const API_BASE_URL =
-    process.env.API_BASE_URL || "http://localhost:6800";
+  process.env.API_BASE_URL ||
+  "http://localhost:6800";
 
+/**
+ * Converts a normal JavaScript object into a value Prisma can safely
+ * persist inside a Json column.
+ */
 const toPrismaJson = (
-    value: unknown,
+  value: unknown,
 ): Prisma.InputJsonValue => {
-    return JSON.parse(
-        JSON.stringify(value),
-    ) as Prisma.InputJsonValue;
+  return JSON.parse(
+    JSON.stringify(value),
+  ) as Prisma.InputJsonValue;
 };
 
 /**
- * Fetches the complete Organization Intelligence dashboard for a user.
+ * Builds the correct dashboard endpoint for the report source.
  *
- * This endpoint already combines:
- * - organization overview
- * - repository rankings
- * - technology inventory
- * - recommendations
- * - risks
- * - activity
- * - trends
+ * USER reports use the existing Organization Intelligence dashboard.
+ * TEAM reports use the Team Intelligence dashboard.
  */
-const fetchOrganizationDashboard = async (
-    userId: string,
-): Promise<OrganizationDashboard> => {
-    const encodedUserId = encodeURIComponent(userId);
-
-    const endpoint =
-        `${API_BASE_URL}/api/users/${encodedUserId}` +
-        "/organization/dashboard";
-
-    const response = await fetch(endpoint, {
-        method: "GET",
-        headers: {
-            Accept: "application/json",
-        },
-    });
-
-    if (!response.ok) {
-        const errorBody = await response.text();
-
-        throw new Error(
-            `Organization Intelligence request failed with status ` +
-            `${response.status}: ${errorBody}`,
-        );
+const buildDashboardEndpoint = (
+  source: ReportSource,
+): string => {
+  if (source.type === "USER") {
+    if (!source.userId?.trim()) {
+      throw new Error(
+        "A USER report source requires a userId.",
+      );
     }
 
-    const dashboard = await response.json();
+    return (
+      `${API_BASE_URL}/api/users/` +
+      `${encodeURIComponent(source.userId)}` +
+      "/organization/dashboard"
+    );
+  }
 
-    return dashboard as OrganizationDashboard;
+  if (source.type === "TEAM") {
+    if (!source.teamId?.trim()) {
+      throw new Error(
+        "A TEAM report source requires a teamId.",
+      );
+    }
+
+    return (
+      `${API_BASE_URL}/api/teams/` +
+      `${encodeURIComponent(source.teamId)}` +
+      "/dashboard"
+    );
+  }
+
+  throw new Error(
+    "Unsupported Executive Report source.",
+  );
 };
 
 /**
- * Generates and stores one Executive Report snapshot.
+ * Fetches the correct dashboard without making the rest of the report
+ * pipeline care whether the source is a user or a team.
+ */
+const fetchDashboardForReport = async (
+  source: ReportSource,
+): Promise<ReportDashboard> => {
+  const endpoint =
+    buildDashboardEndpoint(source);
+
+  const response = await fetch(endpoint, {
+    method: "GET",
+
+    headers: {
+      Accept: "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    const errorBody =
+      await response.text();
+
+    throw new Error(
+      `Executive Report dashboard request failed with status ` +
+        `${response.status}: ${errorBody}`,
+    );
+  }
+
+  const dashboard =
+    await response.json();
+
+  if (
+    !dashboard ||
+    typeof dashboard !== "object" ||
+    Array.isArray(dashboard)
+  ) {
+    throw new Error(
+      "The Executive Report dashboard response was not a valid object.",
+    );
+  }
+
+  return dashboard as ReportDashboard;
+};
+
+/**
+ * Produces a Prisma filter that confirms the report belongs to the
+ * same user or team carried by the BullMQ job.
  *
- * Important:
- * We store the dashboard as JSON rather than recalculating it whenever
- * someone opens the report. This means a generated report represents the
- * exact state of the organization at the time it was created.
+ * This prevents a malformed job from processing an unrelated report.
+ */
+const buildReportOwnershipFilter = (
+  reportId: string,
+  source: ReportSource,
+): Prisma.ReportWhereInput => {
+  if (source.type === "USER") {
+    if (!source.userId?.trim()) {
+      throw new Error(
+        "A USER report source requires a userId.",
+      );
+    }
+
+    return {
+      id: reportId,
+      userId: source.userId,
+      teamId: null,
+    };
+  }
+
+  if (source.type === "TEAM") {
+    if (!source.teamId?.trim()) {
+      throw new Error(
+        "A TEAM report source requires a teamId.",
+      );
+    }
+
+    return {
+      id: reportId,
+      teamId: source.teamId,
+      userId: null,
+    };
+  }
+
+  throw new Error(
+    "Unsupported Executive Report source.",
+  );
+};
+
+/**
+ * Returns readable source information for logs and report snapshots.
+ */
+const getSourceMetadata = (
+  source: ReportSource,
+) => {
+  if (source.type === "USER") {
+    return {
+      sourceType: "USER" as const,
+      sourceId: source.userId,
+      userId: source.userId,
+      teamId: null,
+    };
+  }
+
+  return {
+    sourceType: "TEAM" as const,
+    sourceId: source.teamId,
+    userId: null,
+    teamId: source.teamId,
+  };
+};
+
+/**
+ * Generates and persists one Executive Report.
+ *
+ * The same pipeline is used for user and team reports:
+ *
+ * 1. Validate report ownership.
+ * 2. Mark the report as GENERATING.
+ * 3. Fetch the appropriate dashboard.
+ * 4. Build immutable analytics.
+ * 5. Generate PDF and CSV files.
+ * 6. Persist everything.
+ * 7. Mark the report as COMPLETED.
  */
 const generateExecutiveReport = async ({
-    reportId,
-    userId,
+  reportId,
+  source,
 }: GenerateExecutiveReportJob): Promise<void> => {
-    const report = await prisma.report.findFirst({
-        where: {
-            id: reportId,
-            userId,
-        },
-        select: {
-            id: true,
-            status: true,
-            title: true,
-            description: true,
-        },
+  const ownershipFilter =
+    buildReportOwnershipFilter(
+      reportId,
+      source,
+    );
+
+  const report =
+    await prisma.report.findFirst({
+      where: ownershipFilter,
+
+      select: {
+        id: true,
+        status: true,
+        title: true,
+        description: true,
+        userId: true,
+        teamId: true,
+      },
     });
 
-    if (!report) {
-        throw new Error(
-            `Executive Report ${reportId} was not found for user ${userId}.`,
-        );
-    }
+  if (!report) {
+    const metadata =
+      getSourceMetadata(source);
 
-    /**
-     * A completed report should not be generated again accidentally.
-     *
-     * This protects us if BullMQ retries or the same job somehow runs twice.
-     */
-    if (report.status === ReportStatus.COMPLETED) {
-        console.log("Executive Report is already completed:", {
-            reportId,
-            userId,
-        });
+    throw new Error(
+      `Executive Report ${reportId} was not found for ` +
+        `${metadata.sourceType.toLowerCase()} ` +
+        `${metadata.sourceId}.`,
+    );
+  }
 
-        return;
-    }
-
-    await prisma.report.update({
-        where: {
-            id: reportId,
-        },
-        data: {
-            status: ReportStatus.GENERATING,
-            error: null,
-        },
-    });
-
-    const organizationDashboard =
-        await fetchOrganizationDashboard(userId);
-
-    const executiveSummary =
-        buildExecutiveSummary(
-            organizationDashboard 
-        );
-    /**
-     * These analytics are calculated once while the report is generated.
-     *
-     * This keeps business logic out of the frontend and preserves the exact
-     * analytical state that existed when this report was created.
-     */
-    const executiveKpis =
-        buildExecutiveKpis(
-            organizationDashboard,
-        );
-
-    const riskBreakdown =
-        buildRiskBreakdown(
-            organizationDashboard,
-        );
-
-    const technologyAnalysis =
-        buildTechnologyAnalysis(
-            organizationDashboard,
-        );
-
-    const trendAnalysis =
-        buildEngineeringTrendAnalysis(
-            organizationDashboard,
-        );
-
-    const repositoryHighlights =
-        buildRepositoryHighlights(
-            organizationDashboard,
-        );
-
-    const generatedAt = new Date();
-
-    /**
-     * REPORT_STORAGE_DIR can point to a mounted disk in production.
-     *
-     * Locally, files are stored under:
-     * apps/worker/storage/reports
-     */
-    const reportOutputDirectory =
-        path.resolve(
-            process.env.REPORT_STORAGE_DIR ??
-            path.join(
-                process.cwd(),
-                "storage",
-                "reports",
-            ),
-        );
-
-    const reportSnapshot = {
-        /**
- * Incrementing this value allows future consumers to understand which
- * report structure they are reading.
- */
-        schemaVersion: 2,
+  /**
+   * A completed report is immutable.
+   *
+   * This also protects against accidental duplicate queue processing.
+   */
+  if (
+    report.status ===
+    ReportStatus.COMPLETED
+  ) {
+    console.log(
+      "Executive Report is already completed:",
+      {
         reportId,
-        title: report.title,
-        description:
-            report.description ?? null,
-        generatedAt:
-            generatedAt.toISOString(),
-        executiveSummary,
-        executiveKpis,
-        riskBreakdown,
-        technologyAnalysis,
-        trendAnalysis,
-        repositoryHighlights,
-        /**
-     * We retain the raw Organization Intelligence snapshot so future report
-     * features can inspect the original data without recalculating it.
+        ...getSourceMetadata(source),
+      },
+    );
+
+    return;
+  }
+
+  await prisma.report.update({
+    where: {
+      id: reportId,
+    },
+
+    data: {
+      status:
+        ReportStatus.GENERATING,
+
+      error: null,
+    },
+  });
+
+  const dashboard =
+    await fetchDashboardForReport(
+      source,
+    );
+
+  /**
+   * These analytics are calculated once and stored with the report.
+   *
+   * The frontend, PDF and CSV therefore consume the same immutable
+   * analytical result.
+   */
+  const executiveSummary =
+    buildExecutiveSummary(dashboard);
+
+  const executiveKpis =
+    buildExecutiveKpis(dashboard);
+
+  const riskBreakdown =
+    buildRiskBreakdown(dashboard);
+
+  const technologyAnalysis =
+    buildTechnologyAnalysis(dashboard);
+
+  const trendAnalysis =
+    buildEngineeringTrendAnalysis(
+      dashboard,
+    );
+
+  const repositoryHighlights =
+    buildRepositoryHighlights(
+      dashboard,
+    );
+
+  const generatedAt =
+    new Date();
+
+  /**
+   * In production, REPORT_STORAGE_DIR can point to mounted storage.
+   *
+   * During local development, generated files are written under:
+   * apps/worker/storage/reports
+   */
+  const reportOutputDirectory =
+    path.resolve(
+      process.env.REPORT_STORAGE_DIR ??
+        path.join(
+          process.cwd(),
+          "storage",
+          "reports",
+        ),
+    );
+
+  const sourceMetadata =
+    getSourceMetadata(source);
+
+  const reportSnapshot = {
+    schemaVersion: 3,
+
+    reportId,
+
+    title: report.title,
+
+    description:
+      report.description ?? null,
+
+    generatedAt:
+      generatedAt.toISOString(),
+
+    source: sourceMetadata,
+
+    executiveSummary,
+
+    executiveKpis,
+
+    riskBreakdown,
+
+    technologyAnalysis,
+
+    trendAnalysis,
+
+    repositoryHighlights,
+
+    /**
+     * Preserve the original dashboard used for this report.
      */
+    organization: dashboard,
+  };
+
+  /**
+   * PDF and CSV are generated in parallel because neither depends
+   * on the other.
+   */
+  const [pdfPath, csvPath] =
+    await Promise.all([
+      generateReportPdf({
+        reportId,
+
+        title: report.title,
+
+        description:
+          report.description,
+
+        generatedAt,
+
+        executiveSummary,
+
+        executiveKpis,
+
+        riskBreakdown,
+
+        technologyAnalysis,
+
+        trendAnalysis,
+
+        repositoryHighlights,
+
         organization:
-            organizationDashboard,
-    };
+          dashboard as Record<
+            string,
+            any
+          >,
 
-    const [pdfPath, csvPath] =
-        await Promise.all([
-            generateReportPdf({
-                reportId,
-                title: report.title,
-                description:
-                    report.description,
-                generatedAt,
-                executiveSummary,
-                executiveKpis,
-                riskBreakdown,
-                technologyAnalysis,
-                trendAnalysis,
-                repositoryHighlights,
-                organization:
-                    organizationDashboard as Record<
-                        string,
-                        any
-                    >,
-                outputDirectory:
-                    reportOutputDirectory,
-            }),
+        outputDirectory:
+          reportOutputDirectory,
+      }),
 
-            generateReportCsv({
-                reportId,
-                reportSnapshot,
-                outputDirectory:
-                    reportOutputDirectory,
-            }),
+      generateReportCsv({
+        reportId,
 
-        ]);
+        reportSnapshot,
 
-    await prisma.report.update({
-        where: {
-            id: reportId,
-        },
-        data: {
-            status:
-                ReportStatus.COMPLETED,
-            reportData: toPrismaJson(reportSnapshot), pdfPath,
-            csvPath,
-            generatedAt,
-            error: null,
-        },
-    });
+        outputDirectory:
+          reportOutputDirectory,
+      }),
+    ]);
+
+  /**
+   * COMPLETED is written only after:
+   *
+   * - analytics have been built,
+   * - reportData is ready,
+   * - the PDF exists,
+   * - the CSV exists.
+   */
+  await prisma.report.update({
+    where: {
+      id: reportId,
+    },
+
+    data: {
+      status:
+        ReportStatus.COMPLETED,
+
+      reportData:
+        toPrismaJson(
+          reportSnapshot,
+        ),
+
+      pdfPath,
+
+      csvPath,
+
+      generatedAt,
+
+      error: null,
+    },
+  });
 };
 
-
-
-const reportWorker = new Worker<GenerateExecutiveReportJob>(
+const reportWorker =
+  new Worker<GenerateExecutiveReportJob>(
     EXECUTIVE_REPORT_QUEUE_NAME,
 
     async (job) => {
-        console.log("Executive Report generation started:", {
-            jobId: job.id,
-            reportId: job.data.reportId,
-            userId: job.data.userId,
-            attempt: job.attemptsMade + 1,
-        });
+      const sourceMetadata =
+        getSourceMetadata(
+          job.data.source,
+        );
 
-        await generateExecutiveReport(job.data);
+      console.log(
+        "Executive Report generation started:",
+        {
+          jobId: job.id,
 
-        return {
-            success: true,
-            reportId: job.data.reportId,
-            message: "Executive Report generated successfully.",
-        };
+          reportId:
+            job.data.reportId,
+
+          ...sourceMetadata,
+
+          attempt:
+            job.attemptsMade + 1,
+        },
+      );
+
+      await generateExecutiveReport(
+        job.data,
+      );
+
+      return {
+        success: true,
+
+        reportId:
+          job.data.reportId,
+
+        sourceType:
+          sourceMetadata.sourceType,
+
+        sourceId:
+          sourceMetadata.sourceId,
+
+        message:
+          "Executive Report generated successfully.",
+      };
     },
 
     {
-        connection: redisConnection as any,
+      connection:
+        redisConnection as any,
 
-        /**
-         * Report generation can involve several database queries and later
-         * PDF creation, so we keep concurrency lower than engineering events.
-         */
-        concurrency: 2,
+      /**
+       * Report generation performs database queries and file creation,
+       * so concurrency remains deliberately lower than event processing.
+       */
+      concurrency: 2,
     },
+  );
+
+reportWorker.on(
+  "completed",
+  (job) => {
+    console.log(
+      "Executive Report job completed:",
+      {
+        jobId: job.id,
+
+        reportId:
+          job.data.reportId,
+
+        ...getSourceMetadata(
+          job.data.source,
+        ),
+      },
+    );
+  },
 );
 
-reportWorker.on("completed", (job) => {
-    console.log("Executive Report job completed:", {
-        jobId: job.id,
-        reportId: job.data.reportId,
-    });
-});
-
-reportWorker.on("failed", async (job, error) => {
-    console.error("Executive Report job failed:", {
+reportWorker.on(
+  "failed",
+  async (job, error) => {
+    console.error(
+      "Executive Report job failed:",
+      {
         jobId: job?.id,
-        reportId: job?.data.reportId,
-        message: error.message,
-    });
 
-    const reportId = job?.data.reportId;
+        reportId:
+          job?.data.reportId,
+
+        source:
+          job?.data.source,
+
+        message:
+          error.message,
+      },
+    );
+
+    const reportId =
+      job?.data.reportId;
 
     if (!reportId) {
-        return;
+      return;
     }
 
     /**
-     * BullMQ may retry the job.
+     * The queue may retry a failed job.
      *
-     * We only mark it permanently FAILED after the final attempt has failed.
+     * We only persist FAILED after the final configured attempt.
      */
     const maximumAttempts =
-        typeof job.opts.attempts === "number"
-            ? job.opts.attempts
-            : 1;
+      typeof job.opts.attempts ===
+      "number"
+        ? job.opts.attempts
+        : 1;
 
     const hasMoreAttempts =
-        job.attemptsMade < maximumAttempts;
+      job.attemptsMade <
+      maximumAttempts;
 
     if (hasMoreAttempts) {
-        console.log("Executive Report will be retried:", {
-            reportId,
-            attemptsMade: job.attemptsMade,
-            maximumAttempts,
-        });
+      console.log(
+        "Executive Report will be retried:",
+        {
+          reportId,
 
-        return;
+          attemptsMade:
+            job.attemptsMade,
+
+          maximumAttempts,
+        },
+      );
+
+      return;
     }
 
     try {
-        await prisma.report.update({
-            where: {
-                id: reportId,
-            },
-            data: {
-                status: ReportStatus.FAILED,
-                error: error.message,
-            },
-        });
-    } catch (databaseError) {
-        console.error(
-            "Unable to store Executive Report failure:",
-            databaseError,
-        );
-    }
-});
+      await prisma.report.update({
+        where: {
+          id: reportId,
+        },
 
-reportWorker.on("error", (error) => {
+        data: {
+          status:
+            ReportStatus.FAILED,
+
+          error:
+            error.message,
+        },
+      });
+    } catch (databaseError) {
+      console.error(
+        "Unable to store Executive Report failure:",
+        databaseError,
+      );
+    }
+  },
+);
+
+reportWorker.on(
+  "error",
+  (error) => {
     console.error(
-        "Executive Report worker connection error:",
-        error,
+      "Executive Report worker connection error:",
+      error,
     );
-});
+  },
+);
 
 console.log(
-    "ArcHive report worker is waiting for Executive Report jobs...",
+  "ArcHive report worker is waiting for Executive Report jobs...",
 );
