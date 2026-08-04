@@ -15,13 +15,18 @@ import type {
   AddTeamRepositoryResponse,
   CreateTeamPayload,
   CreateTeamResponse,
+  DeleteTeamReportResponse,
+  GenerateTeamReportPayload,
+  GenerateTeamReportResponse,
   ListTeamMembersResponse,
   ListTeamRepositoriesResponse,
+  ListTeamReportsResponse,
   ListTeamsResponse,
   RemoveTeamMemberResponse,
   RemoveTeamRepositoryResponse,
   TeamDashboard,
   TeamDetailsResponse,
+  TeamExecutiveReport,
   UpdateTeamMemberRolePayload,
   UpdateTeamMemberRoleResponse,
 } from "@/types/team.types";
@@ -495,6 +500,166 @@ export function useRemoveTeamRepository(
         queryKey:
           TEAM_QUERY_KEYS.dashboard(
             teamId,
+          ),
+      });
+    },
+  });
+}
+
+/**
+ * Load all Executive Reports generated for a Team Workspace.
+ */
+export function useTeamReports(
+  teamId: string,
+  userId: string,
+) {
+  return useQuery<ListTeamReportsResponse>({
+    queryKey:
+      TEAM_QUERY_KEYS.reports(
+        teamId,
+        userId,
+      ),
+
+    queryFn: () =>
+      teamService.getTeamReports(
+        teamId,
+        userId,
+      ),
+
+    enabled:
+      Boolean(teamId) &&
+      Boolean(userId),
+
+    refetchInterval: (query) => {
+      const reports =
+        query.state.data?.reports ?? [];
+
+      const hasActiveReport =
+        reports.some(
+          (report) =>
+            report.status === "QUEUED" ||
+            report.status === "GENERATING",
+        );
+
+      return hasActiveReport
+        ? 5000
+        : false;
+    },
+
+    refetchOnWindowFocus: false,
+  });
+}
+
+/** * Load one Executive Report generated for a Team Workspace.
+ */
+export function useTeamReport(
+  teamId: string,
+  reportId: string,
+  userId: string,
+) {
+  return useQuery<TeamExecutiveReport>({
+    queryKey:
+      TEAM_QUERY_KEYS.report(
+        teamId,
+        reportId,
+        userId,
+      ),
+
+    queryFn: () =>
+      teamService.getTeamReport(
+        teamId,
+        reportId,
+        userId,
+      ),
+
+    enabled:
+      Boolean(teamId) &&
+      Boolean(reportId) &&
+      Boolean(userId),
+
+    refetchOnWindowFocus: false,
+  });
+}
+
+/**
+ * Queue a new Executive Report for a Team Workspace.
+ */
+export function useGenerateTeamReport(
+  teamId: string,
+  userId: string,
+) {
+  const queryClient =
+    useQueryClient();
+
+  return useMutation<
+    GenerateTeamReportResponse,
+    Error,
+    GenerateTeamReportPayload
+  >({
+    mutationFn: (payload) =>
+      teamService.generateTeamReport(
+        teamId,
+        payload,
+      ),
+
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey:
+          TEAM_QUERY_KEYS.reports(
+            teamId,
+            userId,
+          ),
+      });
+    },
+  });
+}
+
+/**
+ * Delete one Executive Report from a Team Workspace.
+ */
+export function useDeleteTeamReport(
+  teamId: string,
+  userId: string,
+) {
+  const queryClient =
+    useQueryClient();
+
+  return useMutation<
+    DeleteTeamReportResponse,
+    Error,
+    {
+      reportId: string;
+      actorUserId: string;
+    }
+  >({
+    mutationFn: ({
+      reportId,
+      actorUserId,
+    }) =>
+      teamService.deleteTeamReport(
+        teamId,
+        reportId,
+        actorUserId,
+      ),
+
+    onSuccess: (
+      _response,
+      variables,
+    ) => {
+      queryClient.removeQueries({
+        queryKey:
+          TEAM_QUERY_KEYS.report(
+            teamId,
+            variables.reportId,
+            userId,
+          ),
+      });
+
+      queryClient.invalidateQueries({
+        queryKey:
+          TEAM_QUERY_KEYS.reports(
+            teamId,
+            userId,
           ),
       });
     },

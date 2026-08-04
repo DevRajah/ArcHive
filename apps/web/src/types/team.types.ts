@@ -283,3 +283,181 @@ export interface RemoveTeamRepositoryResponse {
   message: string;
   repositoryId: string;
 }
+
+export type TeamReportStatus =
+  | "QUEUED"
+  | "GENERATING"
+  | "COMPLETED"
+  | "FAILED";
+
+export type TeamReportTrendDirection =
+  | "IMPROVING"
+  | "DECLINING"
+  | "STABLE"
+  | "UNKNOWN";
+
+export interface TeamReportListItem {
+  id: string;
+  teamId: string | null;
+
+  title: string;
+  description: string | null;
+
+  status: TeamReportStatus;
+
+  generatedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+
+  error: string | null;
+
+  hasPdf: boolean;
+  hasCsv: boolean;
+}
+
+export interface ListTeamReportsResponse {
+  success: true;
+  count: number;
+  reports: TeamReportListItem[];
+}
+
+export interface GenerateTeamReportPayload {
+  actorUserId: string;
+  title: string;
+  description?: string;
+}
+
+export interface GenerateTeamReportResponse {
+  success: true;
+  reportId: string;
+  teamId: string;
+  status: "QUEUED";
+  message: string;
+}
+
+export interface TeamReportSource {
+  sourceType: "TEAM";
+  sourceId: string;
+  userId: null;
+  teamId: string;
+}
+
+export interface TeamReportExecutiveSummary {
+  headline: string;
+  overallHealth: string;
+  strengths: string[];
+  concerns: string[];
+  recommendations: string[];
+}
+
+export interface TeamReportExecutiveKpis {
+  repositories: number;
+  averageArchitectureScore: number;
+  highRiskRepositories: number;
+  recommendations: number;
+  technologies: number;
+  engineeringEvents: number;
+}
+
+export interface TeamReportRiskBreakdown {
+  critical: number;
+  high: number;
+  medium: number;
+  low: number;
+  unknown: number;
+  total: number;
+  highestSeverity: string | null;
+}
+
+export interface TeamReportTechnologyInsight {
+  name: string;
+  usageCount: number;
+  category: string | null;
+  percentage: number | null;
+}
+
+export interface TeamReportTechnologyAnalysis {
+  totalTechnologies: number;
+  topTechnologies: TeamReportTechnologyInsight[];
+  dominantTechnology: string | null;
+  categories: Record<string, number>;
+}
+
+export interface TeamReportTrendPoint {
+  label: string;
+  value: number;
+}
+
+export interface TeamReportTrendAnalysis {
+  direction: TeamReportTrendDirection;
+  percentageChange: number | null;
+  latestValue: number | null;
+  previousValue: number | null;
+  points: TeamReportTrendPoint[];
+}
+
+export interface TeamReportRepositoryHighlight {
+  repositoryId: string | null;
+  name: string;
+  score: number;
+  riskLevel: string | null;
+}
+
+export interface TeamReportRepositoryHighlights {
+  strongest: TeamReportRepositoryHighlight[];
+  needsAttention: TeamReportRepositoryHighlight[];
+}
+
+export interface TeamExecutiveReportSnapshot {
+  schemaVersion: 3;
+
+  reportId: string;
+  title: string;
+  description: string | null;
+  generatedAt: string;
+
+  source: TeamReportSource;
+
+  executiveSummary: TeamReportExecutiveSummary;
+  executiveKpis: TeamReportExecutiveKpis;
+  riskBreakdown: TeamReportRiskBreakdown;
+  technologyAnalysis: TeamReportTechnologyAnalysis;
+  trendAnalysis: TeamReportTrendAnalysis;
+  repositoryHighlights: TeamReportRepositoryHighlights;
+
+  organization: TeamDashboard;
+}
+
+export interface TeamExecutiveReport {
+  id: string;
+  teamId: string | null;
+
+  title: string;
+  description: string | null;
+
+  status: TeamReportStatus;
+
+  reportData: TeamExecutiveReportSnapshot | null;
+
+  pdfPath: string | null;
+  csvPath: string | null;
+  error: string | null;
+
+  generatedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+
+  hasPdf: boolean;
+  hasCsv: boolean;
+}
+
+export interface GetTeamReportResponse {
+  success: true;
+  report: TeamExecutiveReport;
+}
+
+export interface DeleteTeamReportResponse {
+  success: true;
+  message: string;
+  reportId: string;
+}

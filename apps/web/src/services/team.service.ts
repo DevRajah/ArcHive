@@ -7,13 +7,19 @@ import type {
   AddTeamRepositoryResponse,
   CreateTeamPayload,
   CreateTeamResponse,
+  DeleteTeamReportResponse,
+  GenerateTeamReportPayload,
+  GenerateTeamReportResponse,
+  GetTeamReportResponse,
   ListTeamMembersResponse,
   ListTeamRepositoriesResponse,
+  ListTeamReportsResponse,
   ListTeamsResponse,
   RemoveTeamMemberResponse,
   RemoveTeamRepositoryResponse,
   TeamDashboard,
   TeamDetailsResponse,
+  TeamExecutiveReport,
   UpdateTeamMemberRolePayload,
   UpdateTeamMemberRoleResponse,
 } from "@/types/team.types";
@@ -226,6 +232,132 @@ async removeTeamRepository(
   const { data } =
     await api.delete<RemoveTeamRepositoryResponse>(
       `/teams/${teamId}/repositories/${repositoryId}`,
+      {
+        params: {
+          actorUserId,
+        },
+      },
+    );
+
+  return data;
+}
+
+/**
+ * Fetch every Executive Report generated for one Team Workspace.
+ */
+async getTeamReports(
+  teamId: string,
+  userId: string,
+): Promise<ListTeamReportsResponse> {
+  const { data } =
+    await api.get<ListTeamReportsResponse>(
+      `/teams/${teamId}/reports`,
+      {
+        params: {
+          userId,
+        },
+      },
+    );
+
+  return data;
+}
+
+/**
+ * Queue a Team Executive Report.
+ *
+ * OWNER, ADMIN, and MEMBER can generate reports.
+ */
+async generateTeamReport(
+  teamId: string,
+  payload: GenerateTeamReportPayload,
+): Promise<GenerateTeamReportResponse> {
+  const { data } =
+    await api.post<GenerateTeamReportResponse>(
+      `/teams/${teamId}/reports/generate`,
+      payload,
+    );
+
+  return data;
+}
+
+/**
+ * Fetch one Team Report with its stored Schema v3 snapshot.
+ */
+async getTeamReport(
+  teamId: string,
+  reportId: string,
+  userId: string,
+): Promise<TeamExecutiveReport> {
+  const { data } =
+    await api.get<GetTeamReportResponse>(
+      `/teams/${teamId}/reports/${reportId}`,
+      {
+        params: {
+          userId,
+        },
+      },
+    );
+
+  return data.report;
+}
+
+/**
+ * Download a completed Team Report as PDF.
+ */
+async downloadTeamReportPdf(
+  teamId: string,
+  reportId: string,
+  userId: string,
+): Promise<Blob> {
+  const { data } =
+    await api.get<Blob>(
+      `/teams/${teamId}/reports/${reportId}/download/pdf`,
+      {
+        params: {
+          userId,
+        },
+        responseType: "blob",
+      },
+    );
+
+  return data;
+}
+
+/**
+ * Download a completed Team Report as CSV.
+ */
+async downloadTeamReportCsv(
+  teamId: string,
+  reportId: string,
+  userId: string,
+): Promise<Blob> {
+  const { data } =
+    await api.get<Blob>(
+      `/teams/${teamId}/reports/${reportId}/download/csv`,
+      {
+        params: {
+          userId,
+        },
+        responseType: "blob",
+      },
+    );
+
+  return data;
+}
+
+/**
+ * Delete one Team Executive Report.
+ *
+ * Only OWNER and ADMIN can perform this action.
+ */
+async deleteTeamReport(
+  teamId: string,
+  reportId: string,
+  actorUserId: string,
+): Promise<DeleteTeamReportResponse> {
+  const { data } =
+    await api.delete<DeleteTeamReportResponse>(
+      `/teams/${teamId}/reports/${reportId}`,
       {
         params: {
           actorUserId,
