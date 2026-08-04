@@ -1,8 +1,6 @@
 "use client";
 
-import {
-  useState,
-} from "react";
+import { useState } from "react";
 
 import {
   LockKeyhole,
@@ -11,6 +9,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 
+import { TeamInvitationsPanel } from "@/components/teams/invitations/TeamInvitationsPanel";
 import { AddTeamMemberDialog } from "@/components/teams/members/AddTeamMemberDialog";
 import { RemoveTeamMemberDialog } from "@/components/teams/members/RemoveTeamMemberDialog";
 import { TeamMembersEmptyState } from "@/components/teams/members/TeamMembersEmptyState";
@@ -31,6 +30,10 @@ interface TeamMembersPanelProps {
   canManageMembers: boolean;
 }
 
+type TeamMembersSection =
+  | "MEMBERS"
+  | "INVITATIONS";
+
 export function TeamMembersPanel({
   teamId,
   userId,
@@ -40,6 +43,14 @@ export function TeamMembersPanel({
     useTeamMembers(
       teamId,
       userId,
+    );
+
+  const [
+    activeSection,
+    setActiveSection,
+  ] =
+    useState<TeamMembersSection>(
+      "MEMBERS",
     );
 
   const [
@@ -64,9 +75,7 @@ export function TeamMembersPanel({
     );
 
   if (membersQuery.isLoading) {
-    return (
-      <TeamMembersSkeleton />
-    );
+    return <TeamMembersSkeleton />;
   }
 
   if (
@@ -90,55 +99,114 @@ export function TeamMembersPanel({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h2 className="text-2xl font-semibold">
-            Team Members
-          </h2>
+      <div className="inline-flex rounded-lg border bg-muted/30 p-1">
+        <Button
+          type="button"
+          size="sm"
+          variant={
+            activeSection ===
+            "MEMBERS"
+              ? "secondary"
+              : "ghost"
+          }
+          onClick={() =>
+            setActiveSection(
+              "MEMBERS",
+            )
+          }
+        >
+          Members
+        </Button>
 
-          <p className="mt-2 text-muted-foreground">
-            Manage workspace access and member roles.
-          </p>
-        </div>
-
-        {canManageMembers ? (
-          <Button
-            onClick={() =>
-              setIsAddMemberOpen(true)
-            }
-          >
-            <UserPlus className="mr-2 h-4 w-4" />
-            Add Member
-          </Button>
-        ) : (
-          <div className="flex items-center gap-2 rounded-lg border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
-            <LockKeyhole className="h-4 w-4" />
-            Read-only access
-          </div>
-        )}
+        <Button
+          type="button"
+          size="sm"
+          variant={
+            activeSection ===
+            "INVITATIONS"
+              ? "secondary"
+              : "ghost"
+          }
+          onClick={() =>
+            setActiveSection(
+              "INVITATIONS",
+            )
+          }
+        >
+          Invitations
+        </Button>
       </div>
 
-      {!members.length ? (
-        <TeamMembersEmptyState
-          canManageMembers={
-            canManageMembers
-          }
-          onAddMember={() =>
-            setIsAddMemberOpen(true)
-          }
-        />
+      {activeSection ===
+      "MEMBERS" ? (
+        <>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h2 className="text-2xl font-semibold">
+                Team Members
+              </h2>
+
+              <p className="mt-2 text-muted-foreground">
+                Manage workspace
+                access and member
+                roles.
+              </p>
+            </div>
+
+            {canManageMembers ? (
+              <Button
+                onClick={() =>
+                  setIsAddMemberOpen(
+                    true,
+                  )
+                }
+              >
+                <UserPlus className="mr-2 h-4 w-4" />
+                Add Member
+              </Button>
+            ) : (
+              <div className="flex items-center gap-2 rounded-lg border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
+                <LockKeyhole className="h-4 w-4" />
+                Read-only access
+              </div>
+            )}
+          </div>
+
+          {!members.length ? (
+            <TeamMembersEmptyState
+              canManageMembers={
+                canManageMembers
+              }
+              onAddMember={() =>
+                setIsAddMemberOpen(
+                  true,
+                )
+              }
+            />
+          ) : (
+            <TeamMembersTable
+              members={members}
+              canManageMembers={
+                canManageMembers
+              }
+              currentUserId={
+                userId
+              }
+              onEditRole={
+                setMemberToEdit
+              }
+              onRemove={
+                setMemberToRemove
+              }
+            />
+          )}
+        </>
       ) : (
-        <TeamMembersTable
-          members={members}
-          canManageMembers={
+        <TeamInvitationsPanel
+          teamId={teamId}
+          userId={userId}
+          canManageInvitations={
             canManageMembers
-          }
-          currentUserId={userId}
-          onEditRole={
-            setMemberToEdit
-          }
-          onRemove={
-            setMemberToRemove
           }
         />
       )}
@@ -156,10 +224,16 @@ export function TeamMembersPanel({
         teamId={teamId}
         actorUserId={userId}
         member={memberToEdit}
-        open={Boolean(memberToEdit)}
-        onOpenChange={(open) => {
+        open={Boolean(
+          memberToEdit,
+        )}
+        onOpenChange={(
+          open,
+        ) => {
           if (!open) {
-            setMemberToEdit(null);
+            setMemberToEdit(
+              null,
+            );
           }
         }}
       />
@@ -171,9 +245,13 @@ export function TeamMembersPanel({
         open={Boolean(
           memberToRemove,
         )}
-        onOpenChange={(open) => {
+        onOpenChange={(
+          open,
+        ) => {
           if (!open) {
-            setMemberToRemove(null);
+            setMemberToRemove(
+              null,
+            );
           }
         }}
       />

@@ -461,3 +461,96 @@ export interface DeleteTeamReportResponse {
   message: string;
   reportId: string;
 }
+
+export type TeamInvitationStatus =
+  | "PENDING"
+  | "ACCEPTED"
+  | "REJECTED"
+  | "EXPIRED"
+  | "CANCELLED";
+
+export type TeamInvitationRole =
+  | "ADMIN"
+  | "MEMBER"
+  | "VIEWER";
+
+export interface TeamInvitationTeam {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+}
+
+export interface TeamInvitationActor {
+  id: string;
+  username: string;
+  avatarUrl: string | null;
+}
+
+export interface TeamInvitationInvitee {
+  id: string;
+  username: string;
+  email: string | null;
+  avatarUrl: string | null;
+}
+
+export interface TeamInvitation {
+  id: string;
+  teamId: string;
+
+  role: TeamInvitationRole;
+  status: TeamInvitationStatus;
+
+  team: TeamInvitationTeam;
+  invitedBy: TeamInvitationActor;
+  invitee: TeamInvitationInvitee;
+
+  createdAt: string;
+  updatedAt: string;
+  expiresAt: string;
+
+  acceptedAt: string | null;
+  rejectedAt: string | null;
+  cancelledAt: string | null;
+}
+
+export interface ListTeamInvitationsResponse {
+  success: true;
+  count: number;
+  data: TeamInvitation[];
+}
+
+export interface CreateTeamInvitationPayload {
+  actorUserId: string;
+  inviteeUserId: string;
+  role: TeamInvitationRole;
+}
+
+export interface CreateTeamInvitationResponse {
+  success: true;
+  message: string;
+  data: TeamInvitation;
+}
+
+export interface CancelTeamInvitationResponse {
+  success: true;
+  message: string;
+  invitationId: string;
+}
+
+export interface ListUserTeamInvitationsResponse {
+  success: true;
+  count: number;
+  data: TeamInvitation[];
+}
+
+export interface RespondToTeamInvitationPayload {
+  actorUserId: string;
+}
+
+export interface RespondToTeamInvitationResponse {
+  success: true;
+  message: string;
+  invitationId: string;
+  teamId: string;
+}
