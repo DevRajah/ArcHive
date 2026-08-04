@@ -9,6 +9,7 @@ import {
   createTeamInvitation,
   getTeamInvitations,
   rejectTeamInvitation,
+  getUserTeamInvitations,
 } from "../services/teams/team-invitation.service";
 
 import {
@@ -256,6 +257,38 @@ export const rejectTeamInvitationController =
         invitationId,
         message:
           "Team invitation rejected successfully.",
+      });
+    } catch (error) {
+      return sendInvitationError(
+        error,
+        request,
+        reply,
+      );
+    }
+  };
+
+  export const listUserTeamInvitationsController =
+  async (
+    request: FastifyRequest,
+    reply: FastifyReply,
+  ) => {
+    try {
+      const { userId } =
+        request.params as {
+          userId: string;
+        };
+
+      const invitations =
+        await getUserTeamInvitations({
+          userId,
+        });
+
+      return reply.send({
+        success: true,
+        count:
+          invitations.length,
+        data:
+          invitations,
       });
     } catch (error) {
       return sendInvitationError(

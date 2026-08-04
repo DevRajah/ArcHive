@@ -1,518 +1,697 @@
 import {
-  TeamInvitationStatus,
-  TeamMemberRole,
+    TeamInvitationStatus,
+    TeamMemberRole,
 } from "@prisma/client";
 
 import { prisma } from "@archive/database";
 
 import type {
-  CreateTeamInvitationInput,
-  TeamInvitationResponse,
+    CreateTeamInvitationInput,
+    TeamInvitationResponse,
 } from "../../types/team-invitation.types";
 
 import {
-  requireTeamMembership,
-  requireTeamRole,
-  TeamAccessDeniedError,
-  TeamNotFoundError,
+    requireTeamMembership,
+    requireTeamRole,
+    TeamAccessDeniedError,
+    TeamNotFoundError,
 } from "./team-permission.service";
 
 import {
-  TeamInvitationConflictError,
-  TeamInvitationNotFoundError,
-  TeamInvitationValidationError,
+    TeamInvitationConflictError,
+    TeamInvitationNotFoundError,
+    TeamInvitationValidationError,
 } from "./team-invitation.errors";
 
 const invitationManagementRoles = [
-  TeamMemberRole.OWNER,
-  TeamMemberRole.ADMIN,
+    TeamMemberRole.OWNER,
+    TeamMemberRole.ADMIN,
 ];
 
 const INVITATION_EXPIRY_DAYS = 7;
 
 const mapInvitation = (
-  invitation: {
-    id: string;
-    teamId: string;
-    role: TeamMemberRole;
-    status: TeamInvitationStatus;
-    createdAt: Date;
-    updatedAt: Date;
-    expiresAt: Date;
-    acceptedAt: Date | null;
-    rejectedAt: Date | null;
-    cancelledAt: Date | null;
+    invitation: {
+        id: string;
+        teamId: string;
+        role: TeamMemberRole;
+        status: TeamInvitationStatus;
 
-    invitedBy: {
-      id: string;
-      username: string;
-      avatarUrl: string | null;
-    };
+        createdAt: Date;
+        updatedAt: Date;
+        expiresAt: Date;
 
-    invitee: {
-      id: string;
-      username: string;
-      email: string | null;
-      avatarUrl: string | null;
-    };
-  },
+        acceptedAt: Date | null;
+        rejectedAt: Date | null;
+        cancelledAt: Date | null;
+
+        team: {
+            id: string;
+            name: string;
+            slug: string;
+            description: string | null;
+        };
+
+        invitedBy: {
+            id: string;
+            username: string;
+            avatarUrl: string | null;
+        };
+
+        invitee: {
+            id: string;
+            username: string;
+            email: string | null;
+            avatarUrl: string | null;
+        };
+    },
 ): TeamInvitationResponse => {
-  return {
-    ...invitation,
+    return {
+        id: invitation.id,
+        teamId: invitation.teamId,
 
-    role:
-      invitation.role as Exclude<
-        TeamMemberRole,
-        "OWNER"
-      >,
-  };
+        role:
+            invitation.role as Exclude<
+                TeamMemberRole,
+                "OWNER"
+            >,
+
+        status: invitation.status,
+
+        team: invitation.team,
+
+        invitedBy: invitation.invitedBy,
+
+        invitee: invitation.invitee,
+
+        createdAt: invitation.createdAt,
+        updatedAt: invitation.updatedAt,
+        expiresAt: invitation.expiresAt,
+
+        acceptedAt: invitation.acceptedAt,
+        rejectedAt: invitation.rejectedAt,
+        cancelledAt: invitation.cancelledAt,
+    };
 };
 
 /**
  * Converts old pending invitations to EXPIRED before returning them.
  */
 const expireOldInvitations = async (
-  teamId?: string,
+    teamId?: string,
 ): Promise<void> => {
-  await prisma.teamInvitation.updateMany({
-    where: {
-      ...(teamId
-        ? {
-            teamId,
-          }
-        : {}),
+    await prisma.teamInvitation.updateMany({
+        where: {
+            ...(teamId
+                ? {
+                    teamId,
+                }
+                : {}),
 
-      status:
-        TeamInvitationStatus.PENDING,
+            status:
+                TeamInvitationStatus.PENDING,
 
-      expiresAt: {
-        lte: new Date(),
-      },
-    },
+            expiresAt: {
+                lte: new Date(),
+            },
+        },
 
-    data: {
-      status:
-        TeamInvitationStatus.EXPIRED,
-    },
-  });
+        data: {
+            status:
+                TeamInvitationStatus.EXPIRED,
+        },
+    });
 };
 
 export const createTeamInvitation = async ({
-  teamId,
-  input,
-}: {
-  teamId: string;
-  input: CreateTeamInvitationInput;
-}): Promise<TeamInvitationResponse> => {
-  await requireTeamRole({
     teamId,
-    userId: input.actorUserId,
-    allowedRoles:
-      invitationManagementRoles,
-  });
-
-  if (!input.inviteeUserId?.trim()) {
-    throw new TeamInvitationValidationError(
-      "An inviteeUserId is required.",
-    );
-  }
-
-//   if (
-//     input.role ===
-//     TeamMemberRole.OWNER
-//   ) {
-//     throw new TeamInvitationValidationError(
-//       "OWNER cannot be assigned through a team invitation.",
-//     );
-//   }
-
-  const team =
-    await prisma.team.findUnique({
-      where: {
-        id: teamId,
-      },
-
-      select: {
-        id: true,
-      },
-    });
-
-  if (!team) {
-    throw new TeamNotFoundError();
-  }
-
-  const invitee =
-    await prisma.user.findUnique({
-      where: {
-        id: input.inviteeUserId,
-      },
-
-      select: {
-        id: true,
-      },
-    });
-
-  if (!invitee) {
-    throw new TeamInvitationValidationError(
-      "The selected ArcHive user does not exist.",
-    );
-  }
-
-  const existingMembership =
-    await prisma.teamMember.findUnique({
-      where: {
-        teamId_userId: {
-          teamId,
-          userId:
-            input.inviteeUserId,
-        },
-      },
-    });
-
-  if (existingMembership) {
-    throw new TeamInvitationConflictError(
-      "This user is already a team member.",
-    );
-  }
-
-  await expireOldInvitations(teamId);
-
-  const existingInvitation =
-    await prisma.teamInvitation.findFirst({
-      where: {
+    input,
+}: {
+    teamId: string;
+    input: CreateTeamInvitationInput;
+}): Promise<TeamInvitationResponse> => {
+    await requireTeamRole({
         teamId,
-
-        inviteeUserId:
-          input.inviteeUserId,
-
-        status:
-          TeamInvitationStatus.PENDING,
-      },
+        userId: input.actorUserId,
+        allowedRoles:
+            invitationManagementRoles,
     });
 
-  if (existingInvitation) {
-    throw new TeamInvitationConflictError(
-      "A pending invitation already exists for this user.",
+    if (!input.inviteeUserId?.trim()) {
+        throw new TeamInvitationValidationError(
+            "An inviteeUserId is required.",
+        );
+    }
+
+    //   if (
+    //     input.role ===
+    //     TeamMemberRole.OWNER
+    //   ) {
+    //     throw new TeamInvitationValidationError(
+    //       "OWNER cannot be assigned through a team invitation.",
+    //     );
+    //   }
+
+    const team =
+        await prisma.team.findUnique({
+            where: {
+                id: teamId,
+            },
+
+            select: {
+                id: true,
+            },
+        });
+
+    if (!team) {
+        throw new TeamNotFoundError();
+    }
+
+    const invitee =
+        await prisma.user.findUnique({
+            where: {
+                id: input.inviteeUserId,
+            },
+
+            select: {
+                id: true,
+            },
+        });
+
+    if (!invitee) {
+        throw new TeamInvitationValidationError(
+            "The selected ArcHive user does not exist.",
+        );
+    }
+
+    const existingMembership =
+        await prisma.teamMember.findUnique({
+            where: {
+                teamId_userId: {
+                    teamId,
+                    userId:
+                        input.inviteeUserId,
+                },
+            },
+        });
+
+    if (existingMembership) {
+        throw new TeamInvitationConflictError(
+            "This user is already a team member.",
+        );
+    }
+
+    await expireOldInvitations(teamId);
+
+    const existingInvitation =
+        await prisma.teamInvitation.findFirst({
+            where: {
+                teamId,
+
+                inviteeUserId:
+                    input.inviteeUserId,
+
+                status:
+                    TeamInvitationStatus.PENDING,
+            },
+        });
+
+    if (existingInvitation) {
+        throw new TeamInvitationConflictError(
+            "A pending invitation already exists for this user.",
+        );
+    }
+
+    const expiresAt =
+        new Date();
+
+    expiresAt.setDate(
+        expiresAt.getDate() +
+        INVITATION_EXPIRY_DAYS,
     );
-  }
 
-  const expiresAt =
-    new Date();
+    const invitation =
+        await prisma.teamInvitation.create({
+            data: {
+                teamId,
 
-  expiresAt.setDate(
-    expiresAt.getDate() +
-      INVITATION_EXPIRY_DAYS,
-  );
+                invitedById:
+                    input.actorUserId,
 
-  const invitation =
-    await prisma.teamInvitation.create({
-      data: {
-        teamId,
+                inviteeUserId:
+                    input.inviteeUserId,
 
-        invitedById:
-          input.actorUserId,
+                role:
+                    input.role,
 
-        inviteeUserId:
-          input.inviteeUserId,
+                expiresAt,
+            },
 
-        role:
-          input.role,
+            include: {
+                team: {
+                    select: {
+                        id: true,
+                        name: true,
+                        slug: true,
+                        description: true,
+                    },
+                },
 
-        expiresAt,
-      },
+                invitedBy: {
+                    select: {
+                        id: true,
+                        username: true,
+                        avatarUrl: true,
+                    },
+                },
 
-      include: {
-        invitedBy: {
-          select: {
-            id: true,
-            username: true,
-            avatarUrl: true,
-          },
-        },
+                invitee: {
+                    select: {
+                        id: true,
+                        username: true,
+                        email: true,
+                        avatarUrl: true,
+                    },
+                },
+            },
+        });
 
-        invitee: {
-          select: {
-            id: true,
-            username: true,
-            email: true,
-            avatarUrl: true,
-          },
-        },
-      },
-    });
-
-  return mapInvitation(
-    invitation,
-  );
+    return mapInvitation(
+        invitation,
+    );
 };
 
 export const getTeamInvitations = async ({
-  teamId,
-  actorUserId,
-}: {
-  teamId: string;
-  actorUserId: string;
-}): Promise<
-  TeamInvitationResponse[]
-> => {
-  await requireTeamRole({
     teamId,
-    userId: actorUserId,
-    allowedRoles:
-      invitationManagementRoles,
-  });
-
-  await expireOldInvitations(teamId);
-
-  const invitations =
-    await prisma.teamInvitation.findMany({
-      where: {
+    actorUserId,
+}: {
+    teamId: string;
+    actorUserId: string;
+}): Promise<
+    TeamInvitationResponse[]
+> => {
+    await requireTeamRole({
         teamId,
-      },
-
-      orderBy: {
-        createdAt: "desc",
-      },
-
-      include: {
-        invitedBy: {
-          select: {
-            id: true,
-            username: true,
-            avatarUrl: true,
-          },
-        },
-
-        invitee: {
-          select: {
-            id: true,
-            username: true,
-            email: true,
-            avatarUrl: true,
-          },
-        },
-      },
+        userId: actorUserId,
+        allowedRoles:
+            invitationManagementRoles,
     });
 
-  return invitations.map(
-    mapInvitation,
-  );
+    await expireOldInvitations(teamId);
+
+    const invitations =
+        await prisma.teamInvitation.findMany({
+            where: {
+                teamId,
+            },
+
+            orderBy: {
+                createdAt: "desc",
+            },
+
+            include: {
+                team: {
+                    select: {
+                        id: true,
+                        name: true,
+                        slug: true,
+                        description: true,
+                    },
+                },
+
+                invitedBy: {
+                    select: {
+                        id: true,
+                        username: true,
+                        avatarUrl: true,
+                    },
+                },
+
+                invitee: {
+                    select: {
+                        id: true,
+                        username: true,
+                        email: true,
+                        avatarUrl: true,
+                    },
+                },
+            },
+        });
+
+    return invitations.map(
+        mapInvitation,
+    );
 };
 
 export const cancelTeamInvitation = async ({
-  teamId,
-  invitationId,
-  actorUserId,
-}: {
-  teamId: string;
-  invitationId: string;
-  actorUserId: string;
-}): Promise<void> => {
-  await requireTeamRole({
     teamId,
-    userId: actorUserId,
-    allowedRoles:
-      invitationManagementRoles,
-  });
-
-  const invitation =
-    await prisma.teamInvitation.findFirst({
-      where: {
-        id: invitationId,
+    invitationId,
+    actorUserId,
+}: {
+    teamId: string;
+    invitationId: string;
+    actorUserId: string;
+}): Promise<void> => {
+    await requireTeamRole({
         teamId,
-      },
+        userId: actorUserId,
+        allowedRoles:
+            invitationManagementRoles,
     });
 
-  if (!invitation) {
-    throw new TeamInvitationNotFoundError();
-  }
+    const invitation =
+        await prisma.teamInvitation.findFirst({
+            where: {
+                id: invitationId,
+                teamId,
+            },
+        });
 
-  if (
-    invitation.status !==
-    TeamInvitationStatus.PENDING
-  ) {
-    throw new TeamInvitationConflictError(
-      "Only pending invitations can be cancelled.",
-    );
-  }
+    if (!invitation) {
+        throw new TeamInvitationNotFoundError();
+    }
 
-  await prisma.teamInvitation.update({
-    where: {
-      id: invitation.id,
-    },
+    if (
+        invitation.status !==
+        TeamInvitationStatus.PENDING
+    ) {
+        throw new TeamInvitationConflictError(
+            "Only pending invitations can be cancelled.",
+        );
+    }
 
-    data: {
-      status:
-        TeamInvitationStatus.CANCELLED,
+    await prisma.teamInvitation.update({
+        where: {
+            id: invitation.id,
+        },
 
-      cancelledAt:
-        new Date(),
-    },
-  });
+        data: {
+            status:
+                TeamInvitationStatus.CANCELLED,
+
+            cancelledAt:
+                new Date(),
+        },
+    });
 };
 
 export const acceptTeamInvitation = async ({
-  invitationId,
-  actorUserId,
+    invitationId,
+    actorUserId,
 }: {
-  invitationId: string;
-  actorUserId: string;
+    invitationId: string;
+    actorUserId: string;
 }) => {
-  await expireOldInvitations();
+    await expireOldInvitations();
 
-  const invitation =
-    await prisma.teamInvitation.findUnique({
-      where: {
-        id: invitationId,
-      },
-    });
-
-  if (!invitation) {
-    throw new TeamInvitationNotFoundError();
-  }
-
-  if (
-    invitation.inviteeUserId !==
-    actorUserId
-  ) {
-    throw new TeamAccessDeniedError(
-      "Only the invited user can accept this invitation.",
-    );
-  }
-
-  if (
-    invitation.status ===
-    TeamInvitationStatus.EXPIRED
-  ) {
-    throw new TeamInvitationConflictError(
-      "This team invitation has expired.",
-    );
-  }
-
-  if (
-    invitation.status !==
-    TeamInvitationStatus.PENDING
-  ) {
-    throw new TeamInvitationConflictError(
-      "This team invitation is no longer pending.",
-    );
-  }
-
-  const result =
-    await prisma.$transaction(
-      async (tx) => {
-        const existingMembership =
-          await tx.teamMember.findUnique({
+    const invitation =
+        await prisma.teamInvitation.findUnique({
             where: {
-              teamId_userId: {
-                teamId:
-                  invitation.teamId,
-
-                userId:
-                  actorUserId,
-              },
+                id: invitationId,
             },
-          });
-
-        if (existingMembership) {
-          throw new TeamInvitationConflictError(
-            "You are already a member of this team.",
-          );
-        }
-
-        const membership =
-          await tx.teamMember.create({
-            data: {
-              teamId:
-                invitation.teamId,
-
-              userId:
-                actorUserId,
-
-              role:
-                invitation.role,
-            },
-          });
-
-        await tx.teamInvitation.update({
-          where: {
-            id: invitation.id,
-          },
-
-          data: {
-            status:
-              TeamInvitationStatus.ACCEPTED,
-
-            acceptedAt:
-              new Date(),
-          },
         });
 
-        return membership;
-      },
-    );
+    if (!invitation) {
+        throw new TeamInvitationNotFoundError();
+    }
 
-  return result;
+    if (
+        invitation.inviteeUserId !==
+        actorUserId
+    ) {
+        throw new TeamAccessDeniedError(
+            "Only the invited user can accept this invitation.",
+        );
+    }
+
+    if (
+        invitation.status ===
+        TeamInvitationStatus.EXPIRED
+    ) {
+        throw new TeamInvitationConflictError(
+            "This team invitation has expired.",
+        );
+    }
+
+    if (
+        invitation.status !==
+        TeamInvitationStatus.PENDING
+    ) {
+        throw new TeamInvitationConflictError(
+            "This team invitation is no longer pending.",
+        );
+    }
+
+    const result =
+        await prisma.$transaction(
+            async (tx) => {
+                const existingMembership =
+                    await tx.teamMember.findUnique({
+                        where: {
+                            teamId_userId: {
+                                teamId:
+                                    invitation.teamId,
+
+                                userId:
+                                    actorUserId,
+                            },
+                        },
+                    });
+
+                if (existingMembership) {
+                    throw new TeamInvitationConflictError(
+                        "You are already a member of this team.",
+                    );
+                }
+
+                const membership =
+                    await tx.teamMember.create({
+                        data: {
+                            teamId:
+                                invitation.teamId,
+
+                            userId:
+                                actorUserId,
+
+                            role:
+                                invitation.role,
+                        },
+                    });
+
+                await tx.teamInvitation.update({
+                    where: {
+                        id: invitation.id,
+                    },
+
+                    data: {
+                        status:
+                            TeamInvitationStatus.ACCEPTED,
+
+                        acceptedAt:
+                            new Date(),
+                    },
+                });
+
+                return membership;
+            },
+        );
+
+    return result;
 };
 
 export const rejectTeamInvitation = async ({
-  invitationId,
-  actorUserId,
+    invitationId,
+    actorUserId,
 }: {
-  invitationId: string;
-  actorUserId: string;
+    invitationId: string;
+    actorUserId: string;
 }): Promise<void> => {
-  await expireOldInvitations();
+    await expireOldInvitations();
 
-  const invitation =
-    await prisma.teamInvitation.findUnique({
-      where: {
-        id: invitationId,
-      },
+    const invitation =
+        await prisma.teamInvitation.findUnique({
+            where: {
+                id: invitationId,
+            },
+        });
+
+    if (!invitation) {
+        throw new TeamInvitationNotFoundError();
+    }
+
+    if (
+        invitation.inviteeUserId !==
+        actorUserId
+    ) {
+        throw new TeamAccessDeniedError(
+            "Only the invited user can reject this invitation.",
+        );
+    }
+
+    if (
+        invitation.status ===
+        TeamInvitationStatus.EXPIRED
+    ) {
+        throw new TeamInvitationConflictError(
+            "This team invitation has expired.",
+        );
+    }
+
+    if (
+        invitation.status !==
+        TeamInvitationStatus.PENDING
+    ) {
+        throw new TeamInvitationConflictError(
+            "This team invitation is no longer pending.",
+        );
+    }
+
+    await prisma.teamInvitation.update({
+        where: {
+            id: invitation.id,
+        },
+
+        data: {
+            status:
+                TeamInvitationStatus.REJECTED,
+
+            rejectedAt:
+                new Date(),
+        },
+    });
+};
+
+export const getUserTeamInvitations = async ({
+    userId,
+}: {
+    userId: string;
+}): Promise<TeamInvitationResponse[]> => {
+    if (!userId?.trim()) {
+        throw new TeamInvitationValidationError(
+            "A userId is required.",
+        );
+    }
+
+    const user = await prisma.user.findUnique({
+        where: {
+            id: userId,
+        },
+
+        select: {
+            id: true,
+        },
     });
 
-  if (!invitation) {
-    throw new TeamInvitationNotFoundError();
-  }
+    if (!user) {
+        throw new TeamInvitationValidationError(
+            "The selected ArcHive user does not exist.",
+        );
+    }
 
-  if (
-    invitation.inviteeUserId !==
-    actorUserId
-  ) {
-    throw new TeamAccessDeniedError(
-      "Only the invited user can reject this invitation.",
-    );
-  }
+    /**
+     * Expire stale pending invitations before returning the inbox.
+     */
+    await prisma.teamInvitation.updateMany({
+        where: {
+            inviteeUserId: userId,
 
-  if (
-    invitation.status ===
-    TeamInvitationStatus.EXPIRED
-  ) {
-    throw new TeamInvitationConflictError(
-      "This team invitation has expired.",
-    );
-  }
+            status:
+                TeamInvitationStatus.PENDING,
 
-  if (
-    invitation.status !==
-    TeamInvitationStatus.PENDING
-  ) {
-    throw new TeamInvitationConflictError(
-      "This team invitation is no longer pending.",
-    );
-  }
+            expiresAt: {
+                lte: new Date(),
+            },
+        },
 
-  await prisma.teamInvitation.update({
-    where: {
-      id: invitation.id,
-    },
+        data: {
+            status:
+                TeamInvitationStatus.EXPIRED,
+        },
+    });
 
-    data: {
-      status:
-        TeamInvitationStatus.REJECTED,
+    const invitations =
+        await prisma.teamInvitation.findMany({
+            where: {
+                inviteeUserId: userId,
+            },
 
-      rejectedAt:
-        new Date(),
-    },
-  });
+            orderBy: {
+                createdAt: "desc",
+            },
+
+            include: {
+                team: {
+                    select: {
+                        id: true,
+                        name: true,
+                        slug: true,
+                        description: true,
+                    },
+                },
+
+                invitedBy: {
+                    select: {
+                        id: true,
+                        username: true,
+                        avatarUrl: true,
+                    },
+                },
+
+                invitee: {
+                    select: {
+                        id: true,
+                        username: true,
+                        email: true,
+                        avatarUrl: true,
+                    },
+                },
+            },
+        });
+
+    return invitations.map((invitation) => ({
+        id:
+            invitation.id,
+
+        teamId:
+            invitation.teamId,
+
+        role:
+            invitation.role as Exclude<
+                TeamMemberRole,
+                "OWNER"
+            >,
+
+        status:
+            invitation.status,
+
+        invitedBy:
+            invitation.invitedBy,
+
+        invitee:
+            invitation.invitee,
+
+        createdAt:
+            invitation.createdAt,
+
+        updatedAt:
+            invitation.updatedAt,
+
+        expiresAt:
+            invitation.expiresAt,
+
+        acceptedAt:
+            invitation.acceptedAt,
+
+        rejectedAt:
+            invitation.rejectedAt,
+
+        cancelledAt:
+            invitation.cancelledAt,
+
+        /**
+         * Extra team context for the invitation inbox.
+         */
+        team:
+            invitation.team,
+    })) as TeamInvitationResponse[];
 };
