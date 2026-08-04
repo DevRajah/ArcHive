@@ -60,6 +60,8 @@ model User {
   teamMemberships TeamMember[]
 
   teamRepositoriesAdded TeamRepository[] @relation("TeamRepositoryAddedBy")
+  teamInvitationsReceived TeamInvitation[] @relation("TeamInvitationInvitee")
+teamInvitationsSent     TeamInvitation[] @relation("TeamInvitationInvitedBy")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -102,6 +104,39 @@ model Repository {
   updatedAt DateTime @updatedAt
 }
 
+model TeamInvitation {
+  id String @id @default(uuid())
+
+  teamId String
+
+  invitedById String
+  inviteeUserId String
+
+  role TeamMemberRole
+
+  status TeamInvitationStatus @default(PENDING)
+
+  expiresAt DateTime
+  acceptedAt DateTime?
+  rejectedAt DateTime?
+  cancelledAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+invitedBy User @relation("TeamInvitationInvitedBy", fields: [invitedById], references: [id], onDelete: Cascade)
+
+invitee User @relation("TeamInvitationInvitee", fields: [inviteeUserId], references: [id], onDelete: Cascade)
+
+  @@index([teamId])
+  @@index([inviteeUserId])
+  @@index([status])
+  @@index([expiresAt])
+  @@unique([teamId, inviteeUserId, status])
+}
+
 model Team {
   id          String  @id @default(uuid())
   name        String
@@ -116,6 +151,8 @@ createdBy User @relation("TeamCreator", fields: [createdById], references: [id],
   repositories TeamRepository[]
 
   reports Report[]
+
+  invitations TeamInvitation[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -364,6 +401,14 @@ enum ArchitectureAdvisorSeverity {
   MEDIUM
   HIGH
   CRITICAL
+}
+
+enum TeamInvitationStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  EXPIRED
+  CANCELLED
 }
 
 enum ArchitectureAdvisorCategory {

@@ -25,9 +25,9 @@ import organizationRoutes from "./routes/organization.routes";
 import { reportRoutes } from "./routes/report.routes";
 import { reportQueryRoutes } from "./routes/report-query.routes";
 import { teamRoutes } from "./routes/team.routes";
-// import {
-//   teamOrganizationRoutes,
-// } from "./routes/team-organization.routes";
+import {
+  teamInvitationRoutes,
+} from "./routes/team-invitation.routes";
 import {
   teamReportRoutes,
 } from "./routes/team-report.routes";
@@ -150,12 +150,12 @@ export const buildApp = async () => {
     prefix: "/api",
   });
 
-  // await app.register(
-  //   teamOrganizationRoutes,
-  //   {
-  //     prefix: "/api",
-  //   },
-  // );
+  await app.register(
+    teamInvitationRoutes,
+    {
+      prefix: "/api",
+    },
+  );
 
   await app.register(
     teamReportRoutes,
