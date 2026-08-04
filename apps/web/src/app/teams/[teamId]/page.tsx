@@ -32,6 +32,7 @@ import type {
 } from "@/types/team-workspace.types";
 import { TeamRepositoriesPanel } from "@/components/teams/repositories/TeamRepositoriesPanel";
 import { TeamReportsPanel } from "@/components/teams/reports/TeamReportsPanel";
+import { TeamWorkspaceSettings } from "@/components/teams/settings/TeamWorkspaceSettings";
 
 interface ArcHiveSession {
     userId?: string;
@@ -299,6 +300,13 @@ export default function TeamWorkspacePage() {
                         }
                         canDeleteReports={
                             permissions.canDeleteReports
+                        }
+                    />
+                ) : activeTab === "settings" ? (
+                    <TeamWorkspaceSettings
+                        team={team}
+                        canDeleteTeam={
+                            permissions.canDeleteTeam
                         }
                     />
                 ) : (

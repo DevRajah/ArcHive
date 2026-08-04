@@ -1,11 +1,13 @@
 import {
-  LayoutDashboard,
-  FolderGit2,
-  Settings,
   Activity,
   BriefcaseBusiness,
+  FileBarChart2,
+  FolderGit2,
   GitCompareArrows,
+  LayoutDashboard,
   Radar,
+  Settings,
+  UsersRound,
 } from "lucide-react";
 
 export const navigationItems = [
@@ -20,9 +22,19 @@ export const navigationItems = [
     icon: FolderGit2,
   },
   {
+    label: "Teams",
+    href: "/teams",
+    icon: UsersRound,
+  },
+  {
     label: "Portfolio",
     href: "/portfolio",
     icon: BriefcaseBusiness,
+  },
+  {
+    label: "Reports",
+    href: "/reports",
+    icon: FileBarChart2,
   },
   {
     label: "Compare",
