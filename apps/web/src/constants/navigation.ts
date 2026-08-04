@@ -5,6 +5,7 @@ import {
   FolderGit2,
   GitCompareArrows,
   LayoutDashboard,
+  Mail,
   Radar,
   Settings,
   UsersRound,
@@ -25,6 +26,11 @@ export const navigationItems = [
     label: "Teams",
     href: "/teams",
     icon: UsersRound,
+  },
+  {
+    label: "Invitations",
+    href: "/invitations",
+    icon: Mail,
   },
   {
     label: "Portfolio",
