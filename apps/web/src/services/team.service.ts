@@ -3,11 +3,15 @@ import { api } from "@/lib/api";
 import type {
   AddTeamMemberPayload,
   AddTeamMemberResponse,
+  AddTeamRepositoryPayload,
+  AddTeamRepositoryResponse,
   CreateTeamPayload,
   CreateTeamResponse,
   ListTeamMembersResponse,
+  ListTeamRepositoriesResponse,
   ListTeamsResponse,
   RemoveTeamMemberResponse,
+  RemoveTeamRepositoryResponse,
   TeamDashboard,
   TeamDetailsResponse,
   UpdateTeamMemberRolePayload,
@@ -161,6 +165,67 @@ async removeTeamMember(
   const { data } =
     await api.delete<RemoveTeamMemberResponse>(
       `/teams/${teamId}/members/${memberId}`,
+      {
+        params: {
+          actorUserId,
+        },
+      },
+    );
+
+  return data;
+}
+
+
+/**
+ * Fetch repositories attached to one Team Workspace.
+ */
+async getTeamRepositories(
+  teamId: string,
+  userId: string,
+): Promise<ListTeamRepositoriesResponse> {
+  const { data } =
+    await api.get<ListTeamRepositoriesResponse>(
+      `/teams/${teamId}/repositories`,
+      {
+        params: {
+          userId,
+        },
+      },
+    );
+
+  return data;
+}
+
+/**
+ * Attach one repository to a Team Workspace.
+ *
+ * Only repositories belonging to the acting user's
+ * ArcHive account can be attached.
+ */
+async addTeamRepository(
+  teamId: string,
+  payload: AddTeamRepositoryPayload,
+): Promise<AddTeamRepositoryResponse> {
+  const { data } =
+    await api.post<AddTeamRepositoryResponse>(
+      `/teams/${teamId}/repositories`,
+      payload,
+    );
+
+  return data;
+}
+
+/**
+ * Remove one repository from the Team Workspace.
+ */
+async removeTeamRepository(
+  teamId: string,
+  repositoryId: string,
+  actorUserId: string,
+): Promise<RemoveTeamRepositoryResponse> {
+  const { data } =
+    await api.delete<RemoveTeamRepositoryResponse>(
+      `/teams/${teamId}/repositories/${repositoryId}`,
       {
         params: {
           actorUserId,

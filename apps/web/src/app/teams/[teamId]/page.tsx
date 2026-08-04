@@ -30,6 +30,7 @@ import { getTeamPermissions } from "@/lib/team-permissions";
 import type {
     TeamWorkspaceTab,
 } from "@/types/team-workspace.types";
+import { TeamRepositoriesPanel } from "@/components/teams/repositories/TeamRepositoriesPanel";
 
 interface ArcHiveSession {
     userId?: string;
@@ -271,6 +272,14 @@ export default function TeamWorkspacePage() {
                     <TeamWorkspaceOverview
                         teamId={teamId}
                         teamName={team.name}
+                    />
+                ) : activeTab === "repositories" ? (
+                    <TeamRepositoriesPanel
+                        teamId={teamId}
+                        userId={userId}
+                        canManageRepositories={
+                            permissions.canManageRepositories
+                        }
                     />
                 ) : activeTab === "members" ? (
                     <TeamMembersPanel

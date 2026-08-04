@@ -11,11 +11,15 @@ import { teamService } from "@/services/team.service";
 import type {
   AddTeamMemberPayload,
   AddTeamMemberResponse,
+  AddTeamRepositoryPayload,
+  AddTeamRepositoryResponse,
   CreateTeamPayload,
   CreateTeamResponse,
   ListTeamMembersResponse,
+  ListTeamRepositoriesResponse,
   ListTeamsResponse,
   RemoveTeamMemberResponse,
+  RemoveTeamRepositoryResponse,
   TeamDashboard,
   TeamDetailsResponse,
   UpdateTeamMemberRolePayload,
@@ -341,6 +345,139 @@ export function useRemoveTeamMember(
       queryClient.invalidateQueries({
         queryKey:
           TEAM_QUERY_KEYS.members(
+            teamId,
+            userId,
+          ),
+      });
+
+      queryClient.invalidateQueries({
+        queryKey:
+          TEAM_QUERY_KEYS.team(
+            teamId,
+            userId,
+          ),
+      });
+
+      queryClient.invalidateQueries({
+        queryKey:
+          TEAM_QUERY_KEYS.dashboard(
+            teamId,
+          ),
+      });
+    },
+  });
+}
+
+/**
+ * Load all repositories attached to a Team Workspace.
+ */
+export function useTeamRepositories(
+  teamId: string,
+  userId: string,
+) {
+  return useQuery<ListTeamRepositoriesResponse>({
+    queryKey:
+      TEAM_QUERY_KEYS.repositories(
+        teamId,
+        userId,
+      ),
+
+    queryFn: () =>
+      teamService.getTeamRepositories(
+        teamId,
+        userId,
+      ),
+
+    enabled:
+      Boolean(teamId) &&
+      Boolean(userId),
+
+    staleTime: 1000 * 60,
+
+    refetchOnWindowFocus: false,
+  });
+}
+
+/**
+ * Attach one repository to a Team Workspace.
+ */
+export function useAddTeamRepository(
+  teamId: string,
+  userId: string,
+) {
+  const queryClient =
+    useQueryClient();
+
+  return useMutation<
+    AddTeamRepositoryResponse,
+    Error,
+    AddTeamRepositoryPayload
+  >({
+    mutationFn: (payload) =>
+      teamService.addTeamRepository(
+        teamId,
+        payload,
+      ),
+
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey:
+          TEAM_QUERY_KEYS.repositories(
+            teamId,
+            userId,
+          ),
+      });
+
+      queryClient.invalidateQueries({
+        queryKey:
+          TEAM_QUERY_KEYS.team(
+            teamId,
+            userId,
+          ),
+      });
+
+      queryClient.invalidateQueries({
+        queryKey:
+          TEAM_QUERY_KEYS.dashboard(
+            teamId,
+          ),
+      });
+    },
+  });
+}
+
+/**
+ * Remove one repository from a Team Workspace.
+ */
+export function useRemoveTeamRepository(
+  teamId: string,
+  userId: string,
+) {
+  const queryClient =
+    useQueryClient();
+
+  return useMutation<
+    RemoveTeamRepositoryResponse,
+    Error,
+    {
+      repositoryId: string;
+      actorUserId: string;
+    }
+  >({
+    mutationFn: ({
+      repositoryId,
+      actorUserId,
+    }) =>
+      teamService.removeTeamRepository(
+        teamId,
+        repositoryId,
+        actorUserId,
+      ),
+
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey:
+          TEAM_QUERY_KEYS.repositories(
             teamId,
             userId,
           ),

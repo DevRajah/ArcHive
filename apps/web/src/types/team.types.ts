@@ -242,3 +242,44 @@ export interface RemoveTeamMemberResponse {
   message: string;
   memberId: string;
 }
+
+export interface TeamRepositoryAddedBy {
+  id: string;
+  username: string;
+}
+
+export interface TeamRepository {
+  id: string;
+  repositoryId: string;
+  name: string;
+  owner: string;
+  fullName: string;
+  description: string | null;
+  language: string | null;
+  isTracked: boolean;
+  addedAt: string;
+  addedBy: TeamRepositoryAddedBy;
+}
+
+export interface ListTeamRepositoriesResponse {
+  success: true;
+  count: number;
+  data: TeamRepository[];
+}
+
+export interface AddTeamRepositoryPayload {
+  actorUserId: string;
+  repositoryId: string;
+}
+
+export interface AddTeamRepositoryResponse {
+  success: true;
+  message: string;
+  data: TeamRepository;
+}
+
+export interface RemoveTeamRepositoryResponse {
+  success: true;
+  message: string;
+  repositoryId: string;
+}
