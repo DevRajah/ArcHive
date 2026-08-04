@@ -7,13 +7,19 @@ import {
 import {
   FilePlus2,
   LockKeyhole,
+  RefreshCcw,
+  TriangleAlert,
 } from "lucide-react";
 
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 
+import { DeleteTeamReportDialog } from "@/components/teams/reports/DeleteTeamReportDialog";
 import { GenerateTeamReportDialog } from "@/components/teams/reports/GenerateTeamReportDialog";
+import { TeamReportDetailsDrawer } from "@/components/teams/reports/TeamReportDetailsDrawer";
 import { TeamReportsEmptyState } from "@/components/teams/reports/TeamReportsEmptyState";
 import { TeamReportsSummaryCards } from "@/components/teams/reports/TeamReportsSummaryCards";
 import { TeamReportsTable } from "@/components/teams/reports/TeamReportsTable";
@@ -58,6 +64,14 @@ export function TeamReportsPanel({
   const [
     selectedReport,
     setSelectedReport,
+  ] =
+    useState<TeamReportListItem | null>(
+      null,
+    );
+
+  const [
+    reportToDelete,
+    setReportToDelete,
   ] =
     useState<TeamReportListItem | null>(
       null,
@@ -151,20 +165,27 @@ export function TeamReportsPanel({
   if (reportsQuery.isLoading) {
     return (
       <div className="space-y-6">
-        <div className="h-10 w-64 animate-pulse rounded bg-muted" />
+        <div className="flex justify-between gap-4">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-64" />
+            <Skeleton className="h-4 w-96 max-w-full" />
+          </div>
+
+          <Skeleton className="h-10 w-40" />
+        </div>
 
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {Array.from({
             length: 4,
           }).map((_, index) => (
-            <div
+            <Skeleton
               key={index}
-              className="h-36 animate-pulse rounded-xl bg-muted"
+              className="h-36 rounded-xl"
             />
           ))}
         </div>
 
-        <div className="h-96 animate-pulse rounded-xl bg-muted" />
+        <Skeleton className="h-96 rounded-xl" />
       </div>
     );
   }
@@ -174,25 +195,40 @@ export function TeamReportsPanel({
     !reportsQuery.data
   ) {
     return (
-      <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-8 text-center">
-        <h2 className="text-xl font-semibold">
-          Unable to load Team Reports
-        </h2>
+      <Card className="flex min-h-[380px] items-center justify-center border-dashed">
+        <div className="max-w-md px-6 py-14 text-center">
+          <TriangleAlert className="mx-auto h-10 w-10 text-destructive" />
 
-        <p className="mt-2 text-sm text-muted-foreground">
-          ArcHive could not load reports for this workspace.
-        </p>
+          <h2 className="mt-4 text-xl font-semibold">
+            Unable to load Team Reports
+          </h2>
 
-        <Button
-          variant="outline"
-          className="mt-5"
-          onClick={() =>
-            reportsQuery.refetch()
-          }
-        >
-          Retry
-        </Button>
-      </div>
+          <p className="mt-2 text-sm text-muted-foreground">
+            ArcHive could not load reports for this workspace.
+          </p>
+
+          <Button
+            variant="outline"
+            className="mt-5"
+            disabled={
+              reportsQuery.isFetching
+            }
+            onClick={() =>
+              reportsQuery.refetch()
+            }
+          >
+            <RefreshCcw
+              className={`mr-2 h-4 w-4 ${
+                reportsQuery.isFetching
+                  ? "animate-spin"
+                  : ""
+              }`}
+            />
+
+            Retry
+          </Button>
+        </div>
+      </Card>
     );
   }
 
@@ -256,11 +292,9 @@ export function TeamReportsPanel({
             onDownloadCsv={
               handleDownloadCsv
             }
-            onDelete={(report) => {
-              toast.warning(
-                `Delete confirmation for "${report.title}" will be connected in the next Team Reports batch.`,
-              );
-            }}
+            onDelete={
+              setReportToDelete
+            }
           />
         </>
       )}
@@ -274,31 +308,34 @@ export function TeamReportsPanel({
         }
       />
 
-      {selectedReportQuery.data ? (
-        <div className="rounded-xl border bg-card p-6">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <h3 className="font-semibold">
-                {selectedReportQuery.data.title}
-              </h3>
+      <TeamReportDetailsDrawer
+        report={
+          selectedReportQuery.data ??
+          null
+        }
+        open={Boolean(selectedReport)}
+        isLoading={
+          selectedReportQuery.isLoading ||
+          selectedReportQuery.isFetching
+        }
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedReport(null);
+          }
+        }}
+      />
 
-              <p className="mt-1 text-sm text-muted-foreground">
-                Team Report detail loaded successfully. The Schema v3
-                analytics drawer will be connected next.
-              </p>
-            </div>
-
-            <Button
-              variant="outline"
-              onClick={() =>
-                setSelectedReport(null)
-              }
-            >
-              Close
-            </Button>
-          </div>
-        </div>
-      ) : null}
+      <DeleteTeamReportDialog
+        teamId={teamId}
+        actorUserId={userId}
+        report={reportToDelete}
+        open={Boolean(reportToDelete)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setReportToDelete(null);
+          }
+        }}
+      />
     </div>
   );
 }
