@@ -193,7 +193,52 @@ export interface TeamDashboard {
   recommendations: TeamRecommendation[];
 }
 
-// export interface TeamDashboardResponse {
-//   success: true;
-//   data: TeamDashboard;
-// }
+export interface TeamMember {
+  id: string;
+  userId: string;
+  username: string;
+  email: string | null;
+  avatarUrl: string | null;
+  role: TeamMemberRole;
+  joinedAt: string;
+}
+
+export interface ListTeamMembersResponse {
+  success: true;
+  count: number;
+  data: TeamMember[];
+}
+
+export type AddTeamMemberRole =
+  | "ADMIN"
+  | "MEMBER"
+  | "VIEWER";
+
+export interface AddTeamMemberPayload {
+  actorUserId: string;
+  userId: string;
+  role: AddTeamMemberRole;
+}
+
+export interface AddTeamMemberResponse {
+  success: true;
+  message: string;
+  data: TeamMember;
+}
+
+export interface UpdateTeamMemberRolePayload {
+  actorUserId: string;
+  role: AddTeamMemberRole;
+}
+
+export interface UpdateTeamMemberRoleResponse {
+  success: true;
+  message: string;
+  data: TeamMember;
+}
+
+export interface RemoveTeamMemberResponse {
+  success: true;
+  message: string;
+  memberId: string;
+}

@@ -9,11 +9,17 @@ import {
 import { teamService } from "@/services/team.service";
 
 import type {
+  AddTeamMemberPayload,
+  AddTeamMemberResponse,
   CreateTeamPayload,
   CreateTeamResponse,
+  ListTeamMembersResponse,
   ListTeamsResponse,
+  RemoveTeamMemberResponse,
   TeamDashboard,
   TeamDetailsResponse,
+  UpdateTeamMemberRolePayload,
+  UpdateTeamMemberRoleResponse,
 } from "@/types/team.types";
 
 export const TEAM_QUERY_KEYS = {
@@ -174,5 +180,186 @@ export function useTeamDashboard(
     staleTime: 1000 * 60 * 2,
 
     refetchOnWindowFocus: false,
+  });
+}
+
+/**
+ * Load all members of a Team Workspace.
+ */
+export function useTeamMembers(
+  teamId: string,
+  userId: string,
+) {
+  return useQuery<ListTeamMembersResponse>({
+    queryKey:
+      TEAM_QUERY_KEYS.members(
+        teamId,
+        userId,
+      ),
+
+    queryFn: () =>
+      teamService.getTeamMembers(
+        teamId,
+        userId,
+      ),
+
+    enabled:
+      Boolean(teamId) &&
+      Boolean(userId),
+
+    staleTime: 1000 * 60,
+
+    refetchOnWindowFocus: false,
+  });
+}
+
+/**
+ * Add a new member to a Team Workspace.
+ */
+export function useAddTeamMember(
+  teamId: string,
+  userId: string,
+) {
+  const queryClient =
+    useQueryClient();
+
+  return useMutation<
+    AddTeamMemberResponse,
+    Error,
+    AddTeamMemberPayload
+  >({
+    mutationFn: (payload) =>
+      teamService.addTeamMember(
+        teamId,
+        payload,
+      ),
+
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey:
+          TEAM_QUERY_KEYS.members(
+            teamId,
+            userId,
+          ),
+      });
+
+      queryClient.invalidateQueries({
+        queryKey:
+          TEAM_QUERY_KEYS.team(
+            teamId,
+            userId,
+          ),
+      });
+
+      queryClient.invalidateQueries({
+        queryKey:
+          TEAM_QUERY_KEYS.dashboard(
+            teamId,
+          ),
+      });
+    },
+  });
+}
+
+/**
+ * Update a Team member's role.
+ */
+export function useUpdateTeamMemberRole(
+  teamId: string,
+  userId: string,
+) {
+  const queryClient =
+    useQueryClient();
+
+  return useMutation<
+    UpdateTeamMemberRoleResponse,
+    Error,
+    {
+      memberId: string;
+      payload: UpdateTeamMemberRolePayload;
+    }
+  >({
+    mutationFn: ({
+      memberId,
+      payload,
+    }) =>
+      teamService.updateTeamMemberRole(
+        teamId,
+        memberId,
+        payload,
+      ),
+
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey:
+          TEAM_QUERY_KEYS.members(
+            teamId,
+            userId,
+          ),
+      });
+
+      queryClient.invalidateQueries({
+        queryKey:
+          TEAM_QUERY_KEYS.team(
+            teamId,
+            userId,
+          ),
+      });
+    },
+  });
+}
+
+/**
+ * Remove a member from a Team Workspace.
+ */
+export function useRemoveTeamMember(
+  teamId: string,
+  userId: string,
+) {
+  const queryClient =
+    useQueryClient();
+
+  return useMutation<
+    RemoveTeamMemberResponse,
+    Error,
+    {
+      memberId: string;
+      actorUserId: string;
+    }
+  >({
+    mutationFn: ({
+      memberId,
+      actorUserId,
+    }) =>
+      teamService.removeTeamMember(
+        teamId,
+        memberId,
+        actorUserId,
+      ),
+
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey:
+          TEAM_QUERY_KEYS.members(
+            teamId,
+            userId,
+          ),
+      });
+
+      queryClient.invalidateQueries({
+        queryKey:
+          TEAM_QUERY_KEYS.team(
+            teamId,
+            userId,
+          ),
+      });
+
+      queryClient.invalidateQueries({
+        queryKey:
+          TEAM_QUERY_KEYS.dashboard(
+            teamId,
+          ),
+      });
+    },
   });
 }

@@ -21,6 +21,7 @@ import { TeamWorkspaceNavigation } from "@/components/teams/workspace/TeamWorksp
 import { TeamWorkspaceOverview } from "@/components/teams/workspace/TeamWorkspaceOverview";
 import { TeamWorkspacePlaceholder } from "@/components/teams/workspace/TeamWorkspacePlaceholder";
 import { TeamWorkspaceSkeleton } from "@/components/teams/workspace/TeamWorkspaceSkeleton";
+import { TeamMembersPanel } from "@/components/teams/members/TeamMembersPanel";
 
 import { useTeam } from "@/hooks/useTeams";
 
@@ -270,6 +271,14 @@ export default function TeamWorkspacePage() {
                     <TeamWorkspaceOverview
                         teamId={teamId}
                         teamName={team.name}
+                    />
+                ) : activeTab === "members" ? (
+                    <TeamMembersPanel
+                        teamId={teamId}
+                        userId={userId}
+                        canManageMembers={
+                            permissions.canManageMembers
+                        }
                     />
                 ) : (
                     <TeamWorkspacePlaceholder
