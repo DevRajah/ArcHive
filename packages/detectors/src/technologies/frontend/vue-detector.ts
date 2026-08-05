@@ -1,25 +1,77 @@
-import { TechnologyDetector } from "../types";
-import { hasKeyword } from "../technology-context";
+import type {
+  TechnologyDetector,
+} from "../types";
 
-export const detectVueTechnology: TechnologyDetector = (
-    context
-) => {
+import {
+  addConfirmedFileTechnology,
+  findImplementationFile,
+} from "../technology-context";
 
-    if (
-        hasKeyword(context, [
-            "vue",
-            "createapp",
-            ".vue"
-        ])
-    ) {
+/**
+ * Confirms Vue from single-file components or Vue-specific configuration.
+ */
+export const detectVueTechnology:
+  TechnologyDetector = (
+    context,
+  ) => {
+    const file =
+      findImplementationFile(
+        context,
+        [
+          /\.vue$/,
+          /(^|\/)vue\.config\.(js|cjs|mjs|ts)$/,
+          /(^|\/)vite\.config\.[jt]s$/,
+          /(^|\/)nuxt\.config\.[jt]s$/,
+          /(^|\/)vue[-_.](client|app|plugin|config)\.[jt]s$/,
+        ],
+      );
 
-        context.addTechnology(
-            "Vue",
-            "Detected Vue application framework.",
-            20,
-            "STRONG"
-        );
-
+    if (!file) {
+      return;
     }
 
-};
+    /**
+     * A Vite config alone is not Vue-specific.
+     *
+     * Only accept it when another Vue-specific file also exists.
+     */
+    if (
+      /vite\.config\.[jt]s$/.test(file)
+    ) {
+      const vueFile =
+        findImplementationFile(
+          context,
+          [
+            /\.vue$/,
+            /(^|\/)vue\.config\.(js|cjs|mjs|ts)$/,
+            /(^|\/)nuxt\.config\.[jt]s$/,
+          ],
+        );
+
+      if (!vueFile) {
+        return;
+      }
+
+      addConfirmedFileTechnology({
+        context,
+        name: "Vue",
+        reason:
+          "Detected Vue components alongside frontend build configuration.",
+        file: vueFile,
+        source: "FILE_PATH",
+        weight: 90,
+      });
+
+      return;
+    }
+
+    addConfirmedFileTechnology({
+      context,
+      name: "Vue",
+      reason:
+        "Detected Vue component or framework configuration files.",
+      file,
+      source: "FILE_PATH",
+      weight: 90,
+    });
+  };

@@ -1,25 +1,81 @@
-import { TechnologyDetector } from "../types";
-import { hasKeyword } from "../technology-context";
+import type {
+  TechnologyDetector,
+} from "../types";
 
-export const detectAngularTechnology: TechnologyDetector = (
-    context
-) => {
+import {
+  addConfirmedFileTechnology,
+  findImplementationFile,
+} from "../technology-context";
 
-    if (
-        hasKeyword(context, [
-            "@angular",
-            "angular.json",
-            "ngmodule"
-        ])
-    ) {
+/**
+ * Confirms Angular using files that are specific to Angular projects.
+ */
+export const detectAngularTechnology:
+  TechnologyDetector = (
+    context,
+  ) => {
+    const file =
+      findImplementationFile(
+        context,
+        [
+          /(^|\/)angular\.json$/,
+          /(^|\/)app\.module\.ts$/,
+          /(^|\/)app\.component\.ts$/,
+          /\.module\.ts$/,
+          /\.component\.ts$/,
+          /\.directive\.ts$/,
+          /\.pipe\.ts$/,
+        ],
+      );
 
-        context.addTechnology(
-            "Angular",
-            "Detected Angular application framework.",
-            20,
-            "STRONG"
-        );
-
+    if (!file) {
+      return;
     }
 
-};
+    /**
+     * Generic component files could appear in other TypeScript projects.
+     * Require angular.json or an Angular module when the first match is weak.
+     */
+    if (
+      /\.component\.ts$/.test(file) ||
+      /\.directive\.ts$/.test(file) ||
+      /\.pipe\.ts$/.test(file)
+    ) {
+      const angularRootEvidence =
+        findImplementationFile(
+          context,
+          [
+            /(^|\/)angular\.json$/,
+            /(^|\/)app\.module\.ts$/,
+            /\.module\.ts$/,
+          ],
+        );
+
+      if (!angularRootEvidence) {
+        return;
+      }
+
+      addConfirmedFileTechnology({
+        context,
+        name: "Angular",
+        reason:
+          "Detected Angular modules and component architecture.",
+        file:
+          angularRootEvidence,
+        source: "FILE_PATH",
+        weight: 95,
+      });
+
+      return;
+    }
+
+    addConfirmedFileTechnology({
+      context,
+      name: "Angular",
+      reason:
+        "Detected Angular project configuration or module files.",
+      file,
+      source: "FILE_PATH",
+      weight: 95,
+    });
+  };

@@ -1,26 +1,45 @@
-import { TechnologyDetector } from "../types";
-import { hasKeyword } from "../technology-context";
+import type {
+  TechnologyDetector,
+} from "../types";
 
-export const detectReactTechnology: TechnologyDetector = (
-    context
-) => {
+import {
+  addConfirmedFileTechnology,
+  findImplementationFile,
+} from "../technology-context";
 
-    if (
-        hasKeyword(context, [
-            "react",
-            "useeffect",
-            "usestate",
-            "jsx"
-        ])
-    ) {
+/**
+ * Confirms React from React-specific source files.
+ *
+ * Generic folders such as "components/" are deliberately excluded because
+ * they are not unique to React.
+ */
+export const detectReactTechnology:
+  TechnologyDetector = (
+    context,
+  ) => {
+    const file =
+      findImplementationFile(
+        context,
+        [
+          /\.tsx$/,
+          /\.jsx$/,
+          /(^|\/)react[-_.](client|provider|context|hook|config)\.[jt]sx?$/,
+          /(^|\/)(client|provider|context|hook|config)[-_.]react\.[jt]sx?$/,
+          /(^|\/)react-app-env\.d\.ts$/,
+        ],
+      );
 
-        context.addTechnology(
-            "React",
-            "Detected React frontend framework.",
-            20,
-            "STRONG"
-        );
-
+    if (!file) {
+      return;
     }
 
-};
+    addConfirmedFileTechnology({
+      context,
+      name: "React",
+      reason:
+        "Detected React JSX or TSX implementation files.",
+      file,
+      source: "FILE_PATH",
+      weight: 90,
+    });
+  };
