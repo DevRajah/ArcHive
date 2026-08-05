@@ -1,39 +1,65 @@
+import fs from "node:fs";
+
 import type {
-  EvidenceContext,
+    EvidenceContext,
 } from "../evidence-types";
 
-/**
- * Files worth scanning for imports.
- */
-const SOURCE_FILE_PATTERN =
-  /\.(ts|tsx|js|jsx|mjs|cjs)$/i;
+const SOURCE_PATTERN =
+    /\.(ts|tsx|js|jsx|mjs|cjs)$/i;
 
-/**
- * Collect implementation files that may later be parsed
- * for import statements.
- *
- * Parsing comes later.
- */
+const IMPORT_PATTERN =
+    /from\s+["']([^"']+)["']/g;
+
 export function collectImportEvidence(
-  context: EvidenceContext,
+    context: EvidenceContext,
 ): void {
 
-  for (
-    const file of context.filesChanged
-  ) {
-
-    if (
-      !SOURCE_FILE_PATTERN.test(
-        file,
-      )
+    for (
+        const file of context.importFiles
     ) {
-      continue;
+
+        if (
+            !SOURCE_PATTERN.test(
+                file,
+            )
+        ) {
+            continue;
+        }
+
+        try {
+
+            const source =
+                fs.readFileSync(
+                    file,
+                    "utf8",
+                );
+
+            const matches =
+                source.matchAll(
+                    IMPORT_PATTERN,
+                );
+
+            for (
+                const match of matches
+            ) {
+
+                context.imports.add(
+
+                    match[1]
+                        .toLowerCase(),
+
+                );
+
+            }
+
+        } catch {
+
+            /**
+             * Ignore unreadable files.
+             */
+
+        }
+
     }
-
-    context.importFiles.add(
-      file,
-    );
-
-  }
 
 }

@@ -120,9 +120,24 @@ export type EvidenceContext = {
   dependencyFiles: Set<string>;
 
   /**
+ * Dependencies extracted from package managers.
+ *
+ * Example:
+ * fastify
+ * bullmq
+ * socket.io
+ */
+dependencies: Set<string>;
+
+  /**
    * Source files that can later be scanned for imports.
    */
   importFiles: Set<string>;
+
+  /**
+ * Packages imported by source code.
+ */
+imports: Set<string>;
 
   /**
    * Framework and infrastructure configuration files.
