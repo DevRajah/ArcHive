@@ -32,22 +32,21 @@ export default function DashboardPage() {
 
   return (
     <AppShell>
-      <div className="space-y-6">
-        <header>
-          <h1 className="text-3xl font-bold tracking-tight">
-            Engineering Dashboard
-          </h1>
+      <div className="w-full min-w-0 max-w-full space-y-6 overflow-x-hidden">        <header>
+        <h1 className="text-3xl font-bold tracking-tight">
+          Engineering Dashboard
+        </h1>
 
-          <p className="mt-2 text-muted-foreground">
-            Monitor repository activity, architecture evolution, queue
-            processing, and engineering intelligence across your tracked
-            systems.
-          </p>
+        <p className="mt-2 text-muted-foreground">
+          Monitor repository activity, architecture evolution, queue
+          processing, and engineering intelligence across your tracked
+          systems.
+        </p>
 
-          <div className="mt-4">
-            <LiveActivityIndicator />
-          </div>
-        </header>
+        <div className="mt-4">
+          <LiveActivityIndicator />
+        </div>
+      </header>
 
         {isLoading ? (
           <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
