@@ -1,21 +1,46 @@
-import { TechnologyDetector } from "../types";
-import { hasKeyword } from "../technology-context";
+import type {
+  TechnologyDetector,
+} from "../types";
 
-export const detectSseTechnology: TechnologyDetector = (context) => {
-  if (
-    hasKeyword(context, [
-      "eventsource",
-      "text/event-stream",
-      "server-sent events",
-      "sse",
-      "event stream",
-    ])
-  ) {
-    context.addTechnology(
-      "Server-Sent Events",
-      "Detected Server-Sent Events realtime streaming.",
-      20,
-      "MEDIUM"
-    );
-  }
-};
+import {
+  addConfirmedFileTechnology,
+  findImplementationFile,
+} from "../technology-context";
+
+/**
+ * Confirms Server-Sent Events from dedicated SSE or event-stream
+ * implementation files.
+ *
+ * The short string "sse" is never searched as a general substring.
+ */
+export const detectSseTechnology:
+  TechnologyDetector = (
+    context,
+  ) => {
+    const file =
+      findImplementationFile(
+        context,
+        [
+          /(^|\/)sse[-_.](controller|route|handler|service|stream|client|server|config)\.[jt]sx?$/,
+          /(^|\/)(controller|route|handler|service|stream|client|server|config)[-_.]sse\.[jt]sx?$/,
+          /(^|\/)server[-_.]sent[-_.]events?\.[jt]sx?$/,
+          /(^|\/)event[-_.]stream[-_.](controller|route|handler|service|client|server)\.[jt]sx?$/,
+          /\/server[-_.]sent[-_.]events?\//,
+          /\/sse\/(controllers?|routes?|handlers?|services?|streams?|clients?|servers?)\//,
+        ],
+      );
+
+    if (!file) {
+      return;
+    }
+
+    addConfirmedFileTechnology({
+      context,
+      name: "Server-Sent Events",
+      reason:
+        "Detected Server-Sent Events controller, route, handler, service, stream, client, or server files.",
+      file,
+      source: "FILE_PATH",
+      weight: 90,
+    });
+  };
