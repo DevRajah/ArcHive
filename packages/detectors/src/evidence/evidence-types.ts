@@ -109,6 +109,30 @@ export type AddTechnology = {
 export type EvidenceContext = {
   filesChanged: string[];
   commitMessages: string[];
+    /**
+   * Dependency manifests discovered in the repository.
+   *
+   * Examples:
+   * package.json
+   * pnpm-lock.yaml
+   * requirements.txt
+   */
+  dependencyFiles: Set<string>;
+
+  /**
+   * Source files that can later be scanned for imports.
+   */
+  importFiles: Set<string>;
+
+  /**
+   * Framework and infrastructure configuration files.
+   */
+  configurationFiles: Set<string>;
+
+  /**
+   * Programming languages inferred from file extensions.
+   */
+  languages: Set<string>;
 
   /**
    * Kept temporarily for old detectors.

@@ -6,13 +6,19 @@ import type {
   EvidenceItem,
   EvidenceStrength,
   TechnologyEvidence,
-  TechnologyEvidenceSource,
   TechnologyEvidenceStatus,
 } from "./evidence-types";
 
 import type {
   RepositoryType,
 } from "../constants";
+
+import {
+  collectConfigurationEvidence,
+  collectDependencyEvidence,
+  collectImportEvidence,
+  collectLanguageEvidence,
+} from "./providers";
 
 const normalizeText = (
   values: Array<string | undefined>,
@@ -83,10 +89,6 @@ const buildLegacyTechnologyEvidence = ({
     weight,
     strength,
 
-    /**
-     * Legacy calls do not reveal where the match came from.
-     * UNKNOWN evidence must not automatically be trusted as confirmed.
-     */
     source: "UNKNOWN",
 
     evidence:
@@ -164,6 +166,22 @@ export const createEvidenceContext = ({
   const technologyEvidence:
     TechnologyEvidence[] = [];
 
+  /**
+   * Providers populate these collections after the context object
+   * has been created.
+   */
+  const dependencyFiles =
+    new Set<string>();
+
+  const importFiles =
+    new Set<string>();
+
+  const configurationFiles =
+    new Set<string>();
+
+  const languages =
+    new Set<string>();
+
   const filePathText =
     normalizeText(filesChanged);
 
@@ -175,19 +193,9 @@ export const createEvidenceContext = ({
       .toLowerCase()
       .trim();
 
-  /**
-   * Structural evidence currently contains repository file paths.
-   *
-   * Later, we will extend the intelligence input with actual dependency,
-   * import and configuration contents.
-   */
   const structuralText =
     filePathText;
 
-  /**
-   * Commit messages and README-style repository context can explain
-   * intent, but they cannot prove that a technology is implemented.
-   */
   const descriptiveText =
     normalizeText([
       commitText,
@@ -195,7 +203,7 @@ export const createEvidenceContext = ({
     ]);
 
   /**
-   * Kept only while older detectors are migrated.
+   * Retained temporarily while legacy detectors are being migrated.
    */
   const combinedText =
     normalizeText([
@@ -288,12 +296,6 @@ export const createEvidenceContext = ({
         return;
       }
 
-      /**
-       * Multiple detectors may identify the same technology.
-       *
-       * Keep the strongest individual evidence for now. Later, we can
-       * preserve every evidence item and calculate a combined score.
-       */
       technologyEvidence[
         existingIndex
       ] =
@@ -305,9 +307,18 @@ export const createEvidenceContext = ({
         );
     };
 
-  return {
+  /**
+   * Create the context first so evidence providers can populate its
+   * dependency, import, configuration and language collections.
+   */
+  const context: EvidenceContext = {
     filesChanged,
     commitMessages,
+
+    dependencyFiles,
+    importFiles,
+    configurationFiles,
+    languages,
 
     combinedText,
 
@@ -323,4 +334,26 @@ export const createEvidenceContext = ({
     addEvidence,
     addTechnology,
   };
+
+  /**
+   * Evidence providers collect structured repository information before
+   * the technology and repository-purpose detectors run.
+   */
+  collectDependencyEvidence(
+    context,
+  );
+
+  collectImportEvidence(
+    context,
+  );
+
+  collectConfigurationEvidence(
+    context,
+  );
+
+  collectLanguageEvidence(
+    context,
+  );
+
+  return context;
 };
