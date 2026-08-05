@@ -1,21 +1,38 @@
-import { TechnologyDetector } from "../types";
-import { hasKeyword } from "../technology-context";
+import type {
+  TechnologyDetector,
+} from "../types";
 
-export const detectPostgresTechnology: TechnologyDetector = (context) => {
-  if (
-    hasKeyword(context, [
-      "postgres",
-      "postgresql",
-      "pgvector",
-      "pg ",
-      "database_url",
-    ])
-  ) {
-    context.addTechnology(
-      "PostgreSQL",
-      "Detected PostgreSQL database usage.",
-      20,
-      "STRONG"
-    );
-  }
-};
+import {
+  addConfirmedFileTechnology,
+  findImplementationFile,
+} from "../technology-context";
+
+export const detectPostgresTechnology:
+  TechnologyDetector = (
+    context,
+  ) => {
+    const file =
+      findImplementationFile(
+        context,
+        [
+          "postgres",
+          "postgresql",
+          "pgvector",
+          "postgres.config",
+          "postgres-client",
+          "postgres.client",
+        ],
+      );
+
+    if (!file) {
+      return;
+    }
+
+    addConfirmedFileTechnology({
+      context,
+      name: "PostgreSQL",
+      reason:
+        "Detected PostgreSQL implementation or configuration files.",
+      file,
+    });
+  };

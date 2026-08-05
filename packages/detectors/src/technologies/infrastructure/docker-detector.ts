@@ -1,24 +1,39 @@
-import { TechnologyDetector } from "../types";
-import { hasKeyword } from "../technology-context";
+import type {
+  TechnologyDetector,
+} from "../types";
 
-export const detectDockerTechnology: TechnologyDetector = (context) => {
+import {
+  addConfirmedFileTechnology,
+  findImplementationFile,
+} from "../technology-context";
 
-    if (
-        hasKeyword(context, [
-            "dockerfile",
-            "docker-compose",
-            "docker compose",
-            "docker build",
-            "docker run",
-            "FROM node"
-        ])
-    ) {
-        context.addTechnology(
-            "Docker",
-            "Detected Docker containerization.",
-            25,
-            "STRONG"
-        );
+export const detectDockerTechnology:
+  TechnologyDetector = (
+    context,
+  ) => {
+    const file =
+      findImplementationFile(
+        context,
+        [
+          /(^|\/)dockerfile$/,
+          /(^|\/)dockerfile\./,
+          "docker-compose.yml",
+          "docker-compose.yaml",
+          "compose.yml",
+          "compose.yaml",
+        ],
+      );
+
+    if (!file) {
+      return;
     }
 
-};
+    addConfirmedFileTechnology({
+      context,
+      name: "Docker",
+      reason:
+        "Detected Docker configuration files.",
+      file,
+      source: "CONFIGURATION",
+    });
+  };

@@ -1,24 +1,41 @@
-import { TechnologyDetector } from "../types";
-import { hasKeyword } from "../technology-context";
+import type {
+  TechnologyDetector,
+} from "../types";
 
-export const detectGcpTechnology: TechnologyDetector = (context) => {
+import {
+  addConfirmedFileTechnology,
+  findImplementationFile,
+} from "../technology-context";
 
-    if (
-        hasKeyword(context, [
-            "google cloud",
-            "gcp",
-            "cloud run",
-            "bigquery"
-        ])
-    ) {
+export const detectGcpTechnology:
+  TechnologyDetector = (
+    context,
+  ) => {
+    const file =
+      findImplementationFile(
+        context,
+        [
+          "app.yaml",
+          "app.yml",
+          "cloudbuild.yaml",
+          "cloudbuild.yml",
+          "firebase.json",
+          "/gcp/",
+          "/google-cloud/",
+          ".gcloudignore",
+        ],
+      );
 
-        context.addTechnology(
-            "Google Cloud",
-            "Detected Google Cloud Platform infrastructure.",
-            25,
-            "STRONG"
-        );
-
+    if (!file) {
+      return;
     }
 
-};
+    addConfirmedFileTechnology({
+      context,
+      name: "Google Cloud",
+      reason:
+        "Detected Google Cloud deployment or infrastructure configuration.",
+      file,
+      source: "CONFIGURATION",
+    });
+  };

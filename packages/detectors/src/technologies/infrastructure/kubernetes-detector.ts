@@ -1,25 +1,41 @@
-import { TechnologyDetector } from "../types";
-import { hasKeyword } from "../technology-context";
+import type {
+  TechnologyDetector,
+} from "../types";
 
-export const detectKubernetesTechnology: TechnologyDetector = (context) => {
+import {
+  addConfirmedFileTechnology,
+  findImplementationFile,
+} from "../technology-context";
 
-    if (
-        hasKeyword(context, [
-            "kubernetes",
-            "kubectl",
-            "deployment.yaml",
-            "service.yaml",
-            "ingress"
-        ])
-    ) {
+export const detectKubernetesTechnology:
+  TechnologyDetector = (
+    context,
+  ) => {
+    const file =
+      findImplementationFile(
+        context,
+        [
+          "kubernetes/",
+          "k8s/",
+          "helm/",
+          "chart.yaml",
+          "deployment.yaml",
+          "deployment.yml",
+          "ingress.yaml",
+          "ingress.yml",
+        ],
+      );
 
-        context.addTechnology(
-            "Kubernetes",
-            "Detected Kubernetes orchestration.",
-            30,
-            "STRONG"
-        );
-
+    if (!file) {
+      return;
     }
 
-};
+    addConfirmedFileTechnology({
+      context,
+      name: "Kubernetes",
+      reason:
+        "Detected Kubernetes or Helm configuration files.",
+      file,
+      source: "CONFIGURATION",
+    });
+  };

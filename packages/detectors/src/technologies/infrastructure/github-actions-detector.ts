@@ -1,24 +1,35 @@
-import { TechnologyDetector } from "../types";
-import { hasKeyword } from "../technology-context";
+import type {
+  TechnologyDetector,
+} from "../types";
 
-export const detectGitHubActionsTechnology: TechnologyDetector = (context) => {
+import {
+  addConfirmedFileTechnology,
+  findImplementationFile,
+} from "../technology-context";
 
-    if (
-        hasKeyword(context, [
-            ".github/workflows",
-            "uses:",
-            "github actions",
-            "workflow_dispatch"
-        ])
-    ) {
+export const detectGitHubActionsTechnology:
+  TechnologyDetector = (
+    context,
+  ) => {
+    const file =
+      findImplementationFile(
+        context,
+        [
+          ".github/workflows/",
+        ],
+      );
 
-        context.addTechnology(
-            "GitHub Actions",
-            "Detected GitHub Actions CI/CD workflows.",
-            20,
-            "STRONG"
-        );
-
+    if (!file) {
+      return;
     }
 
-};
+    addConfirmedFileTechnology({
+      context,
+      name:
+        "GitHub Actions",
+      reason:
+        "Detected GitHub Actions workflow files.",
+      file,
+      source: "CONFIGURATION",
+    });
+  };

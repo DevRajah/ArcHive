@@ -1,13 +1,38 @@
-import { TechnologyDetector } from "../types";
-import { hasKeyword } from "../technology-context";
+import type {
+  TechnologyDetector,
+} from "../types";
 
-export const detectBullMqTechnology: TechnologyDetector = (context) => {
-  if (hasKeyword(context, ["bullmq", "queueevents", "worker(", "queue("])) {
-    context.addTechnology(
-      "BullMQ",
-      "Detected BullMQ queue and worker infrastructure.",
-      25,
-      "STRONG"
-    );
-  }
-};
+import {
+  addConfirmedFileTechnology,
+  findImplementationFile,
+} from "../technology-context";
+
+export const detectBullMqTechnology:
+  TechnologyDetector = (
+    context,
+  ) => {
+    const file =
+      findImplementationFile(
+        context,
+        [
+          "bullmq",
+          /\.queue\.[jt]s$/,
+          /\.worker\.[jt]s$/,
+          "/queues/",
+          "/workers/",
+        ],
+      );
+
+    if (!file) {
+      return;
+    }
+
+    addConfirmedFileTechnology({
+      context,
+      name: "BullMQ",
+      reason:
+        "Detected queue and worker implementation files.",
+      file,
+      weight: 85,
+    });
+  };

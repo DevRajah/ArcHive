@@ -1,13 +1,34 @@
-import { TechnologyDetector } from "../types";
-import { hasKeyword } from "../technology-context";
+import type {
+  TechnologyDetector,
+} from "../types";
 
-export const detectMySqlTechnology: TechnologyDetector = (context) => {
-  if (hasKeyword(context, ["mysql", "mariadb"])) {
-    context.addTechnology(
-      "MySQL",
-      "Detected MySQL or MariaDB database usage.",
-      20,
-      "STRONG"
-    );
-  }
-};
+import {
+  addConfirmedFileTechnology,
+  findImplementationFile,
+} from "../technology-context";
+
+export const detectMySqlTechnology:
+  TechnologyDetector = (
+    context,
+  ) => {
+    const file =
+      findImplementationFile(
+        context,
+        [
+          "mysql",
+          "mariadb",
+        ],
+      );
+
+    if (!file) {
+      return;
+    }
+
+    addConfirmedFileTechnology({
+      context,
+      name: "MySQL",
+      reason:
+        "Detected MySQL or MariaDB implementation files.",
+      file,
+    });
+  };

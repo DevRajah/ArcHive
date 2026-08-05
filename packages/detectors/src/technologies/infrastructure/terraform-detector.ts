@@ -1,24 +1,36 @@
-import { TechnologyDetector } from "../types";
-import { hasKeyword } from "../technology-context";
+import type {
+  TechnologyDetector,
+} from "../types";
 
-export const detectTerraformTechnology: TechnologyDetector = (context) => {
+import {
+  addConfirmedFileTechnology,
+  findImplementationFile,
+} from "../technology-context";
 
-    if (
-        hasKeyword(context, [
-            "terraform",
-            ".tf",
-            "terraform init",
-            "terraform apply"
-        ])
-    ) {
+export const detectTerraformTechnology:
+  TechnologyDetector = (
+    context,
+  ) => {
+    const file =
+      findImplementationFile(
+        context,
+        [
+          /\.tf$/,
+          /\.tfvars$/,
+          /\.terraform\.lock\.hcl$/,
+        ],
+      );
 
-        context.addTechnology(
-            "Terraform",
-            "Detected Infrastructure as Code using Terraform.",
-            25,
-            "STRONG"
-        );
-
+    if (!file) {
+      return;
     }
 
-};
+    addConfirmedFileTechnology({
+      context,
+      name: "Terraform",
+      reason:
+        "Detected Terraform configuration files.",
+      file,
+      source: "CONFIGURATION",
+    });
+  };

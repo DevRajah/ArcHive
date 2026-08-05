@@ -1,20 +1,35 @@
-import { TechnologyDetector } from "../types";
-import { hasKeyword } from "../technology-context";
+import type {
+  TechnologyDetector,
+} from "../types";
 
-export const detectRabbitMqTechnology: TechnologyDetector = (context) => {
-  if (
-    hasKeyword(context, [
-      "rabbitmq",
-      "amqplib",
-      "amqp://",
-      "message broker",
-    ])
-  ) {
-    context.addTechnology(
-      "RabbitMQ",
-      "Detected RabbitMQ message broker infrastructure.",
-      25,
-      "STRONG"
-    );
-  }
-};
+import {
+  addConfirmedFileTechnology,
+  findImplementationFile,
+} from "../technology-context";
+
+export const detectRabbitMqTechnology:
+  TechnologyDetector = (
+    context,
+  ) => {
+    const file =
+      findImplementationFile(
+        context,
+        [
+          "rabbitmq",
+          "amqp",
+          "amqplib",
+        ],
+      );
+
+    if (!file) {
+      return;
+    }
+
+    addConfirmedFileTechnology({
+      context,
+      name: "RabbitMQ",
+      reason:
+        "Detected RabbitMQ implementation files.",
+      file,
+    });
+  };

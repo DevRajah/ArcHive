@@ -1,26 +1,40 @@
-import { TechnologyDetector } from "../types";
-import { hasKeyword } from "../technology-context";
+import type {
+  TechnologyDetector,
+} from "../types";
 
-export const detectAwsTechnology: TechnologyDetector = (context) => {
+import {
+  addConfirmedFileTechnology,
+  findImplementationFile,
+} from "../technology-context";
 
-    if (
-        hasKeyword(context, [
-            "aws",
-            "s3",
-            "lambda",
-            "cloudformation",
-            "dynamodb",
-            "iam"
-        ])
-    ) {
+export const detectAwsTechnology:
+  TechnologyDetector = (
+    context,
+  ) => {
+    const file =
+      findImplementationFile(
+        context,
+        [
+          "serverless.yml",
+          "serverless.yaml",
+          "sam-template",
+          "template.yaml",
+          "cloudformation",
+          "cdk.json",
+          "/aws/",
+        ],
+      );
 
-        context.addTechnology(
-            "AWS",
-            "Detected Amazon Web Services cloud infrastructure.",
-            25,
-            "STRONG"
-        );
-
+    if (!file) {
+      return;
     }
 
-};
+    addConfirmedFileTechnology({
+      context,
+      name: "AWS",
+      reason:
+        "Detected AWS deployment or infrastructure configuration.",
+      file,
+      source: "CONFIGURATION",
+    });
+  };

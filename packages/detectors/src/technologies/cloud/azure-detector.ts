@@ -1,24 +1,41 @@
-import { TechnologyDetector } from "../types";
-import { hasKeyword } from "../technology-context";
+import type {
+  TechnologyDetector,
+} from "../types";
 
-export const detectAzureTechnology: TechnologyDetector = (context) => {
+import {
+  addConfirmedFileTechnology,
+  findImplementationFile,
+} from "../technology-context";
 
-    if (
-        hasKeyword(context, [
-            "azure",
-            "azure storage",
-            "azure functions",
-            "azure app service"
-        ])
-    ) {
+export const detectAzureTechnology:
+  TechnologyDetector = (
+    context,
+  ) => {
+    const file =
+      findImplementationFile(
+        context,
+        [
+          "azure-pipelines.yml",
+          "azure-pipelines.yaml",
+          "host.json",
+          "local.settings.json",
+          "/azure/",
+          "/functions/",
+          "bicep",
+          ".bicep",
+        ],
+      );
 
-        context.addTechnology(
-            "Microsoft Azure",
-            "Detected Microsoft Azure cloud platform.",
-            25,
-            "STRONG"
-        );
-
+    if (!file) {
+      return;
     }
 
-};
+    addConfirmedFileTechnology({
+      context,
+      name: "Azure",
+      reason:
+        "Detected Azure deployment or infrastructure configuration.",
+      file,
+      source: "CONFIGURATION",
+    });
+  };

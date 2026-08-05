@@ -1,21 +1,35 @@
-import { TechnologyDetector } from "../types";
-import { hasKeyword } from "../technology-context";
+import type {
+  TechnologyDetector,
+} from "../types";
 
-export const detectRedisTechnology: TechnologyDetector = (context) => {
-  if (
-    hasKeyword(context, [
-      "redis",
-      "ioredis",
-      "upstash",
-      "redis_url",
-      "cache ttl",
-    ])
-  ) {
-    context.addTechnology(
-      "Redis",
-      "Detected Redis caching, queue, or key-value infrastructure.",
-      20,
-      "STRONG"
-    );
-  }
-};
+import {
+  addConfirmedFileTechnology,
+  findImplementationFile,
+} from "../technology-context";
+
+export const detectRedisTechnology:
+  TechnologyDetector = (
+    context,
+  ) => {
+    const file =
+      findImplementationFile(
+        context,
+        [
+          "redis",
+          "ioredis",
+          "upstash",
+        ],
+      );
+
+    if (!file) {
+      return;
+    }
+
+    addConfirmedFileTechnology({
+      context,
+      name: "Redis",
+      reason:
+        "Detected Redis implementation or configuration files.",
+      file,
+    });
+  };

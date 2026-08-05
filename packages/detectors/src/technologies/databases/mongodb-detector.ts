@@ -1,20 +1,37 @@
-import { TechnologyDetector } from "../types";
-import { hasKeyword } from "../technology-context";
+import type {
+  TechnologyDetector,
+} from "../types";
 
-export const detectMongoDbTechnology: TechnologyDetector = (context) => {
-  if (
-    hasKeyword(context, [
-      "mongodb",
-      "mongoose",
-      "mongo_uri",
-      "mongodb_uri",
-    ])
-  ) {
-    context.addTechnology(
-      "MongoDB",
-      "Detected MongoDB or Mongoose persistence usage.",
-      20,
-      "STRONG"
-    );
-  }
-};
+import {
+  addConfirmedFileTechnology,
+  findImplementationFile,
+} from "../technology-context";
+
+export const detectMongoDbTechnology:
+  TechnologyDetector = (
+    context,
+  ) => {
+    const file =
+      findImplementationFile(
+        context,
+        [
+          "mongoose",
+          "mongodb",
+          "mongo.config",
+          "mongo-client",
+          "mongo.client",
+        ],
+      );
+
+    if (!file) {
+      return;
+    }
+
+    addConfirmedFileTechnology({
+      context,
+      name: "MongoDB",
+      reason:
+        "Detected MongoDB implementation files.",
+      file,
+    });
+  };

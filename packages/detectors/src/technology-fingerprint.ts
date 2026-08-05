@@ -914,9 +914,32 @@ export const detectTechnologyFingerprint = (
 
     const engineeringQuality = buildEngineeringQuality(qualityContext);
 
-    for (const technology of evidenceContext.technologyEvidence) {
-        add(technologies, [technology.name]);
-        addReasoningSignal(technology.reason);
+    for (
+        const technology of
+        evidenceContext.technologyEvidence
+    ) {
+        /**
+         * Only implementation-backed technologies enter the official inventory.
+         *
+         * LIKELY and MENTIONED results remain available in technologyEvidence
+         * for future explanation UI, but they must not affect repository scores,
+         * reports, rankings, or recommendations.
+         */
+        if (
+            technology.status !==
+            "CONFIRMED"
+        ) {
+            continue;
+        }
+
+        add(
+            technologies,
+            [technology.name],
+        );
+
+        addReasoningSignal(
+            `${technology.reason} Evidence: ${technology.evidence}`,
+        );
     }
 
 

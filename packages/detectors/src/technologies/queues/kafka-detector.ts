@@ -1,20 +1,34 @@
-import { TechnologyDetector } from "../types";
-import { hasKeyword } from "../technology-context";
+import type {
+  TechnologyDetector,
+} from "../types";
 
-export const detectKafkaTechnology: TechnologyDetector = (context) => {
-  if (
-    hasKeyword(context, [
-      "kafka",
-      "kafkajs",
-      "consumer group",
-      "topic producer",
-    ])
-  ) {
-    context.addTechnology(
-      "Kafka",
-      "Detected Kafka event streaming infrastructure.",
-      25,
-      "STRONG"
-    );
-  }
-};
+import {
+  addConfirmedFileTechnology,
+  findImplementationFile,
+} from "../technology-context";
+
+export const detectKafkaTechnology:
+  TechnologyDetector = (
+    context,
+  ) => {
+    const file =
+      findImplementationFile(
+        context,
+        [
+          "kafka",
+          "kafkajs",
+        ],
+      );
+
+    if (!file) {
+      return;
+    }
+
+    addConfirmedFileTechnology({
+      context,
+      name: "Kafka",
+      reason:
+        "Detected Kafka implementation files.",
+      file,
+    });
+  };
