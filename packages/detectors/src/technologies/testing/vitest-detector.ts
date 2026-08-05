@@ -1,20 +1,41 @@
-import { TechnologyDetector } from "../types";
-import { hasKeyword } from "../technology-context";
+import type {
+  TechnologyDetector,
+} from "../types";
 
-export const detectVitestTechnology: TechnologyDetector = (context) => {
-  if (
-    hasKeyword(context, [
-      "vitest",
-      "vitest.config",
-      "vi.fn",
-      "vi.mock",
-    ])
-  ) {
-    context.addTechnology(
-      "Vitest",
-      "Detected Vitest testing framework.",
-      20,
-      "STRONG"
-    );
-  }
-};
+import {
+  addConfirmedFileTechnology,
+  findImplementationFile,
+} from "../technology-context";
+
+/**
+ * Confirms Vitest from framework-specific configuration files.
+ */
+export const detectVitestTechnology:
+  TechnologyDetector = (
+    context,
+  ) => {
+    const file =
+      findImplementationFile(
+        context,
+        [
+          /(^|\/)vitest\.config\.(js|ts|cjs|mjs)$/,
+          /(^|\/)vitest\.setup\.[jt]s$/,
+          /(^|\/)setup-vitest\.[jt]s$/,
+          /\/vitest\//,
+        ],
+      );
+
+    if (!file) {
+      return;
+    }
+
+    addConfirmedFileTechnology({
+      context,
+      name: "Vitest",
+      reason:
+        "Detected Vitest configuration or setup files.",
+      file,
+      source: "CONFIGURATION",
+      weight: 95,
+    });
+  };
