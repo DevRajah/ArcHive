@@ -1,27 +1,95 @@
-import { TechnologyDetector } from "../types";
-import { hasKeyword } from "../technology-context";
+import type {
+  TechnologyDetector,
+} from "../types";
 
-export const detectCleanArchitectureTechnology: TechnologyDetector = (
-  context
-) => {
-  if (
-    hasKeyword(context, [
-      "clean architecture",
-      "usecase",
-      "use case",
-      "use-cases",
-      "entities/",
-      "repositories/",
-      "application layer",
-      "domain layer",
-      "infrastructure layer",
-    ])
-  ) {
-    context.addTechnology(
+import {
+  evaluateArchitecture,
+  findSignal,
+} from "./architecture-score";
+
+import {
+  registerArchitecture,
+} from "./register-architecture";
+
+export const detectCleanArchitectureTechnology:
+  TechnologyDetector = (
+    context,
+  ) => {
+    const result =
+      evaluateArchitecture([
+        findSignal(
+          context,
+          "Domain or entities layer",
+          "domain",
+          20,
+          [
+            /\/domain\//,
+            /\/entities\//,
+          ],
+        ),
+
+        findSignal(
+          context,
+          "Application or use-case layer",
+          "application",
+          25,
+          [
+            /\/application\//,
+            /\/use[-_.]?cases?\//,
+            /\.use-case\.[jt]s$/,
+          ],
+        ),
+
+        findSignal(
+          context,
+          "Interface adapters",
+          "adapters",
+          20,
+          [
+            /\/adapters?\//,
+            /\/interface-adapters?\//,
+          ],
+        ),
+
+        findSignal(
+          context,
+          "Infrastructure layer",
+          "infrastructure",
+          20,
+          [
+            /\/infrastructure\//,
+            /\/infra\//,
+          ],
+        ),
+
+        findSignal(
+          context,
+          "Ports or boundaries",
+          "ports",
+          20,
+          [
+            /\/ports?\//,
+            /\/boundaries\//,
+            /\.port\.[jt]s$/,
+          ],
+        ),
+
+        findSignal(
+          context,
+          "Dependency inversion interfaces",
+          "interfaces",
+          15,
+          [
+            /\/interfaces?\//,
+            /repository[-_.]?interface/,
+            /gateway[-_.]?interface/,
+          ],
+        ),
+      ]);
+
+    registerArchitecture(
+      context,
       "Clean Architecture",
-      "Detected clean architecture layering or use-case driven structure.",
-      25,
-      "STRONG"
+      result,
     );
-  }
-};
+  };
