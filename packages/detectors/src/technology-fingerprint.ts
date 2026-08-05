@@ -1,949 +1,215 @@
 import {
-    createEvidenceContext,
-    calculateEvidenceResults,
-    detectFintechEvidence,
-    detectDeveloperToolEvidence,
-    detectDeveloperPlatformEvidence,
-    detectObservabilityEvidence,
-    EvidenceResult,
-    detectSecurityEvidence,
-    detectAiEvidence,
-    detectMobileEvidence,
-    detectTransportEvidence,
-    detectDataEngineeringEvidence,
-    detectBackendServiceEvidence,
-    detectFrontendEvidence,
-    detectDocumentationEvidence,
-    detectDesignSystemEvidence,
-    detectPackageSdkEvidence,
-    detectInfrastructureEvidence,
-    detectMessagingEvidence,
-    detectHealthcareEvidence,
-    detectEducationEvidence,
-    detectEnergyEvidence,
-    detectEcommerceEvidence,
-    detectCollaborationEvidence,
-    detectEngineeringIntelligenceEvidence,
+  buildAnalysisStage,
+  buildEngineeringStage,
+  buildEvidenceStage,
+  buildFingerprintResult,
+  buildHealthStage,
+  applyLegacyClassificationStage,
+  applyLegacyPurposeAdjustmentStage,
+  applyRepositoryPurposeStage,
+} from "./fingerprint";
 
-} from "./evidence";
+import type {
+  TechnologyFingerprintResult,
+} from "./fingerprint/report-stage";
 
-import {
-    buildArchitectureQuality,
-    ArchitectureQuality,
-} from "./architecture-quality";
+export type {
+  TechnologyFingerprintResult,
+} from "./fingerprint/report-stage";
 
-import {
-    ArchitectureDomains,
-    EngineeringSignals,
-    RepositoryTypes,
-    RepositoryType,
-    Technologies,
-} from "./constants";
-
-import {
-    buildEngineeringQuality,
-    createEngineeringQualityContext,
-    EngineeringQualityResult,
-    runQualityDetectors,
-} from "./engineering-quality";
-
-import { detectEngineeringCapabilities } from "./capabilities";
-import {
-    buildRepositoryDNA,
-    RepositoryDNA
-} from "./dna"
-
-import {
-    inferRepositoryPersona,
-    RepositoryPersona,
-} from "./persona";
-
-import {
-    buildRepositoryMaturity,
-    RepositoryMaturity,
-} from "./maturity";
-
-import {
-    buildProductionReadiness,
-    ProductionReadiness,
-} from "./production-readiness";
-
-import {
-    buildTechnicalDebtReport,
-    TechnicalDebtReport,
-} from "./technical-debt";
-
-import {
-    buildStrengthReport,
-    StrengthReport,
-} from "./strengths";
-
-import {
-    buildWeaknessReport,
-    WeaknessReport,
-} from "./weaknesses";
-
-import {
-    buildRecommendationReport,
-    RecommendationReport,
-} from "./recommendations";
-
-import {
-    buildRepositoryHealth,
-    RepositoryHealth,
-} from "./repository-health";
-
-import {
-    ArchitectureDriftReport,
-    buildArchitectureDriftReport,
-} from "./architecture-drift";
-
-import {
-    analyzeRepositoryEvolution,
-    EvolutionInsightsReport,
-} from "./repository-evolution";
-
-import {
-    buildRepositoryIntelligenceReport,
-    RepositoryIntelligenceReport,
-} from "./repository-intelligence";
-
-import {
-    buildEvidenceStage,
-} from "./fingerprint/evidence-stage";
-
-import {
-    applyRepositoryPurposeStage,
-} from "./fingerprint/repository-purpose-stage";
-
-
-import { runTechnologyDetectors } from "./technologies";
-
-export type TechnologyFingerprintResult = {
-    technologies: string[];
-    architectureDomains: string[];
-    engineeringSignals: string[];
-    repositoryTypes: string[];
-    reasoningSignals: string[];
-    evidenceResults: EvidenceResult[];
-    capabilities: ReturnType<typeof detectEngineeringCapabilities>;
-    repositoryDNA: RepositoryDNA
-    repositoryPersona: RepositoryPersona;
-    engineeringQuality: EngineeringQualityResult;
-    repositoryMaturity: RepositoryMaturity;
-    productionReadiness: ProductionReadiness;
-    technicalDebt: TechnicalDebtReport;
-    strengthReport: StrengthReport;
-    weaknessReport: WeaknessReport;
-    recommendationReport: RecommendationReport;
-    repositoryHealth: RepositoryHealth;
-    architectureQuality: ArchitectureQuality;
-    architectureDrift: ArchitectureDriftReport;
-    evolutionInsights: EvolutionInsightsReport;
-    repositoryIntelligence: RepositoryIntelligenceReport;
-    //repositoryIdentity: RepositoryIdentity;
-
-    //rankedEvidence: RankedEvidence[];
-};
-
-const includesAny = (value: string, keywords: string[]) => {
-    return keywords.some((keyword) =>
-        value.toLowerCase().includes(keyword.toLowerCase())
-    );
-};
-
-const add = (set: Set<string>, values: string[]) => {
-    values.forEach((value) => set.add(value));
-};
-
-
-
-const repositoryTypePriority = [
-    "ENGINEERING_INTELLIGENCE_PLATFORM",
-    "DEVTOOL_PLATFORM",
-    "FINTECH_PLATFORM",
-    "OBSERVABILITY_PLATFORM",
-    "SECURITY_PLATFORM",
-    "AI_ML_PROJECT",
-    "DEVELOPER_PLATFORM",
-    "DATA_ENGINEERING_PROJECT",
-    "SMART_TRANSPORT_PLATFORM",
-    "ENERGY_PLATFORM",
-    "HEALTHCARE_PLATFORM",
-    "ECOMMERCE_PLATFORM",
-    "EDUCATION_PLATFORM",
-    "COLLABORATION_PLATFORM",
-    "INFRASTRUCTURE_PLATFORM",
-    "MOBILE_APPLICATION",
-    "BACKEND_SERVICE",
-    "FRONTEND_APPLICATION",
-    "JAVASCRIPT_TYPESCRIPT_PROJECT",
-    "GENERAL_ENGINEERING_PROJECT",
-];
-
-const sortRepositoryTypesByPurpose = (types: string[]) => {
-    return [...types].sort((a, b) => {
-        const aIndex = repositoryTypePriority.indexOf(a);
-        const bIndex = repositoryTypePriority.indexOf(b);
-
-        return (aIndex === -1 ? 999 : aIndex) - (bIndex === -1 ? 999 : bIndex);
-    });
-};
-
+/**
+ * Coordinates the complete ArcHive repository intelligence pipeline.
+ *
+ * Future me:
+ * Keep this file as an orchestrator only.
+ * Detection, scoring, health analysis, and report building belong
+ * inside their respective fingerprint stages.
+ */
 export const detectTechnologyFingerprint = (
-    filesChanged: string[],
-    commitMessages: string[],
-    repositoryContext = ""
+  filesChanged: string[],
+  commitMessages: string[],
+  repositoryContext = "",
 ): TechnologyFingerprintResult => {
-    const joinedFiles = filesChanged.join(" ").toLowerCase();
-    const joinedCommits = commitMessages.join(" ").toLowerCase();
-    const combinedText = `${joinedFiles} ${joinedCommits}`;
+  const joinedFiles =
+    filesChanged
+      .join(" ")
+      .toLowerCase();
 
-    const technologies = new Set<string>();
-    const architectureDomains = new Set<string>();
-    const engineeringSignals = new Set<string>();
-    const repositoryTypes = new Set<string>();
-    const reasoningSignals: string[] = [];
+  const joinedCommits =
+    commitMessages
+      .join(" ")
+      .toLowerCase();
 
-    const addReasoningSignal = (signal: string) => {
-        if (!reasoningSignals.includes(signal)) {
-            reasoningSignals.push(signal);
-        }
-    };
+  /**
+   * This preserves the previous legacy-classification behaviour.
+   *
+   * repositoryContext is processed separately by the evidence stage.
+   */
+  const combinedText =
+    `${joinedFiles} ${joinedCommits}`;
 
-    const state = {
-        technologies,
-        architectureDomains,
-        engineeringSignals,
-        repositoryTypes,
-        reasoningSignals,
-        addReasoningSignal,
-    };
+  const technologies =
+    new Set<string>();
 
-    const {
-        evidenceContext,
-        evidenceResults,
-    } = buildEvidenceStage(
-        filesChanged,
-        commitMessages,
-        repositoryContext,
-    );
+  const architectureDomains =
+    new Set<string>();
 
-    // JavaScript / TypeScript backend
+  const engineeringSignals =
+    new Set<string>();
+
+  const repositoryTypes =
+    new Set<string>();
+
+  const reasoningSignals:
+    string[] = [];
+
+  const addReasoningSignal = (
+    signal: string,
+  ): void => {
     if (
-        includesAny(combinedText, [
-            "package.json",
-            "tsconfig",
-            "express",
-            "fastify",
-            "nestjs",
-            "node",
-            ".ts",
-        ])
+      !reasoningSignals.includes(
+        signal,
+      )
     ) {
-        add(technologies, ["Node.js", "TypeScript"]);
-        add(architectureDomains, ["BACKEND_SYSTEMS"]);
-        add(repositoryTypes, ["JAVASCRIPT_TYPESCRIPT_PROJECT"]);
+      reasoningSignals.push(
+        signal,
+      );
     }
-
-    // Frontend / product UI
-    if (
-        includesAny(combinedText, [
-            "react",
-            "next",
-            ".tsx",
-            ".jsx",
-            "components/",
-            "app/",
-            "pages/",
-            "tailwind",
-            "vite",
-        ])
-    ) {
-        add(technologies, ["React / Frontend UI"]);
-        add(architectureDomains, ["FRONTEND_ARCHITECTURE"]);
-        add(repositoryTypes, ["FRONTEND_APPLICATION"]);
-    }
-
-    // Python
-    if (
-        includesAny(combinedText, [
-            "requirements.txt",
-            "pyproject.toml",
-            "poetry.lock",
-            "pipfile",
-            ".py",
-            "fastapi",
-            "django",
-            "flask",
-        ])
-    ) {
-        add(technologies, ["Python"]);
-        add(architectureDomains, ["PYTHON_SYSTEMS"]);
-        add(repositoryTypes, ["PYTHON_PROJECT"]);
-
-        addReasoningSignal(
-            "Detected Python-specific frameworks and patterns"
-        );
-    }
-
-    if (includesAny(combinedText, ["fastapi"])) {
-        add(technologies, ["FastAPI"]);
-        add(architectureDomains, ["API_LAYER"]);
-        add(repositoryTypes, ["PYTHON_API_SERVICE"]);
-
-        addReasoningSignal(
-            "Detected FastAPI framework and API service patterns"
-        );
-    }
-
-    if (includesAny(combinedText, ["django"])) {
-        add(technologies, ["Django"]);
-        add(architectureDomains, ["WEB_APPLICATION"]);
-        add(repositoryTypes, ["PYTHON_WEB_APPLICATION"]);
-        addReasoningSignal(
-            "Detected Django framework and web application patterns"
-        );
-    }
-
-    if (includesAny(combinedText, ["flask"])) {
-        add(technologies, ["Flask"]);
-        add(architectureDomains, ["API_LAYER"]);
-        add(repositoryTypes, ["PYTHON_API_SERVICE"]);
-        addReasoningSignal(
-            "Detected Flask framework and API service patterns"
-        );
-    }
-
-
-    // Go
-    const hasGoProjectSignal =
-        filesChanged.some((file) => {
-            const normalizedFile = file.toLowerCase();
-
-            return (
-                normalizedFile === "go.mod" ||
-                normalizedFile === "go.sum" ||
-                normalizedFile.endsWith(".go")
-            );
-        }) ||
-        includesAny(combinedText, ["golang", "go module"]);
-
-    if (hasGoProjectSignal) {
-        add(technologies, ["Go"]);
-        add(architectureDomains, ["GO_SYSTEMS"]);
-        add(repositoryTypes, ["GO_SERVICE"]);
-
-        addReasoningSignal(
-            "Detected Go-specific files and patterns"
-        );
-    }
-
-    // Java / Spring
-    if (
-        includesAny(combinedText, [
-            "pom.xml",
-            "build.gradle",
-            ".java",
-            "spring",
-            "springboot",
-            "spring boot",
-        ])
-    ) {
-        add(technologies, ["Java / Spring"]);
-        add(architectureDomains, ["JAVA_SYSTEMS"]);
-        add(repositoryTypes, ["JAVA_SERVICE"]);
-
-        addReasoningSignal(
-            "Detected Java and Spring framework patterns"
-        );
-    }
-
-    // Rust
-    if (
-        includesAny(combinedText, [
-            "cargo.toml",
-            "cargo.lock",
-            ".rs",
-            "tokio",
-            "axum",
-            "actix",
-        ])
-    ) {
-        add(technologies, ["Rust"]);
-        add(architectureDomains, ["RUST_SYSTEMS"]);
-        add(repositoryTypes, ["RUST_SERVICE"]);
-        addReasoningSignal(
-            "Detected Rust-specific files and patterns"
-        );
-    }
-
-    // PHP / Laravel
-    if (
-        includesAny(combinedText, [
-            "composer.json",
-            ".php",
-            "laravel",
-            "symfony",
-        ])
-    ) {
-        add(technologies, ["PHP"]);
-        add(architectureDomains, ["WEB_APPLICATION"]);
-        add(repositoryTypes, ["PHP_WEB_APPLICATION"]);
-        addReasoningSignal(
-            "Detected PHP-specific frameworks and patterns"
-        );
-    }
-
-    // DevOps / Infrastructure
-    if (
-        includesAny(combinedText, [
-            "dockerfile",
-            "docker-compose",
-            "docker",
-        ])
-    ) {
-        add(technologies, ["Docker"]);
-        add(architectureDomains, ["DEVOPS_INFRASTRUCTURE"]);
-        add(engineeringSignals, ["CONTAINERIZATION"]);
-
-        addReasoningSignal(
-            "Detected Dockerfiles and containerization patterns"
-        );
-    }
-
-    if (
-        includesAny(combinedText, [
-            "terraform",
-            ".tf",
-            "provider.tf",
-            "variables.tf",
-        ])
-    ) {
-        add(technologies, ["Terraform"]);
-        add(architectureDomains, ["INFRASTRUCTURE_AS_CODE"]);
-        add(repositoryTypes, ["INFRASTRUCTURE_REPOSITORY"]);
-        addReasoningSignal(
-            "Detected Terraform configuration files"
-        );
-    }
-
-    if (
-        includesAny(combinedText, [
-            "kubernetes",
-            "k8s",
-            "deployment.yaml",
-            "service.yaml",
-            "helm",
-            "chart.yaml",
-        ])
-    ) {
-        add(technologies, ["Kubernetes / Helm"]);
-        add(architectureDomains, ["CONTAINER_ORCHESTRATION"]);
-        add(repositoryTypes, ["INFRASTRUCTURE_REPOSITORY"]);
-        addReasoningSignal(
-            "Detected Kubernetes and Helm configuration files"
-        );
-    }
-
-    if (
-        includesAny(combinedText, [
-            ".github/workflows",
-            "github actions",
-            "ci.yml",
-            "cd.yml",
-            "pipeline.yml",
-        ])
-    ) {
-        add(technologies, ["CI/CD"]);
-        add(architectureDomains, ["CI_CD"]);
-        add(engineeringSignals, ["AUTOMATED_DELIVERY"]);
-
-        addReasoningSignal(
-            "Detected CI/CD pipeline configuration files and patterns"
-        );
-    }
-
-    // Realtime
-    if (
-        includesAny(combinedText, [
-            "socket.io",
-            "websocket",
-            "realtime",
-            "socket-emitter",
-            "socket.on",
-            "socket.emit",
-        ])
-    ) {
-        add(technologies, ["Socket.IO / Realtime Events"]);
-        add(architectureDomains, ["REALTIME_SYSTEMS"]);
-        add(engineeringSignals, ["REALTIME_INFRASTRUCTURE"]);
-        addReasoningSignal(
-            "Detected realtime websocket infrastructure"
-        );
-    }
-
-    // Queue / background jobs
-    if (
-        includesAny(combinedText, [
-            "bullmq",
-            "queue",
-            "worker",
-            "job",
-            "celery",
-            "sidekiq",
-            "rq",
-            "resque",
-        ])
-    ) {
-        add(technologies, ["Background Jobs / Queue"]);
-        add(architectureDomains, ["QUEUE_INFRASTRUCTURE"]);
-        add(engineeringSignals, ["BACKGROUND_PROCESSING"]);
-
-        addReasoningSignal(
-            "Detected background job and queue processing patterns"
-        );
-    }
-
-    // Cache / messaging
-    if (includesAny(combinedText, ["redis", "ioredis", "cache"])) {
-        add(technologies, ["Redis"]);
-        add(architectureDomains, ["CACHING_LAYER"]);
-    }
-
-    if (
-        includesAny(combinedText, [
-            "rabbitmq",
-            "nats",
-            "sqs",
-            "pubsub",
-            "kafka",
-        ])
-    ) {
-        add(technologies, ["Messaging / Event Streaming"]);
-        add(architectureDomains, ["EVENT_STREAMING"]);
-        add(engineeringSignals, ["EVENT_DRIVEN"]);
-
-        addReasoningSignal(
-            "Detected messaging and event streaming patterns"
-        );
-    }
-
-    // Database
-    if (
-        includesAny(combinedText, [
-            "prisma",
-            "schema.prisma",
-            "migration",
-            "postgres",
-            "mongodb",
-            "mysql",
-            "sqlite",
-            "typeorm",
-            "sequelize",
-            "mongoose",
-        ])
-    ) {
-        add(technologies, ["Database"]);
-        add(architectureDomains, ["DATABASE_LAYER"]);
-
-        addReasoningSignal(
-            "Detected database schema and migration patterns"
-        );
-    }
-
-    // Design systems / product design repos
-    if (
-        includesAny(combinedText, [
-            "storybook",
-            "design-system",
-            "tokens",
-            "figma",
-            "theme",
-            "component-library",
-            "ui-kit",
-        ])
-    ) {
-        add(technologies, ["Design System"]);
-        add(architectureDomains, ["DESIGN_SYSTEM"]);
-        add(repositoryTypes, ["DESIGN_SYSTEM_REPOSITORY"]);
-
-        addReasoningSignal(
-            "Detected design system and product design patterns"
-        );
-    }
-
-    // Documentation-heavy repos
-    if (
-        includesAny(combinedText, [
-            "docs/",
-            "documentation",
-            "mkdocs",
-            "docusaurus",
-            "readme",
-        ])
-    ) {
-        add(technologies, ["Documentation"]);
-        add(architectureDomains, ["DOCUMENTATION_SYSTEM"]);
-        add(repositoryTypes, ["DOCUMENTATION_REPOSITORY"]);
-
-        addReasoningSignal(
-            "Detected documentation-focused repository patterns"
-        );
-    }
-
-    if (
-        includesAny(combinedText, [
-            "crdt",
-            "collaboration",
-            "shared editing",
-            "presence",
-            "live cursor",
-            "yjs",
-            "collaborative",
-        ])
-    ) {
-        add(technologies, ["Realtime Collaboration"]);
-        add(architectureDomains, ["COLLABORATION_SYSTEMS"]);
-        add(engineeringSignals, ["LIVE_COLLABORATION"]);
-        add(repositoryTypes, ["COLLABORATION_PLATFORM"]);
-        addReasoningSignal(
-            "Detected realtime collaboration patterns"
-        );
-    }
-
-
-    if (
-        includesAny(combinedText, [
-            "energy",
-            "power",
-            "electricity",
-            "meter",
-            "household",
-            "consumption",
-            "iot",
-            "smart grid",
-        ])
-    ) {
-        add(technologies, ["Energy Monitoring"]);
-        add(architectureDomains, ["ENERGY_SYSTEMS"]);
-        add(engineeringSignals, ["REALTIME_MONITORING"]);
-        add(repositoryTypes, ["ENERGY_PLATFORM"]);
-        addReasoningSignal(
-            "Detected energy monitoring patterns"
-        );
-    }
-
-    const hasEngineeringIntelligenceCoreSignal = includesAny(combinedText, [
-        "repository intelligence",
-        "engineering intelligence",
-        "architecture evolution",
-        "architecture radar",
-        "architecture narrative",
-        "repository fingerprint",
-        "codebase intelligence",
-    ]);
-
-    const hasGithubRepositoryAnalysisSignal = includesAny(combinedText, [
-        "github webhook",
-        "github oauth",
-        "repository import",
-        "pull request analysis",
-        "commit analysis",
-        "engineering timeline",
-        "architecture change",
-    ]);
-
-    if (hasEngineeringIntelligenceCoreSignal && hasGithubRepositoryAnalysisSignal) {
-        add(technologies, ["Engineering Intelligence"]);
-        add(architectureDomains, ["ENGINEERING_INTELLIGENCE"]);
-        add(engineeringSignals, ["ARCHITECTURE_REASONING"]);
-        add(repositoryTypes, ["ENGINEERING_INTELLIGENCE_PLATFORM"]);
-
-        addReasoningSignal(
-            "Detected core engineering intelligence concepts and GitHub repository analysis patterns"
-        );
-    }
-
-    applyRepositoryPurposeStage({
-        evidenceResults,
-        state,
-    });
-
-
-    const capabilities = detectEngineeringCapabilities({
-        filesChanged,
-        commitMessages,
-        repositoryContext: combinedText,
-    });
-
-    const repositoryPersona = inferRepositoryPersona(
-        Array.from(repositoryTypes) as RepositoryType[],
-        capabilities.map((capability) => capability.key)
-    );
-
-    const repositoryDNA = buildRepositoryDNA({
-        repositoryTypes: Array.from(repositoryTypes),
-        technologies: Array.from(technologies),
-        architectureDomains: Array.from(architectureDomains),
-        capabilities,
-    });
-
-    const qualityContext = createEngineeringQualityContext({
-        technologies: Array.from(technologies),
-        architectureDomains: Array.from(architectureDomains),
-        repositoryTypes: Array.from(repositoryTypes),
-        capabilities,
-        repositoryDNA,
-        repositoryPersona,
-    });
-
-    runQualityDetectors(qualityContext);
-
-    const engineeringQuality = buildEngineeringQuality(qualityContext);
-
-    for (
-        const technology of
-        evidenceContext.technologyEvidence
-    ) {
-        /**
-         * Only implementation-backed technologies enter the official inventory.
-         *
-         * LIKELY and MENTIONED results remain available in technologyEvidence
-         * for future explanation UI, but they must not affect repository scores,
-         * reports, rankings, or recommendations.
-         */
-        if (
-            technology.status !==
-            "CONFIRMED"
-        ) {
-            continue;
-        }
-
-        add(
-            technologies,
-            [technology.name],
-        );
-
-        addReasoningSignal(
-            `${technology.reason} Evidence: ${technology.evidence}`,
-        );
-    }
-
-
-
-    const productionReadiness =
-        buildProductionReadiness({
-
-            engineeringQuality,
-
-        });
-
-    const repositoryMaturity = buildRepositoryMaturity({
-        engineeringQuality,
-        productionReadiness,
-        repositoryTypes: Array.from(repositoryTypes),
-        technologies: Array.from(technologies),
-        architectureDomains: Array.from(architectureDomains),
-        engineeringSignals: Array.from(engineeringSignals),
-        reasoningSignals,
-    });
-
-    const technicalDebt = buildTechnicalDebtReport({
-        engineeringQuality,
-        productionReadiness,
-        repositoryMaturity,
-    });
-
-    const strengthReport =
-        buildStrengthReport({
-
-            engineeringQuality,
-
-            repositoryMaturity,
-
-            productionReadiness,
-
-        });
-
-    const weaknessReport = buildWeaknessReport({
-        engineeringQuality,
-        repositoryMaturity,
-        productionReadiness,
-        technicalDebt,
-    });
-
-
-
-    const repositoryHealth = buildRepositoryHealth({
-        engineeringQuality,
-        productionReadiness,
-        repositoryMaturity,
-        technicalDebt,
-        strengthReport,
-        weaknessReport,
-    });
-
-
-    const architectureQuality =
-        buildArchitectureQuality({
-            architectureDomains:
-                Array.from(
-                    architectureDomains
-                ),
-
-            technologies:
-                Array.from(
-                    technologies
-                ),
-
-            engineeringSignals:
-                Array.from(
-                    engineeringSignals
-                ),
-
-            repositoryTypes:
-                Array.from(
-                    repositoryTypes
-                ),
-
-            capabilities,
-
-            repositoryDNA,
-
-            engineeringQuality,
-        });
-
-
-    const architectureDrift = buildArchitectureDriftReport({
-        architectureDomains: Array.from(architectureDomains),
-        repositoryTypes: Array.from(repositoryTypes),
-        technologies: Array.from(technologies),
-        reasoningSignals,
-    });
-
-    const evolutionInsights = analyzeRepositoryEvolution({
-        architectureDomains: Array.from(architectureDomains),
-        repositoryTypes: Array.from(repositoryTypes),
-        technologies: Array.from(technologies),
-        reasoningSignals,
-        repositoryDNA,
-        engineeringQuality,
-        repositoryMaturity,
-        repositoryHealth,
-        architectureDrift,
-    });
-
-    const recommendationReport = buildRecommendationReport({
-        weaknessReport,
-        technicalDebt,
-        productionReadiness,
-        engineeringQuality,
-        repositoryMaturity,
-        repositoryHealth,
-        architectureDrift,
-        evolutionInsights,
-    });
-
-    const combinedPurposeText = [
-        ...filesChanged,
-        ...commitMessages,
-        ...reasoningSignals,
-        ...Array.from(technologies),
-        ...Array.from(architectureDomains),
-        ...Array.from(repositoryTypes),
-    ].join(" ").toLowerCase();
-
-    if (
-        combinedPurposeText.includes("repository intelligence") ||
-        combinedPurposeText.includes("engineering intelligence") ||
-        combinedPurposeText.includes("architecture evolution") ||
-        combinedPurposeText.includes("architecture change") ||
-        combinedPurposeText.includes("repository fingerprint") ||
-        combinedPurposeText.includes("github webhook") ||
-        combinedPurposeText.includes("github oauth") ||
-        combinedPurposeText.includes("repository import")
-    ) {
-        repositoryTypes.add("ENGINEERING_INTELLIGENCE_PLATFORM");
-    }
-
-    if (
-        combinedPurposeText.includes("scaffold") ||
-        combinedPurposeText.includes("scaffolding") ||
-        combinedPurposeText.includes("code generation") ||
-        combinedPurposeText.includes("codegen") ||
-        combinedPurposeText.includes("cli") ||
-        combinedPurposeText.includes("commander") ||
-        combinedPurposeText.includes("inquirer") ||
-        combinedPurposeText.includes("boilerplate") ||
-        combinedPurposeText.includes("create-app")
-    ) {
-        repositoryTypes.add("DEVTOOL_PLATFORM");
-    }
-
-    const finalTechnologies = Array.from(technologies);
-    const finalArchitectureDomains = Array.from(architectureDomains);
-    const finalEngineeringSignals = Array.from(engineeringSignals);
-    const removeConflictingSecondaryTypes = (types: string[]) => {
-        const primaryType = types[0];
-
-        if (primaryType === "ENGINEERING_INTELLIGENCE_PLATFORM") {
-            return types.filter((type) => type !== "DEVTOOL_PLATFORM");
-        }
-
-        return types;
-    };
-
-    const finalRepositoryTypes = removeConflictingSecondaryTypes(
-        sortRepositoryTypesByPurpose(Array.from(repositoryTypes))
-    );
-
-
-    const repositoryIntelligence = buildRepositoryIntelligenceReport({
-        technologies: finalTechnologies,
-        architectureDomains: finalArchitectureDomains,
-        engineeringSignals: finalEngineeringSignals,
-        reasoningSignals,
-        repositoryTypes: finalRepositoryTypes,
-        repositoryPersona,
-        repositoryDNA,
-        capabilities,
-        evidenceResults,
-        engineeringQuality,
-        productionReadiness,
-        repositoryMaturity,
-        repositoryHealth,
-        technicalDebt,
-        architectureDrift,
-        evolutionInsights,
-        strengthReport,
-        weaknessReport,
-        recommendationReport,
-    });
-
-    return {
-        technologies: Array.from(technologies),
-        architectureDomains: Array.from(architectureDomains),
-        engineeringSignals: Array.from(engineeringSignals),
-        repositoryTypes: Array.from(repositoryTypes),
-        reasoningSignals,
-        evidenceResults,
-        capabilities,
-        repositoryDNA,
-        repositoryPersona,
-        engineeringQuality,
-        repositoryMaturity,
-        productionReadiness,
-        technicalDebt,
-        strengthReport,
-        weaknessReport,
-        recommendationReport,
-        repositoryHealth,
-        architectureQuality,
-        architectureDrift,
-        evolutionInsights,
-        repositoryIntelligence,
-        //repositoryIdentity,
-        //rankedEvidence,
-    };
+  };
+
+  const state = {
+    technologies,
+    architectureDomains,
+    engineeringSignals,
+    repositoryTypes,
+    reasoningSignals,
+    addReasoningSignal,
+  };
+
+  /**
+   * Stage 1:
+   * Build structured evidence and run repository and technology detectors.
+   */
+  const {
+    evidenceContext,
+    evidenceResults,
+  } = buildEvidenceStage(
+    filesChanged,
+    commitMessages,
+    repositoryContext,
+  );
+
+  /**
+   * Stage 2:
+   * Preserve older classifications while the evidence-aware engine
+   * gradually replaces the remaining broad keyword heuristics.
+   */
+  applyLegacyClassificationStage({
+    filesChanged,
+    combinedText,
+    state,
+  });
+
+  /**
+   * Stage 3:
+   * Convert repository-purpose evidence into technologies,
+   * architecture domains, and engineering signals.
+   *
+   * This stage was missing from the previous shortened version.
+   */
+  applyRepositoryPurposeStage({
+    evidenceResults,
+    state,
+  });
+
+  /**
+   * Stage 4:
+   * Build capabilities, repository persona, DNA, and engineering quality.
+   */
+  const {
+    capabilities,
+    repositoryPersona,
+    repositoryDNA,
+    engineeringQuality,
+  } = buildEngineeringStage({
+    filesChanged,
+    commitMessages,
+    combinedText,
+    evidenceContext,
+    state,
+  });
+
+  /**
+   * Stage 5:
+   * Build production readiness, maturity, debt, strengths,
+   * weaknesses, and overall repository health.
+   */
+  const {
+    productionReadiness,
+    repositoryMaturity,
+    technicalDebt,
+    strengthReport,
+    weaknessReport,
+    repositoryHealth,
+  } = buildHealthStage({
+    engineeringQuality,
+    state,
+  });
+
+  /**
+   * Stage 6:
+   * Build architecture quality, drift, evolution, and recommendations.
+   */
+  const {
+    architectureQuality,
+    architectureDrift,
+    evolutionInsights,
+    recommendationReport,
+  } = buildAnalysisStage({
+    capabilities,
+    repositoryDNA,
+    engineeringQuality,
+    productionReadiness,
+    repositoryMaturity,
+    technicalDebt,
+    strengthReport,
+    weaknessReport,
+    repositoryHealth,
+    state,
+  });
+
+  /**
+   * Stage 7:
+   * Apply final legacy repository-purpose adjustments after all
+   * reasoning signals and classifications have been produced.
+   */
+  applyLegacyPurposeAdjustmentStage({
+    filesChanged,
+    commitMessages,
+    state,
+  });
+
+  /**
+   * Stage 8:
+   * Build the final response consumed by the API, worker,
+   * dashboards, reports, and repository intelligence features.
+   */
+  return buildFingerprintResult({
+    state,
+    evidenceResults,
+    capabilities,
+    repositoryDNA,
+    repositoryPersona,
+    engineeringQuality,
+    repositoryMaturity,
+    productionReadiness,
+    technicalDebt,
+    strengthReport,
+    weaknessReport,
+    recommendationReport,
+    repositoryHealth,
+    architectureQuality,
+    architectureDrift,
+    evolutionInsights,
+  });
 };
