@@ -83,10 +83,34 @@ export type TechnologyEvidence = {
   status: TechnologyEvidenceStatus;
 };
 
+export type RepositoryFileContent = {
+  /**
+   * Repository-relative path.
+   *
+   * Example:
+   * apps/api/package.json
+   * src/server.ts
+   */
+  path: string;
+
+  /**
+   * Actual file content fetched from GitHub.
+   */
+  content: string;
+};
+
 export type EvidenceContextInput = {
   filesChanged: string[];
   commitMessages: string[];
   repositoryContext?: string;
+
+  /**
+   * Actual repository files fetched by the API.
+   *
+   * filesChanged only contains paths, so dependency and import providers
+   * cannot parse anything unless content is supplied here.
+   */
+  repositoryFiles?: RepositoryFileContent[];
 };
 
 /**
@@ -109,6 +133,10 @@ export type AddTechnology = {
 export type EvidenceContext = {
   filesChanged: string[];
   commitMessages: string[];
+  /**
+ * Actual repository files available for dependency and import parsing.
+ */
+repositoryFiles: RepositoryFileContent[];
     /**
    * Dependency manifests discovered in the repository.
    *

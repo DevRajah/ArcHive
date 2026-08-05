@@ -159,6 +159,7 @@ export const createEvidenceContext = ({
     filesChanged,
     commitMessages,
     repositoryContext = "",
+    repositoryFiles = [],
 }: EvidenceContextInput): EvidenceContext => {
     const evidenceItems:
         EvidenceItem[] = [];
@@ -320,6 +321,7 @@ export const createEvidenceContext = ({
     const context: EvidenceContext = {
         filesChanged,
         commitMessages,
+        repositoryFiles,
 
         dependencyFiles,
         dependencies,

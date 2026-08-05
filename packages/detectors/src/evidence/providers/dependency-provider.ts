@@ -1,91 +1,87 @@
-import fs from "node:fs";
-
-import path from "node:path";
-
 import type {
-    EvidenceContext,
+  EvidenceContext,
 } from "../evidence-types";
 
-/**
- * Extracts dependency names from package.json.
- *
- * This provider intentionally ignores version numbers.
- */
-export function collectDependencyEvidence(
-    context: EvidenceContext,
-): void {
+const DEPENDENCY_MANIFESTS =
+  new Set([
+    "package.json",
+  ]);
 
-    for (
-        const file of context.dependencyFiles
+const getFileName = (
+  filePath: string,
+): string => {
+  return (
+    filePath
+      .replace(/\\/g, "/")
+      .split("/")
+      .pop()
+      ?.toLowerCase() ?? ""
+  );
+};
+
+export const collectDependencyEvidence = (
+  context: EvidenceContext,
+): void => {
+  for (
+    const file of
+    context.repositoryFiles
+  ) {
+    const fileName =
+      getFileName(file.path);
+
+    if (
+      !DEPENDENCY_MANIFESTS.has(
+        fileName,
+      )
     ) {
-
-        const name =
-            path.basename(file)
-                .toLowerCase();
-
-        if (
-            name !==
-            "package.json"
-        ) {
-            continue;
-        }
-
-        try {
-
-            const content =
-                fs.readFileSync(
-                    file,
-                    "utf8",
-                );
-
-            const manifest =
-                JSON.parse(content);
-
-            const sections = [
-
-                manifest.dependencies,
-
-                manifest.devDependencies,
-
-                manifest.peerDependencies,
-
-                manifest.optionalDependencies,
-
-            ];
-
-            for (
-                const section of sections
-            ) {
-
-                if (
-                    !section
-                ) {
-                    continue;
-                }
-
-                for (
-                    const dependency of
-                    Object.keys(section)
-                ) {
-
-                    context.dependencies.add(
-
-                        dependency.toLowerCase(),
-
-                    );
-
-                }
-
-            }
-
-        } catch {
-
-            /**
-             * Invalid JSON should never crash the detector.
-             */
-
-        }
-
+      continue;
     }
 
-}
+    context.dependencyFiles.add(
+      file.path,
+    );
+
+    try {
+      const manifest =
+        JSON.parse(
+          file.content,
+        ) as Record<
+          string,
+          unknown
+        >;
+
+      const sections = [
+        manifest.dependencies,
+        manifest.devDependencies,
+        manifest.peerDependencies,
+        manifest.optionalDependencies,
+      ];
+
+      for (
+        const section of sections
+      ) {
+        if (
+          !section ||
+          typeof section !==
+            "object" ||
+          Array.isArray(section)
+        ) {
+          continue;
+        }
+
+        for (
+          const dependency of
+          Object.keys(section)
+        ) {
+          context.dependencies.add(
+            dependency.toLowerCase(),
+          );
+        }
+      }
+    } catch {
+      /**
+       * One malformed manifest must not stop repository analysis.
+       */
+    }
+  }
+};
