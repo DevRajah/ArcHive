@@ -19,6 +19,22 @@ const getFileName = (
   );
 };
 
+const isDependencySection = (
+  value: unknown,
+): value is Record<string, unknown> => {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    !Array.isArray(value)
+  );
+};
+
+/**
+ * Extracts dependency names from repository manifests.
+ *
+ * This provider does not classify technologies. It only records package
+ * evidence for technology detectors to consume later.
+ */
 export const collectDependencyEvidence = (
   context: EvidenceContext,
 ): void => {
@@ -27,7 +43,9 @@ export const collectDependencyEvidence = (
     context.repositoryFiles
   ) {
     const fileName =
-      getFileName(file.path);
+      getFileName(
+        file.path,
+      );
 
     if (
       !DEPENDENCY_MANIFESTS.has(
@@ -45,10 +63,12 @@ export const collectDependencyEvidence = (
       const manifest =
         JSON.parse(
           file.content,
-        ) as Record<
-          string,
-          unknown
-        >;
+        ) as {
+          dependencies?: unknown;
+          devDependencies?: unknown;
+          peerDependencies?: unknown;
+          optionalDependencies?: unknown;
+        };
 
       const sections = [
         manifest.dependencies,
@@ -61,10 +81,9 @@ export const collectDependencyEvidence = (
         const section of sections
       ) {
         if (
-          !section ||
-          typeof section !==
-            "object" ||
-          Array.isArray(section)
+          !isDependencySection(
+            section,
+          )
         ) {
           continue;
         }
@@ -74,13 +93,15 @@ export const collectDependencyEvidence = (
           Object.keys(section)
         ) {
           context.dependencies.add(
-            dependency.toLowerCase(),
+            dependency
+              .trim()
+              .toLowerCase(),
           );
         }
       }
     } catch {
       /**
-       * One malformed manifest must not stop repository analysis.
+       * A malformed manifest must not stop the entire repository analysis.
        */
     }
   }

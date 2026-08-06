@@ -1,154 +1,158 @@
 import {
-    calculateEvidenceResults,
-    createEvidenceContext,
-    detectAiEvidence,
-    detectBackendServiceEvidence,
-    detectCollaborationEvidence,
-    detectDataEngineeringEvidence,
-    detectDesignSystemEvidence,
-    detectDeveloperPlatformEvidence,
-    detectDeveloperToolEvidence,
-    detectDocumentationEvidence,
-    detectEcommerceEvidence,
-    detectEducationEvidence,
-    detectEnergyEvidence,
-    detectEngineeringIntelligenceEvidence,
-    detectFintechEvidence,
-    detectFrontendEvidence,
-    detectHealthcareEvidence,
-    detectInfrastructureEvidence,
-    detectMessagingEvidence,
-    detectMobileEvidence,
-    detectObservabilityEvidence,
-    detectPackageSdkEvidence,
-    detectSecurityEvidence,
-    detectTransportEvidence,
+  calculateEvidenceResults,
+  createEvidenceContext,
+  detectAiEvidence,
+  detectBackendServiceEvidence,
+  detectCollaborationEvidence,
+  detectDataEngineeringEvidence,
+  detectDesignSystemEvidence,
+  detectDeveloperPlatformEvidence,
+  detectDeveloperToolEvidence,
+  detectDocumentationEvidence,
+  detectEcommerceEvidence,
+  detectEducationEvidence,
+  detectEnergyEvidence,
+  detectEngineeringIntelligenceEvidence,
+  detectFintechEvidence,
+  detectFrontendEvidence,
+  detectHealthcareEvidence,
+  detectInfrastructureEvidence,
+  detectMessagingEvidence,
+  detectMobileEvidence,
+  detectObservabilityEvidence,
+  detectPackageSdkEvidence,
+  detectSecurityEvidence,
+  detectTransportEvidence,
+} from "../evidence";
+
+import type {
+  RepositoryFileContent,
 } from "../evidence";
 
 import {
-    runTechnologyDetectors,
+  runTechnologyDetectors,
 } from "../technologies";
 
+/**
+ * Builds all evidence required by the repository fingerprint pipeline.
+ *
+ * Future me:
+ * This stage receives repository paths, commit context, and any actual
+ * repository files fetched by the API. Evidence providers then extract
+ * dependencies, imports, languages, and configuration signals.
+ */
 export const buildEvidenceStage = (
-    filesChanged: string[],
-    commitMessages: string[],
-    repositoryContext: string,
+  filesChanged: string[],
+  commitMessages: string[],
+  repositoryContext: string,
+  repositoryFiles: RepositoryFileContent[] = [],
 ) => {
+  const evidenceContext =
+    createEvidenceContext({
+      filesChanged,
+      commitMessages,
+      repositoryContext,
+      repositoryFiles,
+    });
 
-    const evidenceContext =
-        createEvidenceContext({
+  runTechnologyDetectors(
+    evidenceContext,
+  );
 
-            filesChanged,
+  detectEngineeringIntelligenceEvidence(
+    evidenceContext,
+  );
 
-            commitMessages,
+  detectFintechEvidence(
+    evidenceContext,
+  );
 
-            repositoryContext,
+  detectDeveloperToolEvidence(
+    evidenceContext,
+  );
 
-        });
+  detectDeveloperPlatformEvidence(
+    evidenceContext,
+  );
 
-    runTechnologyDetectors(
-        evidenceContext,
-    );
+  detectObservabilityEvidence(
+    evidenceContext,
+  );
 
-    detectEngineeringIntelligenceEvidence(
-        evidenceContext,
-    );
+  detectSecurityEvidence(
+    evidenceContext,
+  );
 
-    detectFintechEvidence(
-        evidenceContext,
-    );
+  detectAiEvidence(
+    evidenceContext,
+  );
 
-    detectDeveloperToolEvidence(
-        evidenceContext,
-    );
+  detectMobileEvidence(
+    evidenceContext,
+  );
 
-    detectDeveloperPlatformEvidence(
-        evidenceContext,
-    );
+  detectTransportEvidence(
+    evidenceContext,
+  );
 
-    detectObservabilityEvidence(
-        evidenceContext,
-    );
+  detectDataEngineeringEvidence(
+    evidenceContext,
+  );
 
-    detectSecurityEvidence(
-        evidenceContext,
-    );
+  detectBackendServiceEvidence(
+    evidenceContext,
+  );
 
-    detectAiEvidence(
-        evidenceContext,
-    );
+  detectFrontendEvidence(
+    evidenceContext,
+  );
 
-    detectMobileEvidence(
-        evidenceContext,
-    );
+  detectDocumentationEvidence(
+    evidenceContext,
+  );
 
-    detectTransportEvidence(
-        evidenceContext,
-    );
+  detectDesignSystemEvidence(
+    evidenceContext,
+  );
 
-    detectDataEngineeringEvidence(
-        evidenceContext,
-    );
+  detectPackageSdkEvidence(
+    evidenceContext,
+  );
 
-    detectBackendServiceEvidence(
-        evidenceContext,
-    );
+  detectInfrastructureEvidence(
+    evidenceContext,
+  );
 
-    detectFrontendEvidence(
-        evidenceContext,
-    );
+  detectMessagingEvidence(
+    evidenceContext,
+  );
 
-    detectDocumentationEvidence(
-        evidenceContext,
-    );
+  detectHealthcareEvidence(
+    evidenceContext,
+  );
 
-    detectDesignSystemEvidence(
-        evidenceContext,
-    );
+  detectEducationEvidence(
+    evidenceContext,
+  );
 
-    detectPackageSdkEvidence(
-        evidenceContext,
-    );
+  detectEnergyEvidence(
+    evidenceContext,
+  );
 
-    detectInfrastructureEvidence(
-        evidenceContext,
-    );
+  detectEcommerceEvidence(
+    evidenceContext,
+  );
 
-    detectMessagingEvidence(
-        evidenceContext,
-    );
+  detectCollaborationEvidence(
+    evidenceContext,
+  );
 
-    detectHealthcareEvidence(
-        evidenceContext,
-    );
+  return {
+    evidenceContext,
 
-    detectEducationEvidence(
-        evidenceContext,
-    );
-
-    detectEnergyEvidence(
-        evidenceContext,
-    );
-
-    detectEcommerceEvidence(
-        evidenceContext,
-    );
-
-    detectCollaborationEvidence(
-        evidenceContext,
-    );
-
-    return {
-
-        evidenceContext,
-
-        evidenceResults:
-            calculateEvidenceResults(
-
-                evidenceContext.evidenceItems,
-
-            ),
-
-    };
-
+    evidenceResults:
+      calculateEvidenceResults(
+        evidenceContext.evidenceItems,
+      ),
+  };
 };

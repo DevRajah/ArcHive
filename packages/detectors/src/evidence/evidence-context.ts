@@ -328,11 +328,11 @@ export const createEvidenceContext = ({
 
         importFiles,
         imports,
+
         configurationFiles,
         languages,
 
         combinedText,
-
         filePathText,
         commitText,
         repositoryContextText,

@@ -6,8 +6,21 @@ const SOURCE_FILE_PATTERN =
   /\.(ts|tsx|js|jsx|mjs|cjs)$/i;
 
 const IMPORT_PATTERNS = [
+  /**
+   * import value from "package"
+   * import "package"
+   * export value from "package"
+   */
   /(?:import|export)\s+(?:[\s\S]*?\s+from\s+)?["']([^"']+)["']/g,
+
+  /**
+   * const value = require("package")
+   */
   /require\(\s*["']([^"']+)["']\s*\)/g,
+
+  /**
+   * const value = await import("package")
+   */
   /import\(\s*["']([^"']+)["']\s*\)/g,
 ];
 
@@ -17,6 +30,9 @@ const normalizePackageName = (
   const value =
     importedValue.trim();
 
+  /**
+   * Ignore local modules and Node.js built-ins.
+   */
   if (
     !value ||
     value.startsWith(".") ||
@@ -26,21 +42,44 @@ const normalizePackageName = (
     return null;
   }
 
-  if (value.startsWith("@")) {
-    const [scope, packageName] =
-      value.split("/");
+  /**
+   * Preserve the package root for scoped dependencies.
+   *
+   * @prisma/client/runtime becomes @prisma/client.
+   */
+  if (
+    value.startsWith("@")
+  ) {
+    const [
+      scope,
+      packageName,
+    ] = value.split("/");
 
-    return packageName
-      ? `${scope}/${packageName}`.toLowerCase()
-      : value.toLowerCase();
+    if (
+      !scope ||
+      !packageName
+    ) {
+      return value.toLowerCase();
+    }
+
+    return `${scope}/${packageName}`
+      .toLowerCase();
   }
 
+  /**
+   * socket.io/client becomes socket.io.
+   */
   return (
-    value.split("/")[0]
-      ?.toLowerCase() ?? null
+    value
+      .split("/")[0]
+      ?.toLowerCase() ??
+    null
   );
 };
 
+/**
+ * Extracts third-party package imports from JavaScript and TypeScript files.
+ */
 export const collectImportEvidence = (
   context: EvidenceContext,
 ): void => {
@@ -77,11 +116,13 @@ export const collectImportEvidence = (
             match[1],
           );
 
-        if (packageName) {
-          context.imports.add(
-            packageName,
-          );
+        if (!packageName) {
+          continue;
         }
+
+        context.imports.add(
+          packageName,
+        );
       }
     }
   }

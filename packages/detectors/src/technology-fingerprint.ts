@@ -17,6 +17,10 @@ export type {
   TechnologyFingerprintResult,
 } from "./fingerprint/report-stage";
 
+import type {
+  RepositoryFileContent,
+} from "./evidence";
+
 /**
  * Coordinates the complete ArcHive repository intelligence pipeline.
  *
@@ -29,6 +33,7 @@ export const detectTechnologyFingerprint = (
   filesChanged: string[],
   commitMessages: string[],
   repositoryContext = "",
+  repositoryFiles: RepositoryFileContent[] = [],
 ): TechnologyFingerprintResult => {
   const joinedFiles =
     filesChanged
@@ -97,6 +102,7 @@ export const detectTechnologyFingerprint = (
     filesChanged,
     commitMessages,
     repositoryContext,
+    repositoryFiles,
   );
 
   /**
