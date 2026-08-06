@@ -159,6 +159,15 @@ export type EvidenceContext = {
     dependencies: Set<string>;
 
     /**
+ * Exact dependency versions extracted from package manifests.
+ *
+ * Example:
+ * fastify -> ^5.2.0
+ * react -> 19.0.0
+ */
+    dependencyVersions: Map<string, string>;
+
+    /**
      * Source files that can later be scanned for imports.
      */
     importFiles: Set<string>;

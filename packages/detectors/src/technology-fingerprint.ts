@@ -1,29 +1,31 @@
 import {
-  applyLegacyClassificationStage,
-  applyLegacyPurposeAdjustmentStage,
-  applyRepositoryPurposeStage,
-  applyTechnologyConflictStage,
-  buildAnalysisStage,
-  buildEngineeringStage,
-  buildEvidenceStage,
-  buildFingerprintResult,
-  buildHealthStage,
+    applyLegacyClassificationStage,
+    applyLegacyPurposeAdjustmentStage,
+    applyRepositoryPurposeStage,
+    applyTechnologyConflictStage,
+    buildAnalysisStage,
+    buildEngineeringStage,
+    buildEvidenceStage,
+    buildFingerprintResult,
+    buildHealthStage,
+    applyFrameworkVersionStage,
+    applyTechnologyRelationshipStage,
 } from "./fingerprint";
 
 import type {
-  TechnologyFingerprintResult,
+    TechnologyFingerprintResult,
 } from "./fingerprint/report-stage";
 
 export type {
-  TechnologyFingerprintResult,
+    TechnologyFingerprintResult,
 } from "./fingerprint/report-stage";
 
 import type {
-  RepositoryFileContent,
+    RepositoryFileContent,
 } from "./evidence";
 
 import {
-  getImplementationFiles,
+    getImplementationFiles,
 } from "./technologies/technology-context";
 
 
@@ -37,202 +39,218 @@ import {
  * inside their respective fingerprint stages.
  */
 export const detectTechnologyFingerprint = (
-  filesChanged: string[],
-  commitMessages: string[],
-  repositoryContext = "",
-  repositoryFiles: RepositoryFileContent[] = [],
+    filesChanged: string[],
+    commitMessages: string[],
+    repositoryContext = "",
+    repositoryFiles: RepositoryFileContent[] = [],
 ): TechnologyFingerprintResult => {
 
 
-  const technologies =
-    new Set<string>();
+    const technologies =
+        new Set<string>();
 
-  const architectureDomains =
-    new Set<string>();
+    const architectureDomains =
+        new Set<string>();
 
-  const engineeringSignals =
-    new Set<string>();
+    const engineeringSignals =
+        new Set<string>();
 
-  const repositoryTypes =
-    new Set<string>();
+    const repositoryTypes =
+        new Set<string>();
 
-  const reasoningSignals:
-    string[] = [];
+    const reasoningSignals:
+        string[] = [];
 
-  const addReasoningSignal = (
-    signal: string,
-  ): void => {
-    if (
-      !reasoningSignals.includes(
-        signal,
-      )
-    ) {
-      reasoningSignals.push(
-        signal,
-      );
-    }
-  };
+    const addReasoningSignal = (
+        signal: string,
+    ): void => {
+        if (
+            !reasoningSignals.includes(
+                signal,
+            )
+        ) {
+            reasoningSignals.push(
+                signal,
+            );
+        }
+    };
 
-  const state = {
-    technologies,
-    architectureDomains,
-    engineeringSignals,
-    repositoryTypes,
-    reasoningSignals,
-    addReasoningSignal,
-  };
+    const state = {
+        technologies,
+        architectureDomains,
+        engineeringSignals,
+        repositoryTypes,
+        reasoningSignals,
+        addReasoningSignal,
+    };
 
-  /**
-   * Stage 1:
-   * Build structured evidence and run repository and technology detectors.
-   */
-  const {
-    evidenceContext,
-    evidenceResults,
-  } = buildEvidenceStage(
-    filesChanged,
-    commitMessages,
-    repositoryContext,
-    repositoryFiles,
-  );
+    /**
+     * Stage 1:
+     * Build structured evidence and run repository and technology detectors.
+     */
+    const {
+        evidenceContext,
+        evidenceResults,
+    } = buildEvidenceStage(
+        filesChanged,
+        commitMessages,
+        repositoryContext,
+        repositoryFiles,
+    );
 
-  /**
- * The remaining legacy classifier receives filtered implementation paths.
- *
- * This prevents ArcHive from classifying itself as Kafka, MongoDB,
- * Kubernetes, Anthropic, and similar technologies merely because those
- * words exist inside detector source filenames.
- */
-const combinedText = [
-  ...getImplementationFiles(
-    evidenceContext,
-  ),
-  ...commitMessages,
-]
-  .join(" ")
-  .toLowerCase();
-
-  /**
-   * Stage 2:
-   * Preserve older classifications while the evidence-aware engine
-   * gradually replaces the remaining broad keyword heuristics.
-   */
-  applyLegacyClassificationStage({
-    filesChanged,
-    combinedText,
-    state,
-  });
-
-  /**
-   * Stage 3:
-   * Convert repository-purpose evidence into technologies,
-   * architecture domains, and engineering signals.
+    /**
+   * The remaining legacy classifier receives filtered implementation paths.
    *
-   * This stage was missing from the previous shortened version.
+   * This prevents ArcHive from classifying itself as Kafka, MongoDB,
+   * Kubernetes, Anthropic, and similar technologies merely because those
+   * words exist inside detector source filenames.
    */
-  applyRepositoryPurposeStage({
-    evidenceResults,
-    state,
-  });
+    const combinedText = [
+        ...getImplementationFiles(
+            evidenceContext,
+        ),
+        ...commitMessages,
+    ]
+        .join(" ")
+        .toLowerCase();
 
-  /**
-   * Stage 4:
-   * Build capabilities, repository persona, DNA, and engineering quality.
-   */
-  const {
-    capabilities,
-    repositoryPersona,
-    repositoryDNA,
-    engineeringQuality,
-  } = buildEngineeringStage({
-    filesChanged,
-    commitMessages,
-    combinedText,
-    evidenceContext,
-    state,
-  });
+    /**
+     * Stage 2:
+     * Preserve older classifications while the evidence-aware engine
+     * gradually replaces the remaining broad keyword heuristics.
+     */
+    applyLegacyClassificationStage({
+        filesChanged,
+        combinedText,
+        state,
+    });
 
-  
+    /**
+     * Stage 3:
+     * Convert repository-purpose evidence into technologies,
+     * architecture domains, and engineering signals.
+     *
+     * This stage was missing from the previous shortened version.
+     */
+    applyRepositoryPurposeStage({
+        evidenceResults,
+        state,
+    });
 
-  /**
-   * Stage 5:
-   * Build production readiness, maturity, debt, strengths,
-   * weaknesses, and overall repository health.
-   */
-  const {
-    productionReadiness,
-    repositoryMaturity,
-    technicalDebt,
-    strengthReport,
-    weaknessReport,
-    repositoryHealth,
-  } = buildHealthStage({
-    engineeringQuality,
-    state,
-  });
+    /**
+     * Stage 4:
+     * Build capabilities, repository persona, DNA, and engineering quality.
+     */
+    const {
+        capabilities,
+        repositoryPersona,
+        repositoryDNA,
+        engineeringQuality,
+    } = buildEngineeringStage({
+        filesChanged,
+        commitMessages,
+        combinedText,
+        evidenceContext,
+        state,
+    });
 
-  /**
-   * Stage 6:
-   * Build architecture quality, drift, evolution, and recommendations.
-   */
-  const {
-    architectureQuality,
-    architectureDrift,
-    evolutionInsights,
-    recommendationReport,
-  } = buildAnalysisStage({
-    capabilities,
-    repositoryDNA,
-    engineeringQuality,
-    productionReadiness,
-    repositoryMaturity,
-    technicalDebt,
-    strengthReport,
-    weaknessReport,
-    repositoryHealth,
-    state,
-  });
+    /**
+     * Stage 5:
+     * Apply final legacy repository-purpose adjustments after all
+     * reasoning signals and classifications have been produced.
+     */
+    applyLegacyPurposeAdjustmentStage({
+        filesChanged,
+        commitMessages,
+        state,
+    });
 
-  /**
-   * Stage 7:
-   * Apply final legacy repository-purpose adjustments after all
-   * reasoning signals and classifications have been produced.
-   */
-  applyLegacyPurposeAdjustmentStage({
-    filesChanged,
-    commitMessages,
-    state,
-  });
+    /**
+     * Stage 6:
+     * Resolve any conflicts between identified technologies.
+     */
+    applyTechnologyConflictStage({
+        state,
+    });
 
-  /**
-   * Stage 7.5:
-   * Resolve any conflicts between identified technologies.
-   */
-  applyTechnologyConflictStage({
-    state,
-  });
+    /**
+ * Add exact dependency-version context after generic classifications
+ * and duplicate labels have been resolved.
+ */
+    applyFrameworkVersionStage({
+        evidenceContext,
+        state,
+    });
 
-  /**
-   * Stage 8:
-   * Build the final response consumed by the API, worker,
-   * dashboards, reports, and repository intelligence features.
-   */
-  return buildFingerprintResult({
-    state,
-    evidenceResults,
-    capabilities,
-    repositoryDNA,
-    repositoryPersona,
-    engineeringQuality,
-    repositoryMaturity,
-    productionReadiness,
-    technicalDebt,
-    strengthReport,
-    weaknessReport,
-    recommendationReport,
-    repositoryHealth,
-    architectureQuality,
-    architectureDrift,
-    evolutionInsights,
-  });
+    /**
+     * Explain how confirmed technologies interact before health,
+     * architecture, and recommendation reports are generated.
+     */
+    applyTechnologyRelationshipStage({
+        evidenceContext,
+        state,
+    });
+
+    /**
+ * Stage 7:
+ * Build production readiness, maturity, debt, strengths,
+ * weaknesses, and overall repository health.
+ */
+    const {
+        productionReadiness,
+        repositoryMaturity,
+        technicalDebt,
+        strengthReport,
+        weaknessReport,
+        repositoryHealth,
+    } = buildHealthStage({
+        engineeringQuality,
+        state,
+    });
+
+    /**
+ * Stage 8:
+ * Build architecture quality, drift, evolution, and recommendations.
+ */
+    const {
+        architectureQuality,
+        architectureDrift,
+        evolutionInsights,
+        recommendationReport,
+    } = buildAnalysisStage({
+        capabilities,
+        repositoryDNA,
+        engineeringQuality,
+        productionReadiness,
+        repositoryMaturity,
+        technicalDebt,
+        strengthReport,
+        weaknessReport,
+        repositoryHealth,
+        state,
+    });
+
+    /**
+     * Stage 9:
+     * Build the final response consumed by the API, worker,
+     * dashboards, reports, and repository intelligence features.
+     */
+    return buildFingerprintResult({
+        state,
+        evidenceResults,
+        capabilities,
+        repositoryDNA,
+        repositoryPersona,
+        engineeringQuality,
+        repositoryMaturity,
+        productionReadiness,
+        technicalDebt,
+        strengthReport,
+        weaknessReport,
+        recommendationReport,
+        repositoryHealth,
+        architectureQuality,
+        architectureDrift,
+        evolutionInsights,
+    });
 };

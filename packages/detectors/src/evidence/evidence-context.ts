@@ -177,6 +177,9 @@ export const createEvidenceContext = ({
     const dependencies =
         new Set<string>();
 
+    const dependencyVersions =
+        new Map<string, string>();
+
     const importFiles =
         new Set<string>();
 
@@ -331,6 +334,7 @@ export const createEvidenceContext = ({
 
         dependencyFiles,
         dependencies,
+        dependencyVersions,
 
         importFiles,
         imports,

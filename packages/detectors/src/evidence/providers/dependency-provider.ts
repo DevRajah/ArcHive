@@ -21,7 +21,10 @@ const getFileName = (
 
 const isDependencySection = (
   value: unknown,
-): value is Record<string, unknown> => {
+): value is Record<
+  string,
+  unknown
+> => {
   return (
     typeof value === "object" &&
     value !== null &&
@@ -30,10 +33,93 @@ const isDependencySection = (
 };
 
 /**
- * Extracts dependency names from repository manifests.
+ * Stores a dependency and its declared version.
  *
- * This provider does not classify technologies. It only records package
- * evidence for technology detectors to consume later.
+ * Monorepos may contain several package.json files. If the same dependency
+ * appears more than once, we keep the first concrete version and replace
+ * workspace-only references when a better version is later discovered.
+ */
+const registerDependency = ({
+  context,
+  dependency,
+  version,
+}: {
+  context: EvidenceContext;
+  dependency: string;
+  version: unknown;
+}): void => {
+  const normalizedDependency =
+    dependency
+      .trim()
+      .toLowerCase();
+
+  if (!normalizedDependency) {
+    return;
+  }
+
+  context.dependencies.add(
+    normalizedDependency,
+  );
+
+  if (
+    typeof version !== "string" ||
+    !version.trim()
+  ) {
+    return;
+  }
+
+  const normalizedVersion =
+    version.trim();
+
+  const existingVersion =
+    context.dependencyVersions.get(
+      normalizedDependency,
+    );
+
+  /**
+   * Prefer a concrete package version over workspace or local references.
+   */
+  const existingIsReference =
+    existingVersion?.startsWith(
+      "workspace:",
+    ) ||
+    existingVersion?.startsWith(
+      "file:",
+    ) ||
+    existingVersion?.startsWith(
+      "link:",
+    );
+
+  const incomingIsReference =
+    normalizedVersion.startsWith(
+      "workspace:",
+    ) ||
+    normalizedVersion.startsWith(
+      "file:",
+    ) ||
+    normalizedVersion.startsWith(
+      "link:",
+    );
+
+  if (
+    !existingVersion ||
+    (
+      existingIsReference &&
+      !incomingIsReference
+    )
+  ) {
+    context.dependencyVersions.set(
+      normalizedDependency,
+      normalizedVersion,
+    );
+  }
+};
+
+/**
+ * Extracts dependency names and declared versions from package.json files.
+ *
+ * This provider only gathers evidence. Technology classification remains
+ * inside the technology detector pipeline.
  */
 export const collectDependencyEvidence = (
   context: EvidenceContext,
@@ -89,19 +175,23 @@ export const collectDependencyEvidence = (
         }
 
         for (
-          const dependency of
-          Object.keys(section)
+          const [
+            dependency,
+            version,
+          ] of Object.entries(
+            section,
+          )
         ) {
-          context.dependencies.add(
-            dependency
-              .trim()
-              .toLowerCase(),
-          );
+          registerDependency({
+            context,
+            dependency,
+            version,
+          });
         }
       }
     } catch {
       /**
-       * A malformed manifest must not stop the entire repository analysis.
+       * A malformed package.json must not stop repository analysis.
        */
     }
   }
