@@ -6,3 +6,4 @@ export * from "./health-stage";
 export * from "./analysis-stage";
 export * from "./legacy-classification-stage";
 export * from "./report-stage";
+export * from "./technology-conflict-stage";

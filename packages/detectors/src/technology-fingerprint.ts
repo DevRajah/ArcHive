@@ -1,12 +1,13 @@
 import {
+  applyLegacyClassificationStage,
+  applyLegacyPurposeAdjustmentStage,
+  applyRepositoryPurposeStage,
+  applyTechnologyConflictStage,
   buildAnalysisStage,
   buildEngineeringStage,
   buildEvidenceStage,
   buildFingerprintResult,
   buildHealthStage,
-  applyLegacyClassificationStage,
-  applyLegacyPurposeAdjustmentStage,
-  applyRepositoryPurposeStage,
 } from "./fingerprint";
 
 import type {
@@ -24,6 +25,8 @@ import type {
 import {
   getImplementationFiles,
 } from "./technologies/technology-context";
+
+
 
 /**
  * Coordinates the complete ArcHive repository intelligence pipeline.
@@ -149,6 +152,8 @@ const combinedText = [
     state,
   });
 
+  
+
   /**
    * Stage 5:
    * Build production readiness, maturity, debt, strengths,
@@ -196,6 +201,14 @@ const combinedText = [
   applyLegacyPurposeAdjustmentStage({
     filesChanged,
     commitMessages,
+    state,
+  });
+
+  /**
+   * Stage 7.5:
+   * Resolve any conflicts between identified technologies.
+   */
+  applyTechnologyConflictStage({
     state,
   });
 
