@@ -21,6 +21,10 @@ import type {
   RepositoryFileContent,
 } from "./evidence";
 
+import {
+  getImplementationFiles,
+} from "./technologies/technology-context";
+
 /**
  * Coordinates the complete ArcHive repository intelligence pipeline.
  *
@@ -35,23 +39,7 @@ export const detectTechnologyFingerprint = (
   repositoryContext = "",
   repositoryFiles: RepositoryFileContent[] = [],
 ): TechnologyFingerprintResult => {
-  const joinedFiles =
-    filesChanged
-      .join(" ")
-      .toLowerCase();
 
-  const joinedCommits =
-    commitMessages
-      .join(" ")
-      .toLowerCase();
-
-  /**
-   * This preserves the previous legacy-classification behaviour.
-   *
-   * repositoryContext is processed separately by the evidence stage.
-   */
-  const combinedText =
-    `${joinedFiles} ${joinedCommits}`;
 
   const technologies =
     new Set<string>();
@@ -104,6 +92,22 @@ export const detectTechnologyFingerprint = (
     repositoryContext,
     repositoryFiles,
   );
+
+  /**
+ * The remaining legacy classifier receives filtered implementation paths.
+ *
+ * This prevents ArcHive from classifying itself as Kafka, MongoDB,
+ * Kubernetes, Anthropic, and similar technologies merely because those
+ * words exist inside detector source filenames.
+ */
+const combinedText = [
+  ...getImplementationFiles(
+    evidenceContext,
+  ),
+  ...commitMessages,
+]
+  .join(" ")
+  .toLowerCase();
 
   /**
    * Stage 2:
