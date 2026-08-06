@@ -186,6 +186,12 @@ export const createEvidenceContext = ({
     const configurationFiles =
         new Set<string>();
 
+    const configurationContents =
+        new Map<
+            string,
+            string
+        >();
+
     const languages =
         new Set<string>();
 
@@ -330,6 +336,7 @@ export const createEvidenceContext = ({
         imports,
 
         configurationFiles,
+        configurationContents,
         languages,
 
         combinedText,

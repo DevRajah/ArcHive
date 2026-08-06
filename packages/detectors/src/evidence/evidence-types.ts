@@ -1,24 +1,24 @@
 import type {
-  RepositoryType,
+    RepositoryType,
 } from "../constants";
 
 export type EvidenceCategory =
-  | "REPOSITORY_METADATA"
-  | "FILE_STRUCTURE"
-  | "DEPENDENCY"
-  | "CODE_PATTERN"
-  | "DOMAIN_LANGUAGE"
-  | "ARCHITECTURE_PATTERN"
-  | "README"
-  | "COMMIT"
-  | "CONFIGURATION"
-  | "IMPORT"
-  | "LOCK_FILE";
+    | "REPOSITORY_METADATA"
+    | "FILE_STRUCTURE"
+    | "DEPENDENCY"
+    | "CODE_PATTERN"
+    | "DOMAIN_LANGUAGE"
+    | "ARCHITECTURE_PATTERN"
+    | "README"
+    | "COMMIT"
+    | "CONFIGURATION"
+    | "IMPORT"
+    | "LOCK_FILE";
 
 export type EvidenceStrength =
-  | "WEAK"
-  | "MEDIUM"
-  | "STRONG";
+    | "WEAK"
+    | "MEDIUM"
+    | "STRONG";
 
 /**
  * Describes where a technology signal originated.
@@ -27,90 +27,90 @@ export type EvidenceStrength =
  * evidence from documentation-only mentions.
  */
 export type TechnologyEvidenceSource =
-  | "PACKAGE_JSON"
-  | "DEPENDENCY"
-  | "IMPORT"
-  | "CONFIGURATION"
-  | "FILE_PATH"
-  | "SOURCE_CODE"
-  | "LOCK_FILE"
-  | "README"
-  | "COMMIT_MESSAGE"
-  | "REPOSITORY_CONTEXT"
-  | "UNKNOWN";
+    | "PACKAGE_JSON"
+    | "DEPENDENCY"
+    | "IMPORT"
+    | "CONFIGURATION"
+    | "FILE_PATH"
+    | "SOURCE_CODE"
+    | "LOCK_FILE"
+    | "README"
+    | "COMMIT_MESSAGE"
+    | "REPOSITORY_CONTEXT"
+    | "UNKNOWN";
 
 export type TechnologyEvidenceStatus =
-  | "CONFIRMED"
-  | "LIKELY"
-  | "MENTIONED";
+    | "CONFIRMED"
+    | "LIKELY"
+    | "MENTIONED";
 
 export type EvidenceItem = {
-  repositoryType: RepositoryType;
-  label: string;
-  weight: number;
-  category: EvidenceCategory;
-  strength: EvidenceStrength;
+    repositoryType: RepositoryType;
+    label: string;
+    weight: number;
+    category: EvidenceCategory;
+    strength: EvidenceStrength;
 };
 
 export type EvidenceResult = {
-  repositoryType: RepositoryType;
-  confidence: number;
-  evidence: string[];
-  strongestEvidence: string[];
-  totalScore: number;
+    repositoryType: RepositoryType;
+    confidence: number;
+    evidence: string[];
+    strongestEvidence: string[];
+    totalScore: number;
 };
 
 export type TechnologyEvidence = {
-  name: string;
-  reason: string;
-  weight: number;
-  strength: EvidenceStrength;
+    name: string;
+    reason: string;
+    weight: number;
+    strength: EvidenceStrength;
 
-  /**
-   * The original location of the signal.
-   */
-  source: TechnologyEvidenceSource;
+    /**
+     * The original location of the signal.
+     */
+    source: TechnologyEvidenceSource;
 
-  /**
-   * Human-readable evidence, such as a dependency, file path,
-   * configuration file, or README mention.
-   */
-  evidence: string;
+    /**
+     * Human-readable evidence, such as a dependency, file path,
+     * configuration file, or README mention.
+     */
+    evidence: string;
 
-  /**
-   * Classification derived from evidence quality.
-   */
-  status: TechnologyEvidenceStatus;
+    /**
+     * Classification derived from evidence quality.
+     */
+    status: TechnologyEvidenceStatus;
 };
 
 export type RepositoryFileContent = {
-  /**
-   * Repository-relative path.
-   *
-   * Example:
-   * apps/api/package.json
-   * src/server.ts
-   */
-  path: string;
+    /**
+     * Repository-relative path.
+     *
+     * Example:
+     * apps/api/package.json
+     * src/server.ts
+     */
+    path: string;
 
-  /**
-   * Actual file content fetched from GitHub.
-   */
-  content: string;
+    /**
+     * Actual file content fetched from GitHub.
+     */
+    content: string;
 };
 
 export type EvidenceContextInput = {
-  filesChanged: string[];
-  commitMessages: string[];
-  repositoryContext?: string;
+    filesChanged: string[];
+    commitMessages: string[];
+    repositoryContext?: string;
 
-  /**
-   * Actual repository files fetched by the API.
-   *
-   * filesChanged only contains paths, so dependency and import providers
-   * cannot parse anything unless content is supplied here.
-   */
-  repositoryFiles?: RepositoryFileContent[];
+    /**
+     * Actual repository files fetched by the API.
+     *
+     * filesChanged only contains paths, so dependency and import providers
+     * cannot parse anything unless content is supplied here.
+     */
+    repositoryFiles?: RepositoryFileContent[];
 };
 
 /**
@@ -118,25 +118,26 @@ export type EvidenceContextInput = {
  * migrate them from positional arguments to structured evidence.
  */
 export type AddTechnology = {
-  (
-    technology: TechnologyEvidence,
-  ): void;
+    (
+        technology: TechnologyEvidence,
+    ): void;
 
-  (
-    name: string,
-    reason: string,
-    weight: number,
-    strength: EvidenceStrength,
-  ): void;
+    (
+        name: string,
+        reason: string,
+        weight: number,
+        strength: EvidenceStrength,
+    ): void;
 };
 
 export type EvidenceContext = {
-  filesChanged: string[];
-  commitMessages: string[];
-  /**
- * Actual repository files available for dependency and import parsing.
- */
-repositoryFiles: RepositoryFileContent[];
+    filesChanged: string[];
+    commitMessages: string[];
+
+    /**
+   * Actual repository files available for dependency and import parsing.
+   */
+    repositoryFiles: RepositoryFileContent[];
     /**
    * Dependency manifests discovered in the repository.
    *
@@ -145,87 +146,93 @@ repositoryFiles: RepositoryFileContent[];
    * pnpm-lock.yaml
    * requirements.txt
    */
-  dependencyFiles: Set<string>;
+    dependencyFiles: Set<string>;
 
-  /**
- * Dependencies extracted from package managers.
- *
- * Example:
- * fastify
- * bullmq
- * socket.io
- */
-dependencies: Set<string>;
-
-  /**
-   * Source files that can later be scanned for imports.
-   */
-  importFiles: Set<string>;
-
-  /**
- * Packages imported by source code.
- */
-imports: Set<string>;
-
-  /**
-   * Framework and infrastructure configuration files.
-   */
-  configurationFiles: Set<string>;
-
-  /**
-   * Programming languages inferred from file extensions.
-   */
-  languages: Set<string>;
-
-  /**
-   * Kept temporarily for old detectors.
+    /**
+   * Dependencies extracted from package managers.
    *
-   * New detectors should avoid relying on this field because it merges
-   * strong and weak evidence into one unstructured string.
+   * Example:
+   * fastify
+   * bullmq
+   * socket.io
    */
-  combinedText: string;
+    dependencies: Set<string>;
 
-  /**
-   * Strong structural evidence originating from repository file paths.
+    /**
+     * Source files that can later be scanned for imports.
+     */
+    importFiles: Set<string>;
+
+    /**
+   * Packages imported by source code.
    */
-  filePathText: string;
+    imports: Set<string>;
 
-  /**
-   * Commit messages are useful context, but cannot confirm a technology
-   * on their own.
-   */
-  commitText: string;
+    /**
+     * Framework and infrastructure configuration files.
+     */
+    configurationFiles: Set<string>;
 
-  /**
-   * README, description and other descriptive repository context.
-   *
-   * Treat this as weak evidence.
-   */
-  repositoryContextText: string;
+    /**
+     * Contents of configuration files, keyed by repository-relative path.
+     */
+    configurationContents:
+    Map<string, string>;
 
-  /**
-   * Evidence safe to use for structural checks.
-   */
-  structuralText: string;
+    /**
+     * Programming languages inferred from file extensions.
+     */
+    languages: Set<string>;
 
-  /**
-   * Evidence that can support a detection but should not independently
-   * confirm implementation.
-   */
-  descriptiveText: string;
+    /**
+     * Kept temporarily for old detectors.
+     *
+     * New detectors should avoid relying on this field because it merges
+     * strong and weak evidence into one unstructured string.
+     */
+    combinedText: string;
 
-  evidenceItems: EvidenceItem[];
+    /**
+     * Strong structural evidence originating from repository file paths.
+     */
+    filePathText: string;
 
-  technologyEvidence:
+    /**
+     * Commit messages are useful context, but cannot confirm a technology
+     * on their own.
+     */
+    commitText: string;
+
+    /**
+     * README, description and other descriptive repository context.
+     *
+     * Treat this as weak evidence.
+     */
+    repositoryContextText: string;
+
+    /**
+     * Evidence safe to use for structural checks.
+     */
+    structuralText: string;
+
+    /**
+     * Evidence that can support a detection but should not independently
+     * confirm implementation.
+     */
+    descriptiveText: string;
+
+    evidenceItems: EvidenceItem[];
+
+    technologyEvidence:
     TechnologyEvidence[];
 
-  addEvidence: (
-    repositoryType: RepositoryType,
-    label: string,
-    weight: number,
-    category: EvidenceCategory,
-    strength: EvidenceStrength,
-  ) => void;
+    addEvidence: (
+        repositoryType: RepositoryType,
+        label: string,
+        weight: number,
+        category: EvidenceCategory,
+        strength: EvidenceStrength,
+    ) => void;
 
-  addTechnology: AddTechnology;
+    addTechnology: AddTechnology;
 };
