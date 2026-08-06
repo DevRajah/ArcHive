@@ -9,3 +9,5 @@ export * from "./report-stage";
 export * from "./technology-conflict-stage";
 export * from "./framework-version-stage";
 export * from "./technology-relationship-stage";
+export * from "./dependency-graph-stage";
+export * from "./technology-confidence-stage";

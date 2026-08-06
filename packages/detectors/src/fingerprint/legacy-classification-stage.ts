@@ -764,10 +764,12 @@ export const applyLegacyClassificationStage = ({
 export const applyLegacyPurposeAdjustmentStage = ({
   filesChanged,
   commitMessages,
+  repositoryContext,
   state,
 }: {
   filesChanged: string[];
   commitMessages: string[];
+  repositoryContext: string;
   state: FingerprintState;
 }): void => {
   const {
@@ -777,18 +779,27 @@ export const applyLegacyPurposeAdjustmentStage = ({
     reasoningSignals,
   } = state;
 
-  const combinedPurposeText = [
-    ...filesChanged,
-    ...commitMessages,
-    ...reasoningSignals,
-    ...Array.from(technologies),
-    ...Array.from(
-      architectureDomains,
-    ),
-    ...Array.from(repositoryTypes),
-  ]
-    .join(" ")
-    .toLowerCase();
+const combinedPurposeText = [
+  ...filesChanged,
+  ...commitMessages,
+
+  /**
+   * Repository descriptions and README content contain important product
+   * purpose evidence such as "scaffolding CLI" or "fintech platform".
+   *
+   * They may support repository-purpose classification, but they must not
+   * independently confirm implementation technologies.
+   */
+  repositoryContext,
+
+  ...reasoningSignals,
+  ...Array.from(technologies),
+  ...Array.from(architectureDomains),
+  ...Array.from(repositoryTypes),
+]
+  .filter(Boolean)
+  .join(" ")
+  .toLowerCase();
 
   if (
     combinedPurposeText.includes(

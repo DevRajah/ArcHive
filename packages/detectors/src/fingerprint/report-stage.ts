@@ -70,6 +70,14 @@ import type {
     RepositoryIntelligenceReport,
 } from "../repository-intelligence";
 
+import type {
+    TechnologyRelationship,
+} from "./dependency-graph-stage";
+
+import type {
+    TechnologyConfidenceResult,
+} from "./technology-confidence-stage";
+
 import {
     sortRepositoryTypesByPurpose,
     type FingerprintState,
@@ -88,6 +96,12 @@ export type TechnologyFingerprintResult = {
 
     evidenceResults:
     EvidenceResult[];
+
+    // dependencyGraph:
+    // TechnologyRelationship[];
+
+    // technologyConfidence:
+    // TechnologyConfidenceResult[];
 
     capabilities:
     ReturnType<
@@ -184,6 +198,8 @@ export const buildFingerprintResult = ({
     architectureQuality,
     architectureDrift,
     evolutionInsights,
+    //dependencyGraph,
+    //technologyConfidence
 }: {
     state:
     FingerprintState;
@@ -280,10 +296,11 @@ export const buildFingerprintResult = ({
 
             reasoningSignals,
 
+            /**
+   * Always use the prioritised and conflict-resolved purpose list.
+   */
             repositoryTypes:
-                Array.from(
-                    repositoryTypes,
-                ),
+                finalRepositoryTypes,
 
             repositoryPersona,
 
@@ -337,6 +354,9 @@ export const buildFingerprintResult = ({
         reasoningSignals,
 
         evidenceResults,
+
+        //dependencyGraph,
+        //technologyConfidence,
 
         capabilities,
 

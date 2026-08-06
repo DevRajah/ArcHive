@@ -1,15 +1,17 @@
 import {
+    applyFrameworkVersionStage,
     applyLegacyClassificationStage,
     applyLegacyPurposeAdjustmentStage,
     applyRepositoryPurposeStage,
     applyTechnologyConflictStage,
+    applyTechnologyRelationshipStage,
     buildAnalysisStage,
+    buildDependencyGraphStage,
     buildEngineeringStage,
     buildEvidenceStage,
     buildFingerprintResult,
     buildHealthStage,
-    applyFrameworkVersionStage,
-    applyTechnologyRelationshipStage,
+    buildTechnologyConfidenceStage,
 } from "./fingerprint";
 
 import type {
@@ -28,8 +30,6 @@ import {
     getImplementationFiles,
 } from "./technologies/technology-context";
 
-
-
 /**
  * Coordinates the complete ArcHive repository intelligence pipeline.
  *
@@ -44,8 +44,6 @@ export const detectTechnologyFingerprint = (
     repositoryContext = "",
     repositoryFiles: RepositoryFileContent[] = [],
 ): TechnologyFingerprintResult => {
-
-
     const technologies =
         new Set<string>();
 
@@ -86,7 +84,7 @@ export const detectTechnologyFingerprint = (
 
     /**
      * Stage 1:
-     * Build structured evidence and run repository and technology detectors.
+     * Collect structured evidence and run repository and technology detectors.
      */
     const {
         evidenceContext,
@@ -98,13 +96,19 @@ export const detectTechnologyFingerprint = (
         repositoryFiles,
     );
 
+    console.log("Evidence Results");
+    console.table(
+        evidenceResults.map((item) => ({
+            type: item.repositoryType,
+            score: item.totalScore,
+            confidence: item.confidence,
+        })),
+    );
+
     /**
-   * The remaining legacy classifier receives filtered implementation paths.
-   *
-   * This prevents ArcHive from classifying itself as Kafka, MongoDB,
-   * Kubernetes, Anthropic, and similar technologies merely because those
-   * words exist inside detector source filenames.
-   */
+     * Give the temporary legacy classifier only filtered implementation
+     * paths and real commit context.
+     */
     const combinedText = [
         ...getImplementationFiles(
             evidenceContext,
@@ -116,8 +120,7 @@ export const detectTechnologyFingerprint = (
 
     /**
      * Stage 2:
-     * Preserve older classifications while the evidence-aware engine
-     * gradually replaces the remaining broad keyword heuristics.
+     * Preserve legacy classifications that have not yet been replaced.
      */
     applyLegacyClassificationStage({
         filesChanged,
@@ -127,19 +130,26 @@ export const detectTechnologyFingerprint = (
 
     /**
      * Stage 3:
-     * Convert repository-purpose evidence into technologies,
-     * architecture domains, and engineering signals.
-     *
-     * This stage was missing from the previous shortened version.
+     * Map repository-purpose evidence into the shared fingerprint state.
      */
     applyRepositoryPurposeStage({
         evidenceResults,
         state,
     });
 
+    console.log(
+        "Repository types after purpose stage",
+    );
+
+    console.log(
+        [...state.repositoryTypes],
+    );
+
     /**
      * Stage 4:
      * Build capabilities, repository persona, DNA, and engineering quality.
+     *
+     * This stage also adds confirmed technology evidence to state.technologies.
      */
     const {
         capabilities,
@@ -156,35 +166,24 @@ export const detectTechnologyFingerprint = (
 
     /**
      * Stage 5:
-     * Apply final legacy repository-purpose adjustments after all
-     * reasoning signals and classifications have been produced.
-     */
-    applyLegacyPurposeAdjustmentStage({
-        filesChanged,
-        commitMessages,
-        state,
-    });
-
-    /**
-     * Stage 6:
-     * Resolve any conflicts between identified technologies.
+     * Remove generic labels when a stronger specific technology exists.
      */
     applyTechnologyConflictStage({
         state,
     });
 
     /**
- * Add exact dependency-version context after generic classifications
- * and duplicate labels have been resolved.
- */
+     * Stage 6:
+     * Add framework version context from parsed dependency versions.
+     */
     applyFrameworkVersionStage({
         evidenceContext,
         state,
     });
 
     /**
-     * Explain how confirmed technologies interact before health,
-     * architecture, and recommendation reports are generated.
+     * Stage 7:
+     * Explain meaningful relationships between confirmed technologies.
      */
     applyTechnologyRelationshipStage({
         evidenceContext,
@@ -192,10 +191,10 @@ export const detectTechnologyFingerprint = (
     });
 
     /**
- * Stage 7:
- * Build production readiness, maturity, debt, strengths,
- * weaknesses, and overall repository health.
- */
+     * Stage 8:
+     * Build production readiness, maturity, technical debt,
+     * strengths, weaknesses, and repository health.
+     */
     const {
         productionReadiness,
         repositoryMaturity,
@@ -209,9 +208,9 @@ export const detectTechnologyFingerprint = (
     });
 
     /**
- * Stage 8:
- * Build architecture quality, drift, evolution, and recommendations.
- */
+     * Stage 9:
+     * Build architecture quality, drift, evolution, and recommendations.
+     */
     const {
         architectureQuality,
         architectureDrift,
@@ -231,9 +230,48 @@ export const detectTechnologyFingerprint = (
     });
 
     /**
-     * Stage 9:
-     * Build the final response consumed by the API, worker,
-     * dashboards, reports, and repository intelligence features.
+     * Stage 10:
+     * Apply late repository-purpose adjustments after all classifications
+     * and reasoning signals have been produced.
+     */
+    applyLegacyPurposeAdjustmentStage({
+        filesChanged,
+        commitMessages,
+        repositoryContext,
+        state,
+    });
+
+    /**
+     * Stage 11:
+     * Build the dependency graph only now that confirmed technologies exist.
+     */
+    //   const dependencyGraph =
+    //     buildDependencyGraphStage({
+    //       evidenceContext,
+    //       state,
+    //     });
+
+    /**
+     * Stage 12:
+     * Build confidence details from the complete technology evidence set.
+     */
+    //   const technologyConfidence =
+    //     buildTechnologyConfidenceStage(
+    //       evidenceContext,
+    //     );
+
+    console.log(
+        "Final repository types",
+    );
+
+    console.log(
+        [...state.repositoryTypes],
+    );
+
+    /**
+     * Stage 13:
+     * Build the final response consumed by the API, workers,
+     * dashboards, and reports.
      */
     return buildFingerprintResult({
         state,
@@ -252,5 +290,7 @@ export const detectTechnologyFingerprint = (
         architectureQuality,
         architectureDrift,
         evolutionInsights,
+        //dependencyGraph,
+        //technologyConfidence,
     });
 };
