@@ -66,6 +66,11 @@ import {
     detectMicroservicesTechnology,
 } from "./architecture";
 
+import {
+    detectFrameworkConfigurations,
+    detectMonorepoTechnology,
+} from "./configuration";
+
 import { TechnologyDetector } from "./types";
 
 export const technologyDetectors: TechnologyDetector[] = [
@@ -118,6 +123,9 @@ export const technologyDetectors: TechnologyDetector[] = [
     detectCypressTechnology,
     detectPlaywrightTechnology,
     detectSupertestTechnology,
+
+    detectFrameworkConfigurations,
+    detectMonorepoTechnology,
 
     detectSocketIoTechnology,
     detectWebSocketTechnology,
