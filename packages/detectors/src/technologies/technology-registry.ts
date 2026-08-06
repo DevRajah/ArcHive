@@ -71,9 +71,22 @@ import {
     detectMonorepoTechnology,
 } from "./configuration";
 
+import {
+    detectPackageTechnologyEvidence,
+} from "./package-evidence";
+
 import { TechnologyDetector } from "./types";
 
 export const technologyDetectors: TechnologyDetector[] = [
+    /**
+* Dependency and import evidence should run first because it is
+* stronger than filename-based structural inference.
+*/
+    detectPackageTechnologyEvidence,
+
+    detectFrameworkConfigurations,
+    detectMonorepoTechnology,
+
     detectNodeTechnology,
     detectExpressTechnology,
     detectFastifyTechnology,
@@ -124,8 +137,7 @@ export const technologyDetectors: TechnologyDetector[] = [
     detectPlaywrightTechnology,
     detectSupertestTechnology,
 
-    detectFrameworkConfigurations,
-    detectMonorepoTechnology,
+
 
     detectSocketIoTechnology,
     detectWebSocketTechnology,
