@@ -96,14 +96,14 @@ export const detectTechnologyFingerprint = (
         repositoryFiles,
     );
 
-    console.log("Evidence Results");
-    console.table(
-        evidenceResults.map((item) => ({
-            type: item.repositoryType,
-            score: item.totalScore,
-            confidence: item.confidence,
-        })),
-    );
+    // console.log("Evidence Results");
+    // console.table(
+    //     evidenceResults.map((item) => ({
+    //         type: item.repositoryType,
+    //         score: item.totalScore,
+    //         confidence: item.confidence,
+    //     })),
+    // );
 
     /**
      * Give the temporary legacy classifier only filtered implementation
@@ -137,13 +137,13 @@ export const detectTechnologyFingerprint = (
         state,
     });
 
-    console.log(
-        "Repository types after purpose stage",
-    );
+    // console.log(
+    //     "Repository types after purpose stage",
+    // );
 
-    console.log(
-        [...state.repositoryTypes],
-    );
+    // console.log(
+    //     [...state.repositoryTypes],
+    // );
 
     /**
      * Stage 4:
@@ -260,13 +260,13 @@ export const detectTechnologyFingerprint = (
     //       evidenceContext,
     //     );
 
-    console.log(
-        "Final repository types",
-    );
+    // console.log(
+    //     "Final repository types",
+    // );
 
-    console.log(
-        [...state.repositoryTypes],
-    );
+    // console.log(
+    //     [...state.repositoryTypes],
+    // );
 
     /**
      * Stage 13:

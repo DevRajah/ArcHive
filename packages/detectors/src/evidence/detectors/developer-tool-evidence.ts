@@ -1,107 +1,349 @@
-import { EvidenceContext } from "../evidence-types";
-import { includesAny } from "../evidence-utils";
+import type {
+  EvidenceContext,
+} from "../evidence-types";
 
-export const detectDeveloperToolEvidence = (context: EvidenceContext) => {
-  const { combinedText, addEvidence } = context;
+const CLI_PACKAGES = [
+  "commander",
+  "yargs",
+  "inquirer",
+  "@inquirer/prompts",
+  "oclif",
+  "@oclif/core",
+  "clipanion",
+  "cac",
+  "prompts",
+  "meow",
+];
 
-  const isEngineeringIntelligenceRepository = includesAny(combinedText, [
-  "engineering intelligence",
-  "engineering-intelligence",
-  "repository intelligence",
-  "repository-intelligence",
-  "architecture intelligence",
-  "architecture-intelligence",
-  "repository fingerprint",
-  "technology fingerprint",
-  "architecture drift",
-  "repository health",
-  "repository maturity",
-  "repository purpose",
-  "canonical intelligence wrapper",
-]);
+const CODE_GENERATION_PACKAGES = [
+  "hygen",
+  "plop",
+  "yeoman-generator",
+  "ts-morph",
+  "handlebars",
+  "mustache",
+  "ejs",
+];
 
-if (isEngineeringIntelligenceRepository) {
-  return;
-}
+const hasAnySetValue = (
+  values: Set<string>,
+  candidates: string[],
+): boolean => {
+  return candidates.some((candidate) =>
+    values.has(candidate.toLowerCase()),
+  );
+};
 
-  if (includesAny(combinedText, ["scaffold", "scaffolding"])) {
-    addEvidence(
-      "DEVTOOL_PLATFORM",
-      "Detected scaffolding workflow terminology",
-      30,
-      "DOMAIN_LANGUAGE",
-      "STRONG"
+const matchesAnyPath = (
+  files: string[],
+  patterns: RegExp[],
+): boolean => {
+  return files.some((file) => {
+    const normalizedPath = file
+      .replace(/\\/g, "/")
+      .toLowerCase();
+
+    return patterns.some((pattern) =>
+      pattern.test(normalizedPath),
     );
+  });
+};
+
+/**
+ * Detects developer-facing command-line tools, code generators,
+ * scaffolding systems, and engineering automation utilities.
+ *
+ * Future me:
+ * A repository must not become a DEVTOOL_PLATFORM merely because its README
+ * mentions CLI commands, generators, SDKs, plugins, or developer tooling.
+ *
+ * We require executable CLI structure, generation templates, package-level
+ * command definitions, or direct code-generation implementation.
+ */
+export const detectDeveloperToolEvidence = (
+  context: EvidenceContext,
+): void => {
+  const {
+    dependencies,
+    imports,
+    filesChanged,
+    repositoryFiles,
+    descriptiveText,
+    addEvidence,
+  } = context;
+
+  /**
+   * Engineering-intelligence products are classified separately.
+   *
+   * ArcHive may provide developer-facing tooling, but that should not make
+   * DEVTOOL_PLATFORM its primary repository purpose.
+   */
+  const isEngineeringIntelligenceRepository =
+    [
+      "engineering intelligence",
+      "repository intelligence",
+      "architecture intelligence",
+      "repository fingerprint",
+      "technology fingerprint",
+      "architecture drift",
+      "repository health",
+      "repository maturity",
+      "repository analysis platform",
+    ].some((phrase) =>
+      descriptiveText.includes(phrase),
+    );
+
+  if (
+    isEngineeringIntelligenceRepository
+  ) {
+    return;
   }
 
-  if (includesAny(combinedText, ["generator", "codegen", "code generation"])) {
+  const hasCliDependency =
+    hasAnySetValue(
+      dependencies,
+      CLI_PACKAGES,
+    );
+
+  const hasCliImport =
+    hasAnySetValue(
+      imports,
+      CLI_PACKAGES,
+    );
+
+  const hasGenerationDependency =
+    hasAnySetValue(
+      dependencies,
+      CODE_GENERATION_PACKAGES,
+    );
+
+  const hasGenerationImport =
+    hasAnySetValue(
+      imports,
+      CODE_GENERATION_PACKAGES,
+    );
+
+  const hasCliEntrypoint =
+    matchesAnyPath(
+      filesChanged,
+      [
+        /(^|\/)bin\/[^/]+\.[jt]s$/,
+        /(^|\/)cli\.[jt]s$/,
+        /(^|\/)cli\/(index|main)\.[jt]s$/,
+        /(^|\/)commands?\//,
+        /\.command\.[jt]s$/,
+      ],
+    );
+
+  const hasGeneratorStructure =
+    matchesAnyPath(
+      filesChanged,
+      [
+        /(^|\/)generators?\//,
+        /(^|\/)scaffolds?\//,
+        /(^|\/)scaffolding\//,
+        /(^|\/)templates?\//,
+        /(^|\/)blueprints?\//,
+        /\.generator\.[jt]s$/,
+        /\.scaffold\.[jt]s$/,
+      ],
+    );
+
+  const hasPackageBinDeclaration =
+    context.repositoryFiles.some((file) => {
+      const normalizedPath =
+        file.path
+          .replace(/\\/g, "/")
+          .toLowerCase();
+
+      if (
+        !normalizedPath.endsWith(
+          "package.json",
+        )
+      ) {
+        return false;
+      }
+
+      try {
+        const manifest =
+          JSON.parse(
+            file.content,
+          ) as {
+            bin?: unknown;
+          };
+
+        return (
+          typeof manifest.bin === "string" ||
+          (
+            typeof manifest.bin === "object" &&
+            manifest.bin !== null &&
+            !Array.isArray(
+              manifest.bin,
+            )
+          )
+        );
+      } catch {
+        return false;
+      }
+    });
+
+  const hasGenerationCode =
+    repositoryFiles.some((file) => {
+      const content =
+        file.content.toLowerCase();
+
+      const generationSignals = [
+        "generate module",
+        "generate resource",
+        "generate controller",
+        "generate service",
+        "scaffold backend",
+        "crud generator",
+        "module generator",
+        "project generator",
+        "writefilesync",
+        "copyfile",
+        "template.render",
+      ];
+
+      return generationSignals.filter((signal) =>
+        content.includes(signal),
+      ).length >= 2;
+    });
+
+  const hasStrongDeveloperToolPurpose =
+    [
+      "backend scaffolding cli",
+      "code generation cli",
+      "developer command line tool",
+      "project scaffolding tool",
+      "application generator",
+      "backend generator",
+      "developer automation tool",
+      "cli for developers",
+      "code generator",
+    ].some((phrase) =>
+      descriptiveText.includes(phrase),
+    );
+
+  if (
+    hasCliDependency &&
+    hasCliImport
+  ) {
     addEvidence(
       "DEVTOOL_PLATFORM",
-      "Detected code generation or generator tooling",
+      "Detected CLI framework dependency used directly in source code",
+      35,
+      "IMPORT",
+      "STRONG",
+    );
+  } else if (
+    hasCliImport
+  ) {
+    addEvidence(
+      "DEVTOOL_PLATFORM",
+      "Detected direct command-line framework imports",
       30,
-      "DOMAIN_LANGUAGE",
-      "STRONG"
+      "IMPORT",
+      "STRONG",
+    );
+  } else if (
+    hasCliDependency
+  ) {
+    addEvidence(
+      "DEVTOOL_PLATFORM",
+      "Detected command-line framework dependencies",
+      20,
+      "DEPENDENCY",
+      "MEDIUM",
     );
   }
 
   if (
-    includesAny(combinedText, [
-      "cli",
-      "command line",
-      "commander",
-      "inquirer",
-      "backend-forge",
-      "generate module",
-      "generate resource",
-      "scaffold backend",
-      "crud generator",
-      "module generator",
-      "backend generator",
-    ])
+    hasGenerationDependency &&
+    hasGenerationImport
   ) {
     addEvidence(
       "DEVTOOL_PLATFORM",
-      "Detected CLI tooling dependencies or command-line patterns",
-      25,
-      "DEPENDENCY",
-      "MEDIUM"
+      "Detected code-generation dependency used directly in source code",
+      35,
+      "IMPORT",
+      "STRONG",
     );
-  }
-
-  const hasDeveloperToolSignal =
-    combinedText.includes("backend-forge") ||
-    (
-      combinedText.includes("scaffold") &&
-      combinedText.includes("cli")
-    ) ||
-    (
-      combinedText.includes("generator") &&
-      combinedText.includes("cli")
-    ) ||
-    combinedText.includes("generate module") ||
-    combinedText.includes("module generator") ||
-    combinedText.includes("backend generator");
-
-  if (hasDeveloperToolSignal) {
+  } else if (
+    hasGenerationImport ||
+    hasGenerationDependency
+  ) {
     addEvidence(
       "DEVTOOL_PLATFORM",
-      "Detected CLI, scaffolding, or backend generation tooling patterns",
-      85,
-      "DOMAIN_LANGUAGE",
-      "STRONG"
+      "Detected scaffolding, templating, or code-generation tooling",
+      25,
+      "DEPENDENCY",
+      "MEDIUM",
     );
   }
 
-  
+  if (
+    hasCliEntrypoint &&
+    hasPackageBinDeclaration
+  ) {
+    addEvidence(
+      "DEVTOOL_PLATFORM",
+      "Detected an executable package CLI with command entrypoints",
+      40,
+      "FILE_STRUCTURE",
+      "STRONG",
+    );
+  } else if (
+    hasCliEntrypoint
+  ) {
+    addEvidence(
+      "DEVTOOL_PLATFORM",
+      "Detected command-line entrypoints and command modules",
+      30,
+      "FILE_STRUCTURE",
+      "STRONG",
+    );
+  }
 
-  console.log("===== DEVTOOL DETECTOR =====");
-  console.log({
-    scaffold: combinedText.includes("scaffold"),
-    generator: combinedText.includes("generator"),
-    cli: combinedText.includes("cli"),
-    commander: combinedText.includes("commander"),
-    inquirer: combinedText.includes("inquirer"),
-    backendForge: combinedText.includes("backend-forge"),
-    generateModule: combinedText.includes("generate module"),
-  });
+  if (
+    hasGeneratorStructure &&
+    hasGenerationCode
+  ) {
+    addEvidence(
+      "DEVTOOL_PLATFORM",
+      "Detected templates and implemented code-generation workflows",
+      40,
+      "CODE_PATTERN",
+      "STRONG",
+    );
+  } else if (
+    hasGeneratorStructure
+  ) {
+    addEvidence(
+      "DEVTOOL_PLATFORM",
+      "Detected scaffolding, generator, template, or blueprint structure",
+      25,
+      "FILE_STRUCTURE",
+      "MEDIUM",
+    );
+  }
+
+  if (
+    hasStrongDeveloperToolPurpose &&
+    (
+      hasCliEntrypoint ||
+      hasPackageBinDeclaration ||
+      hasGeneratorStructure ||
+      hasGenerationCode
+    )
+  ) {
+    addEvidence(
+      "DEVTOOL_PLATFORM",
+      "Repository purpose explicitly describes a CLI, scaffolding, or code-generation product",
+      30,
+      "DOMAIN_LANGUAGE",
+      "STRONG",
+    );
+  }
 };
