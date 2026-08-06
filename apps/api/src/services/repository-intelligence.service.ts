@@ -143,6 +143,7 @@ const HIGH_VALUE_FILE_PATTERNS = [
   /(^|\/)nest-cli\.json$/i,
 
   /(^|\/)dockerfile$/i,
+  /(^|\/)dockerfile\.[^/]+$/i,
   /(^|\/)docker-compose\.ya?ml$/i,
 
   /(^|\/)schema\.prisma$/i,

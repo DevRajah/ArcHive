@@ -75,6 +75,10 @@ import {
     detectPackageTechnologyEvidence,
 } from "./package-evidence";
 
+import {
+  detectDockerIntelligence,
+} from "./infrastructure";
+
 import { TechnologyDetector } from "./types";
 
 export const technologyDetectors: TechnologyDetector[] = [
@@ -86,6 +90,7 @@ export const technologyDetectors: TechnologyDetector[] = [
 
     detectFrameworkConfigurations,
     detectMonorepoTechnology,
+    detectDockerIntelligence,
 
     detectNodeTechnology,
     detectExpressTechnology,
