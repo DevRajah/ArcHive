@@ -1,34 +1,32 @@
 import {
-    applyFrameworkVersionStage,
-    applyLegacyClassificationStage,
-    applyLegacyPurposeAdjustmentStage,
-    applyRepositoryPurposeStage,
-    applyRepositoryTypeResolutionStage,
-    applyTechnologyConflictStage,
-    applyTechnologyRelationshipStage,
-    buildAnalysisStage,
-    buildDependencyGraphStage,
-    buildEngineeringStage,
-    buildEvidenceStage,
-    buildFingerprintResult,
-    buildHealthStage,
-    buildTechnologyConfidenceStage,
+  applyFrameworkVersionStage,
+  applyLegacyClassificationStage,
+  applyLegacyPurposeAdjustmentStage,
+  applyRepositoryPurposeStage,
+  applyRepositoryTypeResolutionStage,
+  applyTechnologyConflictStage,
+  applyTechnologyRelationshipStage,
+  buildAnalysisStage,
+  buildEngineeringStage,
+  buildEvidenceStage,
+  buildFingerprintResult,
+  buildHealthStage,
 } from "./fingerprint";
 
 import type {
-    TechnologyFingerprintResult,
+  TechnologyFingerprintResult,
 } from "./fingerprint/report-stage";
 
 export type {
-    TechnologyFingerprintResult,
+  TechnologyFingerprintResult,
 } from "./fingerprint/report-stage";
 
 import type {
-    RepositoryFileContent,
+  RepositoryFileContent,
 } from "./evidence";
 
 import {
-    getImplementationFiles,
+  getImplementationFiles,
 } from "./technologies/technology-context";
 
 /**
@@ -36,313 +34,312 @@ import {
  *
  * Future me:
  * Keep this file as an orchestrator only.
- * Detection, scoring, health analysis, and report building belong
- * inside their respective fingerprint stages.
+ *
+ * Detection, scoring, health analysis, architecture analysis,
+ * and report building belong inside their respective stages.
  */
 export const detectTechnologyFingerprint = (
-    filesChanged: string[],
-    commitMessages: string[],
-    repositoryContext = "",
-    repositoryFiles: RepositoryFileContent[] = [],
+  filesChanged: string[],
+  commitMessages: string[],
+  repositoryContext = "",
+  repositoryFiles: RepositoryFileContent[] = [],
 ): TechnologyFingerprintResult => {
-    const technologies =
-        new Set<string>();
+  const technologies =
+    new Set<string>();
 
-    const architectureDomains =
-        new Set<string>();
+  const architectureDomains =
+    new Set<string>();
 
-    const engineeringSignals =
-        new Set<string>();
+  const engineeringSignals =
+    new Set<string>();
 
-    const repositoryTypes =
-        new Set<string>();
+  const repositoryTypes =
+    new Set<string>();
 
-    const reasoningSignals:
-        string[] = [];
+  const reasoningSignals:
+    string[] = [];
 
-    const addReasoningSignal = (
-        signal: string,
-    ): void => {
-        if (
-            !reasoningSignals.includes(
-                signal,
-            )
-        ) {
-            reasoningSignals.push(
-                signal,
-            );
-        }
-    };
+  const addReasoningSignal = (
+    signal: string,
+  ): void => {
+    if (
+      !reasoningSignals.includes(
+        signal,
+      )
+    ) {
+      reasoningSignals.push(
+        signal,
+      );
+    }
+  };
 
-    const state = {
-        technologies,
-        architectureDomains,
-        engineeringSignals,
-        repositoryTypes,
-        reasoningSignals,
-        addReasoningSignal,
-    };
+  const state = {
+    technologies,
+    architectureDomains,
+    engineeringSignals,
+    repositoryTypes,
+    reasoningSignals,
+    addReasoningSignal,
+  };
 
-    /**
-     * Stage 1:
-     * Collect structured evidence and run repository and technology detectors.
-     */
-    const {
-        evidenceContext,
-        evidenceResults,
-    } = buildEvidenceStage(
-        filesChanged,
-        commitMessages,
-        repositoryContext,
-        repositoryFiles,
+  /**
+   * Stage 1:
+   * Collect structured evidence and run repository-purpose
+   * and technology detectors.
+   */
+  const {
+    evidenceContext,
+    evidenceResults,
+  } = buildEvidenceStage(
+    filesChanged,
+    commitMessages,
+    repositoryContext,
+    repositoryFiles,
+  );
+
+  /**
+   * Give the temporary legacy classifier only filtered
+   * implementation paths and real commit context.
+   *
+   * This reduces false positives caused by detector source files
+   * mentioning technologies that the analysed repository does not use.
+   */
+  const combinedText = [
+    ...getImplementationFiles(
+      evidenceContext,
+    ),
+    ...commitMessages,
+  ]
+    .join(" ")
+    .toLowerCase();
+
+  /**
+   * Stage 2:
+   * Run remaining legacy classification.
+   *
+   * This is kept temporarily for backward compatibility while
+   * structured evidence continues replacing older heuristics.
+   */
+  const repositoryTypesBeforeLegacy =
+    new Set(
+      state.repositoryTypes,
     );
 
-    // console.log("Evidence Results");
-    // console.table(
-    //     evidenceResults.map((item) => ({
-    //         type: item.repositoryType,
-    //         score: item.totalScore,
-    //         confidence: item.confidence,
-    //     })),
-    // );
+  applyLegacyClassificationStage({
+    filesChanged,
+    combinedText,
+    state,
+  });
 
-    /**
-     * Give the temporary legacy classifier only filtered implementation
-     * paths and real commit context.
-     */
-    const combinedText = [
-        ...getImplementationFiles(
-            evidenceContext,
+  const legacyAddedRepositoryTypes =
+    Array.from(
+      state.repositoryTypes,
+    ).filter(
+      (repositoryType) =>
+        !repositoryTypesBeforeLegacy.has(
+          repositoryType,
         ),
-        ...commitMessages,
-    ]
-        .join(" ")
-        .toLowerCase();
-
-    /**
-     * Stage 2:
-     * Preserve legacy classifications that have not yet been replaced.
-     */
-    const repositoryTypesBeforeLegacy =
-        new Set(
-            state.repositoryTypes,
-        );
-
-    applyLegacyClassificationStage({
-        filesChanged,
-        combinedText,
-        state,
-    });
-
-    const legacyAddedRepositoryTypes =
-        Array.from(
-            state.repositoryTypes,
-        ).filter(
-            (repositoryType) =>
-                !repositoryTypesBeforeLegacy.has(
-                    repositoryType,
-                ),
-        );
-
-    console.log(
-        "[LEGACY TYPES ADDED]",
-        legacyAddedRepositoryTypes,
     );
 
-    /**
-     * Stage 3:
-     * Map repository-purpose evidence into the shared fingerprint state.
-     */
-    applyRepositoryPurposeStage({
-        evidenceResults,
-        state,
-    });
+  console.log(
+    "[LEGACY TYPES ADDED]",
+    legacyAddedRepositoryTypes,
+  );
 
-    // console.log(
-    //     "Repository types after purpose stage",
-    // );
+  /**
+   * Stage 3:
+   * Convert structured repository-purpose evidence into
+   * the shared fingerprint state.
+   */
+  applyRepositoryPurposeStage({
+    evidenceResults,
+    state,
+  });
 
-    // console.log(
-    //     [...state.repositoryTypes],
-    // );
+  /**
+   * Stage 4:
+   * Build capabilities, repository persona, DNA,
+   * and engineering quality.
+   *
+   * This stage can also add confirmed technologies
+   * to state.technologies.
+   */
+  const {
+    capabilities,
+    repositoryPersona,
+    repositoryDNA,
+    engineeringQuality,
+  } = buildEngineeringStage({
+    filesChanged,
+    commitMessages,
+    combinedText,
+    evidenceContext,
+    state,
+  });
 
-    /**
-     * Stage 4:
-     * Build capabilities, repository persona, DNA, and engineering quality.
-     *
-     * This stage also adds confirmed technology evidence to state.technologies.
-     */
-    const {
-        capabilities,
-        repositoryPersona,
-        repositoryDNA,
-        engineeringQuality,
-    } = buildEngineeringStage({
-        filesChanged,
-        commitMessages,
-        combinedText,
-        evidenceContext,
-        state,
-    });
+  /**
+   * Stage 5:
+   * Remove generic technology labels where stronger,
+   * more specific technology evidence exists.
+   */
+  applyTechnologyConflictStage({
+    state,
+  });
 
-    /**
-     * Stage 5:
-     * Remove generic labels when a stronger specific technology exists.
-     */
-    applyTechnologyConflictStage({
-        state,
-    });
+  /**
+   * Stage 6:
+   * Add framework-version context from parsed dependencies.
+   */
+  applyFrameworkVersionStage({
+    evidenceContext,
+    state,
+  });
 
-    /**
- * Evidence gets the final say over repository identity.
- *
- * Legacy classification still runs for backward compatibility, but any
- * unsupported purpose classifications it introduced are removed here.
- */
-    applyRepositoryTypeResolutionStage({
-        evidenceResults,
-        state,
-    });
+  /**
+   * Stage 7:
+   * Explain meaningful relationships between confirmed technologies.
+   */
+  applyTechnologyRelationshipStage({
+    evidenceContext,
+    state,
+  });
 
-    /**
-     * Stage 6:
-     * Add framework version context from parsed dependency versions.
-     */
-    applyFrameworkVersionStage({
-        evidenceContext,
-        state,
-    });
+  /**
+   * Stage 8:
+   * Build production readiness, maturity, technical debt,
+   * strengths, weaknesses, and repository health.
+   */
+  const {
+    productionReadiness,
+    repositoryMaturity,
+    technicalDebt,
+    strengthReport,
+    weaknessReport,
+    repositoryHealth,
+  } = buildHealthStage({
+    engineeringQuality,
+    state,
+  });
 
-    /**
-     * Stage 7:
-     * Explain meaningful relationships between confirmed technologies.
-     */
-    applyTechnologyRelationshipStage({
-        evidenceContext,
-        state,
-    });
+  /**
+   * Stage 9:
+   * Build architecture quality, drift, evolution,
+   * and recommendations.
+   */
+  const {
+    architectureQuality,
+    architectureDrift,
+    evolutionInsights,
+    recommendationReport,
+  } = buildAnalysisStage({
+    capabilities,
+    repositoryDNA,
+    engineeringQuality,
+    productionReadiness,
+    repositoryMaturity,
+    technicalDebt,
+    strengthReport,
+    weaknessReport,
+    repositoryHealth,
+    state,
+  });
 
-    /**
-     * Stage 8:
-     * Build production readiness, maturity, technical debt,
-     * strengths, weaknesses, and repository health.
-     */
-    const {
-        productionReadiness,
-        repositoryMaturity,
-        technicalDebt,
-        strengthReport,
-        weaknessReport,
-        repositoryHealth,
-    } = buildHealthStage({
-        engineeringQuality,
-        state,
-    });
-
-    /**
-     * Stage 9:
-     * Build architecture quality, drift, evolution, and recommendations.
-     */
-    const {
-        architectureQuality,
-        architectureDrift,
-        evolutionInsights,
-        recommendationReport,
-    } = buildAnalysisStage({
-        capabilities,
-        repositoryDNA,
-        engineeringQuality,
-        productionReadiness,
-        repositoryMaturity,
-        technicalDebt,
-        strengthReport,
-        weaknessReport,
-        repositoryHealth,
-        state,
-    });
-
-    /**
-     * Stage 10:
-     * Apply late repository-purpose adjustments after all classifications
-     * and reasoning signals have been produced.
-     */
-    const repositoryTypesBeforeLateAdjustment =
-        new Set(
-            state.repositoryTypes,
-        );
-
-    applyLegacyPurposeAdjustmentStage({
-        filesChanged,
-        commitMessages,
-        repositoryContext,
-        state,
-    });
-
-    const lateAddedRepositoryTypes =
-        Array.from(
-            state.repositoryTypes,
-        ).filter(
-            (repositoryType) =>
-                !repositoryTypesBeforeLateAdjustment.has(
-                    repositoryType,
-                ),
-        );
-
-    console.log(
-        "[LATE PURPOSE TYPES ADDED]",
-        lateAddedRepositoryTypes,
+  /**
+   * Stage 10:
+   * Allow the remaining late legacy purpose adjustments to run.
+   *
+   * Important:
+   * This stage can still add noisy repository types such as
+   * DEVTOOL_PLATFORM.
+   *
+   * That is why repository-purpose resolution runs AFTER this stage.
+   */
+  const repositoryTypesBeforeLateAdjustment =
+    new Set(
+      state.repositoryTypes,
     );
 
-    /**
-     * Stage 11:
-     * Build the dependency graph only now that confirmed technologies exist.
-     */
-    //   const dependencyGraph =
-    //     buildDependencyGraphStage({
-    //       evidenceContext,
-    //       state,
-    //     });
+  applyLegacyPurposeAdjustmentStage({
+    filesChanged,
+    commitMessages,
+    repositoryContext,
+    state,
+  });
 
-    /**
-     * Stage 12:
-     * Build confidence details from the complete technology evidence set.
-     */
-    //   const technologyConfidence =
-    //     buildTechnologyConfidenceStage(
-    //       evidenceContext,
-    //     );
+  const lateAddedRepositoryTypes =
+    Array.from(
+      state.repositoryTypes,
+    ).filter(
+      (repositoryType) =>
+        !repositoryTypesBeforeLateAdjustment.has(
+          repositoryType,
+        ),
+    );
 
-    // console.log(
-    //     "Final repository types",
-    // );
+  console.log(
+    "[LATE PURPOSE TYPES ADDED]",
+    lateAddedRepositoryTypes,
+  );
 
-    // console.log(
-    //     [...state.repositoryTypes],
-    // );
+  /**
+   * Stage 11:
+   * Resolve the canonical repository purpose.
+   *
+   * This MUST run after every legacy classifier.
+   *
+   * Structured evidence gets the final say over repository identity.
+   * Any unsupported repository-purpose classifications introduced by
+   * legacy stages are removed here.
+   */
+  applyRepositoryTypeResolutionStage({
+    evidenceResults,
+    state,
+  });
 
-    /**
-     * Stage 13:
-     * Build the final response consumed by the API, workers,
-     * dashboards, and reports.
-     */
-    return buildFingerprintResult({
-        state,
-        evidenceResults,
-        capabilities,
-        repositoryDNA,
-        repositoryPersona,
-        engineeringQuality,
-        repositoryMaturity,
-        productionReadiness,
-        technicalDebt,
-        strengthReport,
-        weaknessReport,
-        recommendationReport,
-        repositoryHealth,
-        architectureQuality,
-        architectureDrift,
-        evolutionInsights,
-        //dependencyGraph,
-        //technologyConfidence,
-    });
-};
+  /**
+   * Stage 12:
+   * Dependency graph generation will return here once the final
+   * report DTO exposes it again.
+   *
+   * const dependencyGraph =
+   *   buildDependencyGraphStage({
+   *     evidenceContext,
+   *     state,
+   *   });
+   */
+
+  /**
+   * Stage 13:
+   * Technology-confidence reporting will return here once the
+   * final report DTO exposes it again.
+   *
+   * const technologyConfidence =
+   *   buildTechnologyConfidenceStage(
+   *     evidenceContext,
+   *   );
+   */
+
+  /**
+   * Stage 14:
+   * Build the final response consumed by the API,
+   * workers, dashboards, and reports.
+   */
+  return buildFingerprintResult({
+    state,
+    evidenceResults,
+    capabilities,
+    repositoryDNA,
+    repositoryPersona,
+    engineeringQuality,
+    repositoryMaturity,
+    productionReadiness,
+    technicalDebt,
+    strengthReport,
+    weaknessReport,
+    recommendationReport,
+    repositoryHealth,
+    architectureQuality,
+    architectureDrift,
+    evolutionInsights,
+  });
+}; 
