@@ -535,6 +535,38 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
           isTracked: true,
           createdAt: true,
           updatedAt: true,
+
+          /*
+           * RepositoryIntelligenceSnapshot is now the source of truth for
+           * generated repository intelligence.
+           *
+           * Important:
+           * We do NOT rerun detectTechnologyFingerprint() inside this GET route.
+           * Reprocessing already performed the full analysis using the real
+           * repository tree, README, source files and architecture evidence.
+           *
+           * The GET route should only return that persisted result.
+           */
+          intelligenceSnapshots: {
+            orderBy: {
+              createdAt: "desc",
+            },
+            take: 1,
+            select: {
+              id: true,
+              primaryRepositoryType: true,
+              repositoryTypes: true,
+              intelligence: true,
+              createdAt: true,
+            },
+          },
+
+          /*
+           * Keep ArchitectureChange data for the legacy response only.
+           *
+           * Some existing consumers may still rely on these aggregated signals,
+           * so we are not removing them as part of this fix.
+           */
           architectureChanges: {
             orderBy: {
               createdAt: "desc",
@@ -562,10 +594,79 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
         });
       }
 
-      const repositoryTypes = Array.from(
+      /*
+       * Reprocessing creates immutable intelligence snapshots.
+       * The newest snapshot represents the latest canonical analysis.
+       */
+      const latestSnapshot =
+        repository.intelligenceSnapshots[0];
+
+      if (!latestSnapshot) {
+        return reply.status(404).send({
+          success: false,
+          message:
+            "Repository intelligence has not been generated yet. Reprocess the repository first.",
+        });
+      }
+
+      const canonicalRepositoryTypes: string[] =
+        Array.isArray(
+          latestSnapshot.repositoryTypes,
+        )
+          ? latestSnapshot.repositoryTypes.filter(
+            (value): value is string =>
+              typeof value === "string",
+          )
+          : [];
+
+      /*
+       * The complete RepositoryIntelligenceReport was persisted as JSON.
+       *
+       * We intentionally trust this object rather than rebuilding intelligence
+       * from ArchitectureChange rows, because those rows contain only a subset
+       * of the evidence used during the real repository analysis.
+       */
+      const repositoryIntelligence =
+        latestSnapshot.intelligence as any;
+
+      /*
+       * Make the persisted top-level snapshot fields authoritative.
+       *
+       * Normally these values should already match identity inside the JSON.
+       * Explicitly assigning them here prevents an old embedded JSON value from
+       * overriding the canonical fields stored alongside the snapshot.
+       */
+      repositoryIntelligence.identity.primaryRepositoryType =
+        latestSnapshot.primaryRepositoryType;
+
+      repositoryIntelligence.identity.repositoryTypes =
+        canonicalRepositoryTypes;
+
+      /*
+       * Repository DNA is part of the same identity model.
+       *
+       * It must describe the same canonical repository purpose instead of
+       * exposing an older generic JAVASCRIPT_TYPESCRIPT_PROJECT classification.
+       */
+      if (repositoryIntelligence.identity.repositoryDNA) {
+        repositoryIntelligence.identity.repositoryDNA.engineeringProfile =
+          latestSnapshot.primaryRepositoryType;
+
+        repositoryIntelligence.identity.repositoryDNA.repositoryTypes =
+          canonicalRepositoryTypes;
+      }
+
+      /*
+       * These aggregates remain only for backwards-compatible legacy data.
+       * They are NOT used to determine canonical repository purpose anymore.
+       */
+      const legacyRepositoryTypes = Array.from(
         new Set(
           repository.architectureChanges
-            .flatMap((change) => change.repositoryTypes?.split(",") || [])
+            .flatMap(
+              (change) =>
+                change.repositoryTypes?.split(",") || []
+            )
             .map((type) => type.trim())
             .filter(Boolean)
         )
@@ -575,7 +676,10 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
         new Set(
           repository.architectureChanges
             .map((change) => change.detectedTechnology)
-            .filter((technology): technology is string => Boolean(technology))
+            .filter(
+              (technology): technology is string =>
+                Boolean(technology)
+            )
         )
       );
 
@@ -583,14 +687,20 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
         new Set(
           repository.architectureChanges
             .map((change) => change.architectureDomain)
-            .filter((domain): domain is string => Boolean(domain))
+            .filter(
+              (domain): domain is string =>
+                Boolean(domain)
+            )
         )
       );
 
       const reasoningSignals = Array.from(
         new Set(
           repository.architectureChanges
-            .flatMap((change) => change.reasoningSignals?.split(",") || [])
+            .flatMap(
+              (change) =>
+                change.reasoningSignals?.split(",") || []
+            )
             .map((signal) => signal.trim())
             .filter(Boolean)
         )
@@ -598,39 +708,49 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
 
       const engineeringSignals = reasoningSignals;
 
-      const fingerprint = detectTechnologyFingerprint(
-        repository.architectureChanges
-          .map((change) => change.fileAffected)
-          .filter((file): file is string => Boolean(file)),
-        repository.architectureChanges.map((change) => change.summary)
-      );
-
-      const repositoryIntelligence =
-        fingerprint.repositoryIntelligence;
-
+      /*
+       * Summary now derives from the persisted canonical snapshot too.
+       *
+       * This guarantees:
+       *
+       * summary.primaryRepositoryType
+       *                  ===
+       * repositoryIntelligence.identity.primaryRepositoryType
+       */
       const summary = {
         primaryRepositoryType:
-          repositoryIntelligence.identity.repositoryTypes[0] || null,
-        persona: repositoryIntelligence.identity.repositoryPersona,
+          latestSnapshot.primaryRepositoryType,
+
+        persona:
+          repositoryIntelligence.identity.repositoryPersona,
+
         healthStatus:
           repositoryIntelligence.assessment.repositoryHealth.status,
+
         healthScore:
           repositoryIntelligence.assessment.repositoryHealth.score,
+
         maturityLevel:
           repositoryIntelligence.assessment.repositoryMaturity.level,
+
         maturityScore:
           repositoryIntelligence.assessment.repositoryMaturity.score,
+
         productionReadinessLevel:
           repositoryIntelligence.assessment.productionReadiness.level,
+
         productionReadinessScore:
           repositoryIntelligence.assessment.productionReadiness.score,
+
         engineeringQualityScore:
           repositoryIntelligence.assessment.engineeringQuality.overallScore,
       };
 
       return {
         success: true,
-        message: "Repository intelligence fetched successfully.",
+        message:
+          "Repository intelligence fetched successfully.",
+
         data: {
           repository: {
             id: repository.id,
@@ -649,7 +769,7 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
           repositoryIntelligence,
 
           legacy: {
-            repositoryTypes,
+            repositoryTypes: legacyRepositoryTypes,
             technologies,
             architectureDomains,
             engineeringSignals,
@@ -1504,56 +1624,56 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
   );
 
 
-// Repository-level engineering knowledge graph
-app.get<{ Params: { repositoryId: string } }>(
-  "/:repositoryId/knowledge-graph",
-  async (request, reply) => {
-    const { repositoryId } = request.params;
+  // Repository-level engineering knowledge graph
+  app.get<{ Params: { repositoryId: string } }>(
+    "/:repositoryId/knowledge-graph",
+    async (request, reply) => {
+      const { repositoryId } = request.params;
 
-    const knowledgeGraph =
-      await knowledgeGraphService.getRepositoryGraph(repositoryId);
+      const knowledgeGraph =
+        await knowledgeGraphService.getRepositoryGraph(repositoryId);
 
-    if (!knowledgeGraph) {
-      return reply.status(404).send({
-        success: false,
-        message: "Repository not found",
+      if (!knowledgeGraph) {
+        return reply.status(404).send({
+          success: false,
+          message: "Repository not found",
+        });
+      }
+
+      /*
+       * Keep the original graph format available so the current frontend does
+       * not break while richer node-and-edge visualisations are introduced.
+       */
+      const legacyGraph = buildTechnologyRelationships({
+        technologies: knowledgeGraph.signals.technologies,
+        domains: knowledgeGraph.signals.architectureDomains,
+        repositoryTypes: knowledgeGraph.signals.repositoryTypes,
       });
+
+      return {
+        success: true,
+        message: "Repository knowledge graph fetched successfully",
+        data: {
+          repository: knowledgeGraph.repository,
+
+          graph: legacyGraph,
+
+          nodes: {
+            technologies: knowledgeGraph.signals.technologies,
+            domains: knowledgeGraph.signals.architectureDomains,
+            repositoryTypes: knowledgeGraph.signals.repositoryTypes,
+            capabilities: knowledgeGraph.signals.capabilities,
+          },
+
+          knowledgeGraph: {
+            nodes: knowledgeGraph.nodes,
+            edges: knowledgeGraph.edges,
+            summary: knowledgeGraph.summary,
+          },
+        },
+      };
     }
-
-    /*
-     * Keep the original graph format available so the current frontend does
-     * not break while richer node-and-edge visualisations are introduced.
-     */
-    const legacyGraph = buildTechnologyRelationships({
-      technologies: knowledgeGraph.signals.technologies,
-      domains: knowledgeGraph.signals.architectureDomains,
-      repositoryTypes: knowledgeGraph.signals.repositoryTypes,
-    });
-
-    return {
-      success: true,
-      message: "Repository knowledge graph fetched successfully",
-      data: {
-        repository: knowledgeGraph.repository,
-
-        graph: legacyGraph,
-
-        nodes: {
-          technologies: knowledgeGraph.signals.technologies,
-          domains: knowledgeGraph.signals.architectureDomains,
-          repositoryTypes: knowledgeGraph.signals.repositoryTypes,
-          capabilities: knowledgeGraph.signals.capabilities,
-        },
-
-        knowledgeGraph: {
-          nodes: knowledgeGraph.nodes,
-          edges: knowledgeGraph.edges,
-          summary: knowledgeGraph.summary,
-        },
-      },
-    };
-  }
-);
+  );
 
 
   // evolution direction analysis
@@ -1973,85 +2093,85 @@ app.get<{ Params: { repositoryId: string } }>(
 | so the frontend can show a useful empty state instead of a missing page.
 |--------------------------------------------------------------------------
 */
-app.get<{ Params: { repositoryId: string } }>(
-  "/:repositoryId/intelligence-diff",
-  async (request, reply) => {
-    const authentication = getAuthenticatedUser(request);
+  app.get<{ Params: { repositoryId: string } }>(
+    "/:repositoryId/intelligence-diff",
+    async (request, reply) => {
+      const authentication = getAuthenticatedUser(request);
 
-    if (!authentication.authenticated) {
-      return reply.status(401).send({
-        success: false,
-        message:
-          authentication.reason === "MISSING_TOKEN"
-            ? "Authentication required."
-            : "Invalid or expired authentication token.",
-      });
-    }
+      if (!authentication.authenticated) {
+        return reply.status(401).send({
+          success: false,
+          message:
+            authentication.reason === "MISSING_TOKEN"
+              ? "Authentication required."
+              : "Invalid or expired authentication token.",
+        });
+      }
 
-    const { repositoryId } = request.params;
+      const { repositoryId } = request.params;
 
-    /*
-     * Repository existence is checked separately from access so the endpoint
-     * can return the precise status required by the API contract.
-     */
-    const repository =
-      await prisma.repository.findUnique({
-        where: {
-          id: repositoryId,
-        },
-        select: {
-          id: true,
-          userId: true,
-        },
-      });
+      /*
+       * Repository existence is checked separately from access so the endpoint
+       * can return the precise status required by the API contract.
+       */
+      const repository =
+        await prisma.repository.findUnique({
+          where: {
+            id: repositoryId,
+          },
+          select: {
+            id: true,
+            userId: true,
+          },
+        });
 
-    if (!repository) {
-      return reply.status(404).send({
-        success: false,
-        message: "Repository not found.",
-      });
-    }
+      if (!repository) {
+        return reply.status(404).send({
+          success: false,
+          message: "Repository not found.",
+        });
+      }
 
-    const isOwner =
-      repository.userId === authentication.user.userId;
+      const isOwner =
+        repository.userId === authentication.user.userId;
 
-    const hasAdminAccess = isPlatformAdmin(
-      authentication.user.username
-    );
-
-    if (!isOwner && !hasAdminAccess) {
-      return reply.status(403).send({
-        success: false,
-        message:
-          "You do not have permission to access this repository.",
-      });
-    }
-
-    const diff =
-      await intelligenceDiffService.getRepositoryDiff(
-        repositoryId
+      const hasAdminAccess = isPlatformAdmin(
+        authentication.user.username
       );
 
-    /*
-     * This should only be reachable if the repository disappears between the
-     * access check and diff query, but the response remains safely handled.
-     */
-    if (!diff) {
-      return reply.status(404).send({
-        success: false,
-        message: "Repository not found.",
+      if (!isOwner && !hasAdminAccess) {
+        return reply.status(403).send({
+          success: false,
+          message:
+            "You do not have permission to access this repository.",
+        });
+      }
+
+      const diff =
+        await intelligenceDiffService.getRepositoryDiff(
+          repositoryId
+        );
+
+      /*
+       * This should only be reachable if the repository disappears between the
+       * access check and diff query, but the response remains safely handled.
+       */
+      if (!diff) {
+        return reply.status(404).send({
+          success: false,
+          message: "Repository not found.",
+        });
+      }
+
+      return reply.send({
+        success: true,
+        message: diff.hasDiff
+          ? "Repository intelligence diff fetched successfully."
+          : "Repository intelligence history is not yet sufficient for comparison.",
+        data: diff,
       });
     }
-
-    return reply.send({
-      success: true,
-      message: diff.hasDiff
-        ? "Repository intelligence diff fetched successfully."
-        : "Repository intelligence history is not yet sufficient for comparison.",
-      data: diff,
-    });
-  }
-);
+  );
 
 
   // intelligence search analysis
@@ -2239,13 +2359,33 @@ app.get<{ Params: { repositoryId: string } }>(
       const { repositoryId } = request.params;
 
       const repository = await prisma.repository.findUnique({
-        where: { id: repositoryId },
+        where: {
+          id: repositoryId,
+        },
         select: {
           id: true,
           name: true,
           fullName: true,
           description: true,
           language: true,
+
+          /*
+           * The latest intelligence snapshot owns repository purpose.
+           *
+           * ArchitectureChange rows still provide supporting engineering
+           * evidence, but they no longer decide what the repository IS.
+           */
+          intelligenceSnapshots: {
+            orderBy: {
+              createdAt: "desc",
+            },
+            take: 1,
+            select: {
+              primaryRepositoryType: true,
+              repositoryTypes: true,
+              createdAt: true,
+            },
+          },
         },
       });
 
@@ -2256,66 +2396,108 @@ app.get<{ Params: { repositoryId: string } }>(
         });
       }
 
-      const architectureChanges = await prisma.architectureChange.findMany({
-        where: { repositoryId },
-        orderBy: { createdAt: "desc" },
-        select: {
-          architectureDomain: true,
-          detectedTechnology: true,
-          repositoryTypes: true,
-          reasoningSignals: true,
-          summary: true,
-          evolutionSummary: true,
-          createdAt: true,
-        },
-      });
+      const latestSnapshot =
+        repository.intelligenceSnapshots[0];
 
+      if (!latestSnapshot) {
+        return reply.status(404).send({
+          success: false,
+          message:
+            "Repository intelligence has not been generated yet. Reprocess the repository first.",
+        });
+      }
 
+      const architectureChanges =
+        await prisma.architectureChange.findMany({
+          where: {
+            repositoryId,
+          },
+          orderBy: {
+            createdAt: "desc",
+          },
+          select: {
+            architectureDomain: true,
+            detectedTechnology: true,
+            repositoryTypes: true,
+            reasoningSignals: true,
+            summary: true,
+            evolutionSummary: true,
+            createdAt: true,
+          },
+        });
 
       const domains = Array.from(
         new Set(
           architectureChanges
-            .map((change) => change.architectureDomain)
-            .filter((domain): domain is string => Boolean(domain))
+            .map(
+              (change) =>
+                change.architectureDomain
+            )
+            .filter(
+              (domain): domain is string =>
+                Boolean(domain)
+            )
         )
       );
 
       const technologies = Array.from(
         new Set(
           architectureChanges
-            .map((change) => change.detectedTechnology)
-            .filter((technology): technology is string => Boolean(technology))
+            .map(
+              (change) =>
+                change.detectedTechnology
+            )
+            .filter(
+              (technology): technology is string =>
+                Boolean(technology)
+            )
         )
       );
 
-      const repositoryTypes = Array.from(
-        new Set(
-          architectureChanges
-            .flatMap((change) => change.repositoryTypes?.split(",") || [])
-            .map((type) => type.trim())
-            .filter(Boolean)
+      /**
+    * Prisma exposes Json columns as JsonValue.
+    *
+    * Future me:
+    * RepositoryIntelligenceSnapshot.repositoryTypes is persisted as a JSON array
+    * of strings, but TypeScript only knows that it could be any valid JSON value.
+    *
+    * Convert it back into a clean string[] before giving it to intelligence
+    * helpers or rendering it in Markdown.
+    */
+      const repositoryTypes: string[] =
+        Array.isArray(
+          latestSnapshot.repositoryTypes,
         )
-      );
+          ? latestSnapshot.repositoryTypes.filter(
+            (value): value is string =>
+              typeof value === "string",
+          )
+          : [];
 
       const reasoningSignals = Array.from(
         new Set(
           architectureChanges
-            .flatMap((change) => change.reasoningSignals?.split(" | ") || [])
+            .flatMap(
+              (change) =>
+                change.reasoningSignals?.split(" | ") ||
+                []
+            )
             .map((signal) => signal.trim())
             .filter(Boolean)
         )
       );
 
-      const semanticProfile = generateRepositorySemanticProfile({
-        repositoryName: repository.name,
-        fullName: repository.fullName,
-        description: repository.description,
-        language: repository.language,
-        repositoryTypes,
-        domains,
-        technologies,
-        reasoningSignals,
-      });
+      const semanticProfile =
+        generateRepositorySemanticProfile({
+          repositoryName: repository.name,
+          fullName: repository.fullName,
+          description: repository.description,
+          language: repository.language,
+          repositoryTypes,
+          domains,
+          technologies,
+          reasoningSignals,
+        });
 
       const markdown = `# ${repository.name} Intelligence Report
 
@@ -2323,6 +2505,7 @@ app.get<{ Params: { repositoryId: string } }>(
 
 - Full Name: ${repository.fullName}
 - Language: ${repository.language || "Unknown"}
+- Primary Repository Type: ${latestSnapshot.primaryRepositoryType || "Unknown"}
 - Semantic Category: ${semanticProfile.semanticLabel}
 - Confidence: ${semanticProfile.confidence.confidenceLevel} (${semanticProfile.confidence.confidenceScore}%)
 
@@ -2332,19 +2515,31 @@ ${semanticProfile.semanticDescription}
 
 ## Repository Types
 
-${repositoryTypes.map((type) => `- ${type}`).join("\n") || "- None detected"}
+${repositoryTypes
+          .map((type) => `- ${type}`)
+          .join("\n") || "- None detected"
+        }
 
 ## Architecture Domains
 
-${domains.map((domain) => `- ${domain}`).join("\n") || "- None detected"}
+${domains
+          .map((domain) => `- ${domain}`)
+          .join("\n") || "- None detected"
+        }
 
 ## Detected Technologies
 
-${technologies.map((tech) => `- ${tech}`).join("\n") || "- None detected"}
+${technologies
+          .map((tech) => `- ${tech}`)
+          .join("\n") || "- None detected"
+        }
 
 ## Reasoning Signals
 
-${reasoningSignals.map((signal) => `- ${signal}`).join("\n") || "- None available"}
+${reasoningSignals
+          .map((signal) => `- ${signal}`)
+          .join("\n") || "- None available"
+        }
 
 ## Recent Evidence
 
@@ -2359,9 +2554,16 @@ ${architectureChanges
 
       return {
         success: true,
-        message: "Repository intelligence markdown report generated successfully",
+        message:
+          "Repository intelligence markdown report generated successfully",
         data: {
-          repository,
+          repository: {
+            id: repository.id,
+            name: repository.name,
+            fullName: repository.fullName,
+            description: repository.description,
+            language: repository.language,
+          },
           markdown,
         },
       };
@@ -2884,171 +3086,171 @@ ${architectureChanges
 
   //repository narrative synthesis
   app.get<{ Params: { repositoryId: string } }>(
-  "/:repositoryId/narrative",
-  async (request, reply) => {
-    const { repositoryId } = request.params;
+    "/:repositoryId/narrative",
+    async (request, reply) => {
+      const { repositoryId } = request.params;
 
-    const repository = await prisma.repository.findUnique({
-      where: { id: repositoryId },
-      select: {
-        id: true,
-        name: true,
-        fullName: true,
-        description: true,
-        language: true,
-        userId: true,
-        architectureChanges: {
-          orderBy: {
-            createdAt: "desc",
-          },
-          select: {
-            changeType: true,
-            detectedTechnology: true,
-            fileAffected: true,
-            summary: true,
-            repositoryTypes: true,
-            reasoningSignals: true,
-            architectureDomain: true,
-            evolutionSummary: true,
+      const repository = await prisma.repository.findUnique({
+        where: { id: repositoryId },
+        select: {
+          id: true,
+          name: true,
+          fullName: true,
+          description: true,
+          language: true,
+          userId: true,
+          architectureChanges: {
+            orderBy: {
+              createdAt: "desc",
+            },
+            select: {
+              changeType: true,
+              detectedTechnology: true,
+              fileAffected: true,
+              summary: true,
+              repositoryTypes: true,
+              reasoningSignals: true,
+              architectureDomain: true,
+              evolutionSummary: true,
+            },
           },
         },
-      },
-    });
-
-    if (!repository) {
-      return reply.status(404).send({
-        success: false,
-        message: "Repository not found",
       });
-    }
 
-    const repositoryContext = [
-      repository.name,
-      repository.fullName,
-      repository.description || "",
-      repository.language || "",
-      ...repository.architectureChanges.map((change) =>
-        [
-          change.changeType,
-          change.detectedTechnology || "",
-          change.summary,
-          change.repositoryTypes || "",
-          change.reasoningSignals || "",
-          change.architectureDomain || "",
-          change.evolutionSummary || "",
-        ].join(" ")
-      ),
-    ].join(" ");
+      if (!repository) {
+        return reply.status(404).send({
+          success: false,
+          message: "Repository not found",
+        });
+      }
 
-    const fingerprint = detectTechnologyFingerprint(
-      repository.architectureChanges
-        .map((change) => change.fileAffected)
-        .filter((file): file is string => Boolean(file)),
-      repository.architectureChanges.map((change) => change.summary),
-      repositoryContext
-    );
-
-    const repositoryIntelligence = fingerprint.repositoryIntelligence;
-
-    const repositoryTypes =
-      repositoryIntelligence.identity.repositoryTypes.length > 0
-        ? repositoryIntelligence.identity.repositoryTypes
-        : fingerprint.repositoryTypes;
-
-    const domains =
-      repositoryIntelligence.signals.architectureDomains.length > 0
-        ? repositoryIntelligence.signals.architectureDomains
-        : fingerprint.architectureDomains;
-
-    const technologies =
-      repositoryIntelligence.signals.technologies.length > 0
-        ? repositoryIntelligence.signals.technologies
-        : fingerprint.technologies;
-
-    const reasoningSignals =
-      repositoryIntelligence.signals.reasoningSignals.length > 0
-        ? repositoryIntelligence.signals.reasoningSignals
-        : fingerprint.reasoningSignals;
-
-    const repositoryPurpose = inferRepositoryPurpose(repositoryTypes);
-
-    const capabilities = {
-      frontendArchitecture: domains.includes("FRONTEND_ARCHITECTURE"),
-      apiLayer:
-        domains.includes("API_LAYER") ||
-        domains.includes("BACKEND_SYSTEMS"),
-      authentication:
-        domains.includes("AUTHENTICATION") ||
-        repositoryIntelligence.signals.capabilities.some(
-          (capability) => capability.key === "AUTHENTICATION"
+      const repositoryContext = [
+        repository.name,
+        repository.fullName,
+        repository.description || "",
+        repository.language || "",
+        ...repository.architectureChanges.map((change) =>
+          [
+            change.changeType,
+            change.detectedTechnology || "",
+            change.summary,
+            change.repositoryTypes || "",
+            change.reasoningSignals || "",
+            change.architectureDomain || "",
+            change.evolutionSummary || "",
+          ].join(" ")
         ),
-      realtimeSystems:
-        domains.includes("REALTIME_SYSTEMS") ||
-        repositoryIntelligence.signals.capabilities.some(
-          (capability) => capability.key === "REALTIME_SYSTEMS"
+      ].join(" ");
+
+      const fingerprint = detectTechnologyFingerprint(
+        repository.architectureChanges
+          .map((change) => change.fileAffected)
+          .filter((file): file is string => Boolean(file)),
+        repository.architectureChanges.map((change) => change.summary),
+        repositoryContext
+      );
+
+      const repositoryIntelligence = fingerprint.repositoryIntelligence;
+
+      const repositoryTypes =
+        repositoryIntelligence.identity.repositoryTypes.length > 0
+          ? repositoryIntelligence.identity.repositoryTypes
+          : fingerprint.repositoryTypes;
+
+      const domains =
+        repositoryIntelligence.signals.architectureDomains.length > 0
+          ? repositoryIntelligence.signals.architectureDomains
+          : fingerprint.architectureDomains;
+
+      const technologies =
+        repositoryIntelligence.signals.technologies.length > 0
+          ? repositoryIntelligence.signals.technologies
+          : fingerprint.technologies;
+
+      const reasoningSignals =
+        repositoryIntelligence.signals.reasoningSignals.length > 0
+          ? repositoryIntelligence.signals.reasoningSignals
+          : fingerprint.reasoningSignals;
+
+      const repositoryPurpose = inferRepositoryPurpose(repositoryTypes);
+
+      const capabilities = {
+        frontendArchitecture: domains.includes("FRONTEND_ARCHITECTURE"),
+        apiLayer:
+          domains.includes("API_LAYER") ||
+          domains.includes("BACKEND_SYSTEMS"),
+        authentication:
+          domains.includes("AUTHENTICATION") ||
+          repositoryIntelligence.signals.capabilities.some(
+            (capability) => capability.key === "AUTHENTICATION"
+          ),
+        realtimeSystems:
+          domains.includes("REALTIME_SYSTEMS") ||
+          repositoryIntelligence.signals.capabilities.some(
+            (capability) => capability.key === "REALTIME_SYSTEMS"
+          ),
+        queueInfrastructure:
+          domains.includes("QUEUE_INFRASTRUCTURE") ||
+          repositoryIntelligence.signals.capabilities.some(
+            (capability) => capability.key === "QUEUE_INFRASTRUCTURE"
+          ),
+        databaseLayer:
+          domains.includes("DATABASE_LAYER") ||
+          repositoryIntelligence.signals.capabilities.some(
+            (capability) => capability.key === "DATABASE_LAYER"
+          ),
+        architectureIntelligence:
+          repositoryTypes.includes("ENGINEERING_INTELLIGENCE_PLATFORM") ||
+          domains.includes("ENGINEERING_INTELLIGENCE"),
+      };
+
+      const architectureStyles = detectArchitectureStyle({
+        domains,
+        technologies,
+        signals: repositoryIntelligence.signals.engineeringSignals,
+        repositoryTypes,
+      });
+
+      const narrative = generateRepositoryNarrative({
+        repositoryName: repository.name,
+        repositoryTypes,
+        technologies,
+        domains,
+        capabilities,
+        architectureStyles,
+        architectureChangeCount: Math.max(
+          repository.architectureChanges.length,
+          domains.length
         ),
-      queueInfrastructure:
-        domains.includes("QUEUE_INFRASTRUCTURE") ||
-        repositoryIntelligence.signals.capabilities.some(
-          (capability) => capability.key === "QUEUE_INFRASTRUCTURE"
-        ),
-      databaseLayer:
-        domains.includes("DATABASE_LAYER") ||
-        repositoryIntelligence.signals.capabilities.some(
-          (capability) => capability.key === "DATABASE_LAYER"
-        ),
-      architectureIntelligence:
-        repositoryTypes.includes("ENGINEERING_INTELLIGENCE_PLATFORM") ||
-        domains.includes("ENGINEERING_INTELLIGENCE"),
-    };
+      });
 
-    const architectureStyles = detectArchitectureStyle({
-      domains,
-      technologies,
-      signals: repositoryIntelligence.signals.engineeringSignals,
-      repositoryTypes,
-    });
-
-    const narrative = generateRepositoryNarrative({
-      repositoryName: repository.name,
-      repositoryTypes,
-      technologies,
-      domains,
-      capabilities,
-      architectureStyles,
-      architectureChangeCount: Math.max(
-        repository.architectureChanges.length,
-        domains.length
-      ),
-    });
-
-    const confidence = calculateIntelligenceConfidence({
-      repositoryTypes,
-      domains,
-      technologies,
-      reasoningSignals,
-    });
-
-    return {
-      success: true,
-      message: "Repository narrative generated successfully",
-      data: {
-        repository: {
-          id: repository.id,
-          name: repository.name,
-          fullName: repository.fullName,
-          language: repository.language,
-          userId: repository.userId,
-        },
-        narrative,
-        confidence,
+      const confidence = calculateIntelligenceConfidence({
+        repositoryTypes,
+        domains,
+        technologies,
         reasoningSignals,
-        repositoryPurpose,
-        repositoryIntelligence,
-      },
-    };
-  }
-);
+      });
+
+      return {
+        success: true,
+        message: "Repository narrative generated successfully",
+        data: {
+          repository: {
+            id: repository.id,
+            name: repository.name,
+            fullName: repository.fullName,
+            language: repository.language,
+            userId: repository.userId,
+          },
+          narrative,
+          confidence,
+          reasoningSignals,
+          repositoryPurpose,
+          repositoryIntelligence,
+        },
+      };
+    }
+  );
 
   // Architecture radar data for visualization
   app.get<{ Params: { repositoryId: string } }>(
