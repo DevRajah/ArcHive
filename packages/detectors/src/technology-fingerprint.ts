@@ -3,6 +3,7 @@ import {
     applyLegacyClassificationStage,
     applyLegacyPurposeAdjustmentStage,
     applyRepositoryPurposeStage,
+    applyRepositoryTypeResolutionStage,
     applyTechnologyConflictStage,
     applyTechnologyRelationshipStage,
     buildAnalysisStage,
@@ -122,11 +123,31 @@ export const detectTechnologyFingerprint = (
      * Stage 2:
      * Preserve legacy classifications that have not yet been replaced.
      */
+    const repositoryTypesBeforeLegacy =
+        new Set(
+            state.repositoryTypes,
+        );
+
     applyLegacyClassificationStage({
         filesChanged,
         combinedText,
         state,
     });
+
+    const legacyAddedRepositoryTypes =
+        Array.from(
+            state.repositoryTypes,
+        ).filter(
+            (repositoryType) =>
+                !repositoryTypesBeforeLegacy.has(
+                    repositoryType,
+                ),
+        );
+
+    console.log(
+        "[LEGACY TYPES ADDED]",
+        legacyAddedRepositoryTypes,
+    );
 
     /**
      * Stage 3:
@@ -169,6 +190,17 @@ export const detectTechnologyFingerprint = (
      * Remove generic labels when a stronger specific technology exists.
      */
     applyTechnologyConflictStage({
+        state,
+    });
+
+    /**
+ * Evidence gets the final say over repository identity.
+ *
+ * Legacy classification still runs for backward compatibility, but any
+ * unsupported purpose classifications it introduced are removed here.
+ */
+    applyRepositoryTypeResolutionStage({
+        evidenceResults,
         state,
     });
 
@@ -234,12 +266,32 @@ export const detectTechnologyFingerprint = (
      * Apply late repository-purpose adjustments after all classifications
      * and reasoning signals have been produced.
      */
+    const repositoryTypesBeforeLateAdjustment =
+        new Set(
+            state.repositoryTypes,
+        );
+
     applyLegacyPurposeAdjustmentStage({
         filesChanged,
         commitMessages,
         repositoryContext,
         state,
     });
+
+    const lateAddedRepositoryTypes =
+        Array.from(
+            state.repositoryTypes,
+        ).filter(
+            (repositoryType) =>
+                !repositoryTypesBeforeLateAdjustment.has(
+                    repositoryType,
+                ),
+        );
+
+    console.log(
+        "[LATE PURPOSE TYPES ADDED]",
+        lateAddedRepositoryTypes,
+    );
 
     /**
      * Stage 11:

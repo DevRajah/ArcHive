@@ -8,6 +8,35 @@ import {
 } from "./shared";
 
 /**
+ * Repository purposes that represent meaningful product/domain identity.
+ *
+ * Future me:
+ * Once one of these has been established by the evidence engine, broad
+ * legacy keyword classification should not be allowed to invent additional
+ * unrelated repository purposes.
+ */
+const meaningfulRepositoryTypes = new Set([
+  "ENGINEERING_INTELLIGENCE_PLATFORM",
+  "DEVTOOL_PLATFORM",
+  "FINTECH_PLATFORM",
+  "OBSERVABILITY_PLATFORM",
+  "SECURITY_PLATFORM",
+  "AI_ML_PROJECT",
+  "DEVELOPER_PLATFORM",
+  "DATA_ENGINEERING_PROJECT",
+  "SMART_TRANSPORT_PLATFORM",
+  "ENERGY_PLATFORM",
+  "HEALTHCARE_PLATFORM",
+  "ECOMMERCE_PLATFORM",
+  "EDUCATION_PLATFORM",
+  "COLLABORATION_PLATFORM",
+  "INFRASTRUCTURE_PLATFORM",
+  "MOBILE_APPLICATION",
+  "BACKEND_SERVICE",
+  "FRONTEND_APPLICATION",
+]);
+
+/**
  * Preserves ArcHive's older filename and keyword classifications.
  *
  * Future me:
@@ -779,27 +808,27 @@ export const applyLegacyPurposeAdjustmentStage = ({
     reasoningSignals,
   } = state;
 
-const combinedPurposeText = [
-  ...filesChanged,
-  ...commitMessages,
+  const combinedPurposeText = [
+    ...filesChanged,
+    ...commitMessages,
 
-  /**
-   * Repository descriptions and README content contain important product
-   * purpose evidence such as "scaffolding CLI" or "fintech platform".
-   *
-   * They may support repository-purpose classification, but they must not
-   * independently confirm implementation technologies.
-   */
-  repositoryContext,
+    /**
+     * Repository descriptions and README content contain important product
+     * purpose evidence such as "scaffolding CLI" or "fintech platform".
+     *
+     * They may support repository-purpose classification, but they must not
+     * independently confirm implementation technologies.
+     */
+    repositoryContext,
 
-  ...reasoningSignals,
-  ...Array.from(technologies),
-  ...Array.from(architectureDomains),
-  ...Array.from(repositoryTypes),
-]
-  .filter(Boolean)
-  .join(" ")
-  .toLowerCase();
+    ...reasoningSignals,
+    ...Array.from(technologies),
+    ...Array.from(architectureDomains),
+    ...Array.from(repositoryTypes),
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
 
   if (
     combinedPurposeText.includes(

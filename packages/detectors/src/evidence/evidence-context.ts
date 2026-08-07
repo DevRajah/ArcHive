@@ -244,6 +244,16 @@ export const createEvidenceContext = ({
         strength:
             EvidenceStrength,
     ) => {
+          console.log(
+    "[PURPOSE EVIDENCE]",
+    {
+      repositoryType,
+      label,
+      weight,
+      category,
+      strength,
+    },
+  );
         evidenceItems.push({
             repositoryType,
             label,

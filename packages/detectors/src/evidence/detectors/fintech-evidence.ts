@@ -29,10 +29,9 @@ const matchesAnyPath = (
   patterns: RegExp[],
 ): boolean => {
   return files.some((file) => {
-    const normalizedPath =
-      file
-        .replace(/\\/g, "/")
-        .toLowerCase();
+    const normalizedPath = file
+      .replace(/\\/g, "/")
+      .toLowerCase();
 
     return patterns.some((pattern) =>
       pattern.test(normalizedPath),
@@ -73,16 +72,28 @@ export const detectFintechEvidence = (
       FINTECH_PACKAGES,
     );
 
+  /**
+   * Structural checks intentionally support both folder-based domain
+   * organisation and file-based MVC/service organisation.
+   *
+   * LedgerFlow, for example, uses files such as:
+   *
+   * src/controllers/ledger.controller.ts
+   * src/services/reconciliation.service.ts
+   * src/routes/settlement.routes.ts
+   */
   const hasLedgerStructure =
     matchesAnyPath(
       filesChanged,
       [
         /(^|\/)ledgers?\//,
         /(^|\/)journal-entries?\//,
-        /(^|\/)accounts?\//,
         /(^|\/)double-entry\//,
-        /\.ledger\.(ts|js|py)$/,
-        /\.journal-entry\.(ts|js|py)$/,
+        /(^|\/)accounts?\//,
+
+        /(^|\/)ledger\.(controller|service|routes?|router|repository|model)\.(ts|js|py)$/,
+        /(^|\/)ledger-entry\.(controller|service|routes?|router|repository|model)\.(ts|js|py)$/,
+        /(^|\/)journal-entry\.(controller|service|routes?|router|repository|model)\.(ts|js|py)$/,
       ],
     );
 
@@ -91,11 +102,14 @@ export const detectFintechEvidence = (
       filesChanged,
       [
         /(^|\/)payments?\//,
+        /(^|\/)payment-events?\//,
         /(^|\/)payment-providers?\//,
         /(^|\/)payment-gateways?\//,
         /(^|\/)payment-webhooks?\//,
-        /\.payment\.(ts|js|py)$/,
-        /\.payment-provider\.(ts|js|py)$/,
+
+        /(^|\/)payment\.(controller|service|routes?|router|repository|model|queue|worker)\.(ts|js|py)$/,
+        /(^|\/)payment-event\.(controller|service|routes?|router|repository|model)\.(ts|js|py)$/,
+        /(^|\/)payment-reprocess\.(controller|service|routes?|router)\.(ts|js|py)$/,
       ],
     );
 
@@ -105,11 +119,21 @@ export const detectFintechEvidence = (
       [
         /(^|\/)reconciliation\//,
         /(^|\/)reconciliations?\//,
+        /(^|\/)reconcile\//,
+
+        /(^|\/)reconciliation\.(controller|service|routes?|router|repository|model)\.(ts|js|py)$/,
+        /(^|\/)reconcile\.(controller|service|routes?|router|repository|model)\.(ts|js|py)$/,
+      ],
+    );
+
+  const hasSettlementStructure =
+    matchesAnyPath(
+      filesChanged,
+      [
+        /(^|\/)settlement\//,
         /(^|\/)settlements?\//,
-        /(^|\/)disputes?\//,
-        /(^|\/)chargebacks?\//,
-        /\.reconciliation\.(ts|js|py)$/,
-        /\.settlement\.(ts|js|py)$/,
+
+        /(^|\/)settlement\.(controller|service|routes?|router|repository|model)\.(ts|js|py)$/,
       ],
     );
 
@@ -121,8 +145,10 @@ export const detectFintechEvidence = (
         /(^|\/)balances?\//,
         /(^|\/)transfers?\//,
         /(^|\/)beneficiaries?\//,
-        /\.wallet\.(ts|js|py)$/,
-        /\.transfer\.(ts|js|py)$/,
+
+        /(^|\/)wallet\.(controller|service|routes?|router|repository|model)\.(ts|js|py)$/,
+        /(^|\/)balance\.(controller|service|routes?|router|repository|model)\.(ts|js|py)$/,
+        /(^|\/)transfer\.(controller|service|routes?|router|repository|model)\.(ts|js|py)$/,
       ],
     );
 
@@ -134,6 +160,9 @@ export const detectFintechEvidence = (
         /(^|\/)financial-audit\//,
         /(^|\/)transaction-history\//,
         /(^|\/)financial-events?\//,
+
+        /(^|\/)audit\.(controller|service|routes?|router|repository|model)\.(ts|js|py)$/,
+        /(^|\/)audit-ledger\.(controller|service|routes?|router|repository|model)\.(ts|js|py)$/,
       ],
     );
 
@@ -141,9 +170,54 @@ export const detectFintechEvidence = (
     hasLedgerStructure,
     hasPaymentStructure,
     hasReconciliationStructure,
+    hasSettlementStructure,
     hasWalletOrBalanceStructure,
     hasFinancialAuditStructure,
   ].filter(Boolean).length;
+
+  /*
+  |--------------------------------------------------------------------------
+  | Temporary detector diagnostics.
+  |
+  | Keep this while we validate LedgerFlow, TransitIQ, GridWise, and the
+  | remaining repositories. Remove it once purpose detection is stable.
+  |--------------------------------------------------------------------------
+  */
+  console.log(
+    "========== FINTECH DETECTOR ==========",
+  );
+
+  console.log({
+    hasPaymentDependency,
+    hasPaymentImport,
+
+    hasLedgerStructure,
+    hasPaymentStructure,
+    hasReconciliationStructure,
+    hasSettlementStructure,
+    hasWalletOrBalanceStructure,
+    hasFinancialAuditStructure,
+
+    financialCapabilityCount,
+
+    filesChangedCount:
+      filesChanged.length,
+
+    repositoryFilesCount:
+      repositoryFiles.length,
+  });
+
+  console.log(
+    "Fintech descriptive text preview:",
+    descriptiveText.substring(
+      0,
+      700,
+    ),
+  );
+
+  console.log(
+    "======================================",
+  );
 
   const hasFinancialCode =
     repositoryFiles.some((file) => {
@@ -177,21 +251,22 @@ export const detectFintechEvidence = (
         file.content.toLowerCase();
 
       return (
-        content.includes(
-          "idempotency",
-        ) &&
         (
           content.includes(
-            "payment",
-          ) ||
-          content.includes(
-            "transaction",
-          ) ||
-          content.includes(
-            "transfer",
+            "idempotency",
+          ) &&
+          (
+            content.includes(
+              "payment",
+            ) ||
+            content.includes(
+              "transaction",
+            ) ||
+            content.includes(
+              "transfer",
+            )
           )
-        )
-      ) ||
+        ) ||
         (
           content.includes(
             "webhook signature",
@@ -199,7 +274,8 @@ export const detectFintechEvidence = (
           content.includes(
             "payment",
           )
-        );
+        )
+      );
     });
 
   const hasStrongFintechPurpose =
@@ -207,17 +283,25 @@ export const detectFintechEvidence = (
       "fintech platform",
       "payment processing platform",
       "payment reconciliation platform",
+      "payment reconciliation",
       "financial ledger system",
+      "audit ledger",
       "wallet platform",
       "transaction processing platform",
       "financial infrastructure",
       "banking platform",
       "settlement platform",
       "double-entry ledger",
+      "event-driven payment reconciliation",
     ].some((phrase) =>
       descriptiveText.includes(phrase),
     );
 
+  /*
+  |--------------------------------------------------------------------------
+  | Payment-provider evidence.
+  |--------------------------------------------------------------------------
+  */
   if (
     hasPaymentDependency &&
     hasPaymentImport
@@ -251,33 +335,45 @@ export const detectFintechEvidence = (
     );
   }
 
+  /*
+  |--------------------------------------------------------------------------
+  | Structural financial-domain evidence.
+  |--------------------------------------------------------------------------
+  */
+  if (
+    financialCapabilityCount >= 2
+  ) {
+    addEvidence(
+      "FINTECH_PLATFORM",
+      "Detected multiple implemented financial processing domains",
+      55,
+      "FILE_STRUCTURE",
+      "STRONG",
+    );
+  }
+
   if (
     hasLedgerStructure &&
     (
-      hasReconciliationStructure ||
       hasPaymentStructure ||
-      hasWalletOrBalanceStructure
+      hasReconciliationStructure ||
+      hasSettlementStructure
     )
   ) {
     addEvidence(
       "FINTECH_PLATFORM",
-      "Detected financial ledger with payment, reconciliation, settlement, or wallet workflows",
-      45,
-      "ARCHITECTURE_PATTERN",
-      "STRONG",
-    );
-  } else if (
-    financialCapabilityCount >= 3
-  ) {
-    addEvidence(
-      "FINTECH_PLATFORM",
-      "Detected multiple connected financial-processing capabilities",
-      40,
+      "Detected implemented ledger and payment lifecycle architecture",
+      50,
       "ARCHITECTURE_PATTERN",
       "STRONG",
     );
   }
 
+  /*
+  |--------------------------------------------------------------------------
+  | Source-code financial behaviour.
+  |--------------------------------------------------------------------------
+  */
   if (
     hasFinancialCode &&
     financialCapabilityCount >= 2
@@ -301,6 +397,12 @@ export const detectFintechEvidence = (
     );
   }
 
+  /*
+  |--------------------------------------------------------------------------
+  | Purpose language can strengthen structural evidence, but must not
+  | classify an empty repository by itself.
+  |--------------------------------------------------------------------------
+  */
   if (
     hasStrongFintechPurpose &&
     (

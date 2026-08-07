@@ -2,129 +2,123 @@ import type {
   EvidenceContext,
 } from "../evidence-types";
 
-const ENGINEERING_INTELLIGENCE_PACKAGES = [
-  "@octokit/rest",
-  "octokit",
-  "probot",
-  "@octokit/webhooks",
-  "@octokit/oauth-app",
-];
-
-const hasAnySetValue = (
-  values: Set<string>,
-  candidates: string[],
-): boolean => {
-  return candidates.some((candidate) =>
-    values.has(candidate.toLowerCase()),
-  );
-};
-
-const matchesAnyPath = (
-  files: string[],
-  patterns: RegExp[],
-): boolean => {
-  return files.some((file) => {
-    const normalizedPath = file
-      .replace(/\\/g, "/")
-      .toLowerCase();
-
-    return patterns.some((pattern) =>
-      pattern.test(normalizedPath),
-    );
-  });
-};
+import {
+  includesAny,
+} from "../evidence-utils";
 
 /**
- * Detects products that analyse software repositories, engineering activity,
- * architecture evolution, repository health, and engineering quality.
+ * Detects repositories whose actual purpose is analysing software
+ * repositories, engineering activity, architecture, or codebase health.
  *
  * Future me:
- * Generic words such as "repository", "architecture", "metrics", "health",
- * or "intelligence" must never confirm this repository purpose by themselves.
+ * Individual concepts such as "GitHub", "repository", "architecture",
+ * or "intelligence" are not enough.
  *
- * A genuine engineering-intelligence platform should combine:
+ * Engineering Intelligence requires evidence from BOTH:
  *
- * - repository ingestion or GitHub integration
- * - engineering or architecture analysis
- * - generated intelligence, scoring, timelines, or reports
+ * 1. an engineering-analysis capability
+ * 2. a repository/codebase-analysis workflow
+ *
+ * This prevents ordinary developer tools and GitHub-integrated
+ * applications from becoming Engineering Intelligence platforms.
  */
 export const detectEngineeringIntelligenceEvidence = (
   context: EvidenceContext,
 ): void => {
   const {
-    dependencies,
-    imports,
-    filesChanged,
-    repositoryFiles,
+    structuralText,
     descriptiveText,
+    repositoryFiles,
     addEvidence,
   } = context;
 
-  const hasGitHubDependency =
-    hasAnySetValue(
-      dependencies,
-      ENGINEERING_INTELLIGENCE_PACKAGES,
-    );
-
-  const hasGitHubImport =
-    hasAnySetValue(
-      imports,
-      ENGINEERING_INTELLIGENCE_PACKAGES,
-    );
-
-  const hasRepositoryIngestionStructure =
-    matchesAnyPath(
-      filesChanged,
+  /**
+   * Product capabilities that specifically describe analysing
+   * engineering systems rather than simply building software.
+   */
+  const hasEngineeringAnalysisPurpose =
+    includesAny(
+      descriptiveText,
       [
-        /(^|\/)github\//,
-        /(^|\/)webhooks?\//,
-        /(^|\/)repository-import\//,
-        /(^|\/)repositories\/.*import/,
-        /github[-_.]?oauth/,
-        /github[-_.]?webhook/,
-        /repository[-_.]?import/,
-        /pull[-_.]?request[-_.]?analysis/,
-        /commit[-_.]?analysis/,
+        "engineering intelligence",
+        "codebase intelligence",
+        "repository intelligence",
+        "architecture intelligence",
+        "repository fingerprint",
+        "technology fingerprint",
+        "architecture drift",
+        "architecture evolution",
+        "engineering quality",
+        "repository health",
+        "repository maturity",
+        "technical debt",
+        "repository benchmark",
+        "engineering scorecard",
       ],
     );
 
-  const hasIntelligenceStructure =
-    matchesAnyPath(
-      filesChanged,
+  /**
+   * Structural evidence that the repository actually contains
+   * engineering-intelligence implementation areas.
+   */
+  const hasEngineeringAnalysisStructure =
+    includesAny(
+      structuralText,
       [
-        /(^|\/)repository-intelligence\//,
-        /(^|\/)engineering-intelligence\//,
-        /(^|\/)architecture-intelligence\//,
-        /(^|\/)repository-health\//,
-        /(^|\/)repository-evolution\//,
-        /(^|\/)architecture-drift\//,
-        /(^|\/)technology-fingerprint\//,
-        /(^|\/)fingerprint\//,
-        /repository[-_.]?intelligence/,
-        /technology[-_.]?fingerprint/,
-        /architecture[-_.]?drift/,
-        /repository[-_.]?health/,
-        /repository[-_.]?maturity/,
-        /engineering[-_.]?quality/,
+        "repository-intelligence",
+        "technology-fingerprint",
+        "architecture-drift",
+        "repository-evolution",
+        "repository-health",
+        "repository-maturity",
+        "engineering-quality",
+        "technical-debt",
+        "architecture-quality",
       ],
     );
 
-  const hasTimelineOrSnapshotStructure =
-    matchesAnyPath(
-      filesChanged,
+  /**
+   * Engineering Intelligence also needs a repository-analysis workflow.
+   *
+   * Otherwise an application that merely discusses architecture in its
+   * README could accidentally satisfy the detector.
+   */
+  const hasRepositoryAnalysisPurpose =
+    includesAny(
+      descriptiveText,
       [
-        /(^|\/)timeline\//,
-        /(^|\/)snapshots?\//,
-        /(^|\/)architecture-changes?\//,
-        /(^|\/)engineering-events?\//,
-        /(^|\/)reports?\//,
-        /intelligence[-_.]?snapshot/,
-        /architecture[-_.]?change/,
-        /engineering[-_.]?event/,
+        "github repository analysis",
+        "repository analysis",
+        "codebase analysis",
+        "commit analysis",
+        "pull request analysis",
+        "repository import",
+        "engineering event",
+        "architecture change",
+        "repository timeline",
       ],
     );
 
-  const hasRepositoryAnalysisCode =
+  const hasRepositoryAnalysisStructure =
+    includesAny(
+      structuralText,
+      [
+        "github",
+        "repository",
+        "engineering-event",
+        "architecture-change",
+        "timeline",
+        "webhook",
+      ],
+    );
+
+  /**
+   * Actual source code gives us another strong implementation signal.
+   *
+   * We deliberately require several related concepts inside the same
+   * repository instead of trusting one isolated keyword.
+   */
+  const hasEngineeringIntelligenceCode =
     repositoryFiles.some((file) => {
       const content =
         file.content.toLowerCase();
@@ -132,139 +126,81 @@ export const detectEngineeringIntelligenceEvidence = (
       const signals = [
         "repository intelligence",
         "technology fingerprint",
-        "architecture drift",
-        "repository maturity",
         "repository health",
+        "repository maturity",
+        "architecture drift",
         "engineering quality",
         "architecture change",
         "engineering event",
-        "repository timeline",
-        "repository comparison",
-        "repository benchmark",
       ];
 
-      return signals.filter((signal) =>
-        content.includes(signal),
-      ).length >= 3;
+      const matches =
+        signals.filter((signal) =>
+          content.includes(signal),
+        );
+
+      return matches.length >= 3;
     });
 
-  const hasGitHubAnalysisCode =
-    repositoryFiles.some((file) => {
-      const content =
-        file.content.toLowerCase();
-
-      const signals = [
-        "github webhook",
-        "github oauth",
-        "repository import",
-        "pull request",
-        "commit analysis",
-        "repository tree",
-        "githubaccesstoken",
-      ];
-
-      return signals.filter((signal) =>
-        content.includes(signal),
-      ).length >= 2;
-    });
-
-  const hasStrongPurposeLanguage =
-    [
-      "engineering intelligence platform",
-      "repository intelligence platform",
-      "codebase intelligence platform",
-      "software engineering intelligence",
-      "repository analysis platform",
-      "architecture intelligence platform",
-      "engineering health platform",
-      "architecture evolution platform",
-      "engineering analytics platform",
-    ].some((phrase) =>
-      descriptiveText.includes(phrase),
-    );
-
-  const hasGitHubIntegration =
-    hasGitHubImport ||
-    hasRepositoryIngestionStructure ||
-    hasGitHubAnalysisCode;
-
-  const hasEngineeringAnalysis =
-    hasIntelligenceStructure ||
-    hasRepositoryAnalysisCode;
-
+  /**
+   * Highest-quality case:
+   *
+   * The repository says what the product does AND contains the
+   * corresponding implementation structure.
+   */
   if (
-    hasGitHubDependency &&
-    hasGitHubImport
+    hasEngineeringAnalysisPurpose &&
+    hasEngineeringAnalysisStructure &&
+    (
+      hasRepositoryAnalysisPurpose ||
+      hasRepositoryAnalysisStructure
+    )
   ) {
     addEvidence(
       "ENGINEERING_INTELLIGENCE_PLATFORM",
-      "Detected GitHub integration dependency used directly in source code",
-      25,
-      "IMPORT",
-      "STRONG",
-    );
-  } else if (
-    hasGitHubImport
-  ) {
-    addEvidence(
-      "ENGINEERING_INTELLIGENCE_PLATFORM",
-      "Detected direct GitHub integration imports",
-      20,
-      "IMPORT",
-      "STRONG",
-    );
-  }
-
-  if (
-    hasRepositoryIngestionStructure &&
-    hasIntelligenceStructure
-  ) {
-    addEvidence(
-      "ENGINEERING_INTELLIGENCE_PLATFORM",
-      "Detected repository ingestion together with engineering or architecture intelligence modules",
-      45,
+      "Detected implemented engineering intelligence and repository analysis platform",
+      95,
       "ARCHITECTURE_PATTERN",
       "STRONG",
     );
+
+    return;
   }
 
+  /**
+   * Source-code implementation can independently provide strong
+   * corroboration when repository structure also supports the purpose.
+   */
   if (
-    hasEngineeringAnalysis &&
-    hasTimelineOrSnapshotStructure
+    hasEngineeringIntelligenceCode &&
+    hasEngineeringAnalysisStructure &&
+    hasRepositoryAnalysisStructure
   ) {
     addEvidence(
       "ENGINEERING_INTELLIGENCE_PLATFORM",
-      "Detected repository analysis with historical snapshots, engineering events, timelines, or architecture changes",
-      35,
-      "FILE_STRUCTURE",
-      "STRONG",
-    );
-  }
-
-  if (
-    hasRepositoryAnalysisCode &&
-    hasGitHubIntegration
-  ) {
-    addEvidence(
-      "ENGINEERING_INTELLIGENCE_PLATFORM",
-      "Detected implemented repository analysis and GitHub ingestion workflows",
-      40,
+      "Detected engineering intelligence implementation across repository analysis source code",
+      90,
       "CODE_PATTERN",
       "STRONG",
     );
+
+    return;
   }
 
+  /**
+   * Descriptive purpose alone is useful evidence, but deliberately not
+   * enough to classify the entire repository.
+   */
   if (
-    hasStrongPurposeLanguage &&
-    hasGitHubIntegration &&
-    hasEngineeringAnalysis
+    hasEngineeringAnalysisPurpose &&
+    hasRepositoryAnalysisPurpose
   ) {
     addEvidence(
       "ENGINEERING_INTELLIGENCE_PLATFORM",
-      "Repository purpose explicitly describes an engineering or repository intelligence platform",
-      30,
+      "Repository describes engineering intelligence and repository analysis capabilities",
+      40,
       "DOMAIN_LANGUAGE",
-      "STRONG",
+      "MEDIUM",
     );
   }
 };
