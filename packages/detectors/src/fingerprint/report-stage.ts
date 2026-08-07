@@ -1,153 +1,135 @@
 import type {
-    EvidenceResult,
+  EvidenceResult,
 } from "../evidence";
 
-import type {
-    RepositoryType,
-} from "../constants";
-
 import {
-    detectEngineeringCapabilities,
+  detectEngineeringCapabilities,
 } from "../capabilities";
 
 import type {
-    RepositoryDNA,
+  RepositoryDNA,
 } from "../dna";
 
 import type {
-    RepositoryPersona,
+  RepositoryPersona,
 } from "../persona";
 
 import type {
-    EngineeringQualityResult,
+  EngineeringQualityResult,
 } from "../engineering-quality";
 
 import type {
-    RepositoryMaturity,
+  RepositoryMaturity,
 } from "../maturity";
 
 import type {
-    ProductionReadiness,
+  ProductionReadiness,
 } from "../production-readiness";
 
 import type {
-    TechnicalDebtReport,
+  TechnicalDebtReport,
 } from "../technical-debt";
 
 import type {
-    StrengthReport,
+  StrengthReport,
 } from "../strengths";
 
 import type {
-    WeaknessReport,
+  WeaknessReport,
 } from "../weaknesses";
 
 import type {
-    RecommendationReport,
+  RecommendationReport,
 } from "../recommendations";
 
 import type {
-    RepositoryHealth,
+  RepositoryHealth,
 } from "../repository-health";
 
 import type {
-    ArchitectureQuality,
+  ArchitectureQuality,
 } from "../architecture-quality";
 
 import type {
-    ArchitectureDriftReport,
+  ArchitectureDriftReport,
 } from "../architecture-drift";
 
 import type {
-    EvolutionInsightsReport,
+  EvolutionInsightsReport,
 } from "../repository-evolution";
 
 import {
-    buildRepositoryIntelligenceReport,
+  buildRepositoryIntelligenceReport,
 } from "../repository-intelligence";
 
 import type {
-    RepositoryIntelligenceReport,
+  RepositoryIntelligenceReport,
 } from "../repository-intelligence";
-
-import type {
-    TechnologyRelationship,
-} from "./dependency-graph-stage";
-
-import type {
-    TechnologyConfidenceResult,
-} from "./technology-confidence-stage";
 
 import {
-    sortRepositoryTypesByPurpose,
-    type FingerprintState,
+  sortRepositoryTypesByPurpose,
+  type FingerprintState,
 } from "./shared";
 
 export type TechnologyFingerprintResult = {
-    technologies: string[];
+  technologies: string[];
 
-    architectureDomains: string[];
+  architectureDomains: string[];
 
-    engineeringSignals: string[];
+  engineeringSignals: string[];
 
-    repositoryTypes: string[];
+  repositoryTypes: string[];
 
-    reasoningSignals: string[];
+  reasoningSignals: string[];
 
-    evidenceResults:
+  evidenceResults:
     EvidenceResult[];
 
-    // dependencyGraph:
-    // TechnologyRelationship[];
-
-    // technologyConfidence:
-    // TechnologyConfidenceResult[];
-
-    capabilities:
+  capabilities:
     ReturnType<
-        typeof detectEngineeringCapabilities
+      typeof detectEngineeringCapabilities
     >;
 
-    repositoryDNA:
+  repositoryDNA:
     RepositoryDNA;
 
-    repositoryPersona:
+  repositoryPersona:
     RepositoryPersona;
 
-    engineeringQuality:
+  engineeringQuality:
     EngineeringQualityResult;
 
-    repositoryMaturity:
+  repositoryMaturity:
     RepositoryMaturity;
 
-    productionReadiness:
+  productionReadiness:
     ProductionReadiness;
 
-    technicalDebt:
+  technicalDebt:
     TechnicalDebtReport;
 
-    strengthReport:
+  strengthReport:
     StrengthReport;
 
-    weaknessReport:
+  weaknessReport:
     WeaknessReport;
 
-    recommendationReport:
+  recommendationReport:
     RecommendationReport;
 
-    repositoryHealth:
+  repositoryHealth:
     RepositoryHealth;
 
-    architectureQuality:
+  architectureQuality:
     ArchitectureQuality;
 
-    architectureDrift:
+  architectureDrift:
     ArchitectureDriftReport;
 
-    evolutionInsights:
+  evolutionInsights:
     EvolutionInsightsReport;
 
-    repositoryIntelligence:
+  repositoryIntelligence:
     RepositoryIntelligenceReport;
 };
 
@@ -156,236 +138,266 @@ export type TechnologyFingerprintResult = {
  * strongest detected purpose.
  *
  * Future me:
- * This currently preserves ArcHive's previous behaviour exactly.
+ * Most repository-purpose conflict resolution now happens earlier inside
+ * repository-type-resolution-stage.ts.
+ *
+ * Keep this final guard small. It should never invent repository types.
  */
 const removeConflictingSecondaryTypes = (
-    types: string[],
+  types: string[],
 ): string[] => {
-    const primaryType =
-        types[0];
+  const primaryType =
+    types[0];
 
-    if (
-        primaryType ===
-        "ENGINEERING_INTELLIGENCE_PLATFORM"
-    ) {
-        return types.filter(
-            (type) =>
-                type !==
-                "DEVTOOL_PLATFORM",
-        );
-    }
+  if (
+    primaryType ===
+    "ENGINEERING_INTELLIGENCE_PLATFORM"
+  ) {
+    return types.filter(
+      (type) =>
+        type !==
+        "DEVTOOL_PLATFORM",
+    );
+  }
 
-    return types;
+  return types;
 };
 
 /**
  * Builds the final immutable fingerprint response consumed by ArcHive.
+ *
+ * At this point repository purpose has already been resolved.
+ * This stage must preserve that result rather than reclassifying it.
  */
 export const buildFingerprintResult = ({
-    state,
-    evidenceResults,
-    capabilities,
-    repositoryDNA,
-    repositoryPersona,
-    engineeringQuality,
-    repositoryMaturity,
-    productionReadiness,
-    technicalDebt,
-    strengthReport,
-    weaknessReport,
-    recommendationReport,
-    repositoryHealth,
-    architectureQuality,
-    architectureDrift,
-    evolutionInsights,
-    //dependencyGraph,
-    //technologyConfidence
+  state,
+  evidenceResults,
+  capabilities,
+  repositoryDNA,
+  repositoryPersona,
+  engineeringQuality,
+  repositoryMaturity,
+  productionReadiness,
+  technicalDebt,
+  strengthReport,
+  weaknessReport,
+  recommendationReport,
+  repositoryHealth,
+  architectureQuality,
+  architectureDrift,
+  evolutionInsights,
 }: {
-    state:
+  state:
     FingerprintState;
 
-    evidenceResults:
+  evidenceResults:
     EvidenceResult[];
 
-    capabilities:
+  capabilities:
     ReturnType<
-        typeof detectEngineeringCapabilities
+      typeof detectEngineeringCapabilities
     >;
 
-    repositoryDNA:
+  repositoryDNA:
     RepositoryDNA;
 
-    repositoryPersona:
+  repositoryPersona:
     RepositoryPersona;
 
-    engineeringQuality:
+  engineeringQuality:
     EngineeringQualityResult;
 
-    repositoryMaturity:
+  repositoryMaturity:
     RepositoryMaturity;
 
-    productionReadiness:
+  productionReadiness:
     ProductionReadiness;
 
-    technicalDebt:
+  technicalDebt:
     TechnicalDebtReport;
 
-    strengthReport:
+  strengthReport:
     StrengthReport;
 
-    weaknessReport:
+  weaknessReport:
     WeaknessReport;
 
-    recommendationReport:
+  recommendationReport:
     RecommendationReport;
 
-    repositoryHealth:
+  repositoryHealth:
     RepositoryHealth;
 
-    architectureQuality:
+  architectureQuality:
     ArchitectureQuality;
 
-    architectureDrift:
+  architectureDrift:
     ArchitectureDriftReport;
 
-    evolutionInsights:
+  evolutionInsights:
     EvolutionInsightsReport;
 }): TechnologyFingerprintResult => {
-    const {
-        technologies,
-        architectureDomains,
-        engineeringSignals,
-        repositoryTypes,
-        reasoningSignals,
-    } = state;
+  const {
+    technologies,
+    architectureDomains,
+    engineeringSignals,
+    repositoryTypes,
+    reasoningSignals,
+  } = state;
 
-    const finalTechnologies =
-        Array.from(
-            technologies,
-        );
+  const finalTechnologies =
+    Array.from(
+      technologies,
+    );
 
-    const finalArchitectureDomains =
-        Array.from(
-            architectureDomains,
-        );
+  const finalArchitectureDomains =
+    Array.from(
+      architectureDomains,
+    );
 
-    const finalEngineeringSignals =
-        Array.from(
-            engineeringSignals,
-        );
+  const finalEngineeringSignals =
+    Array.from(
+      engineeringSignals,
+    );
 
-    const finalRepositoryTypes =
-        removeConflictingSecondaryTypes(
-            sortRepositoryTypesByPurpose(
-                Array.from(
-                    repositoryTypes,
-                ),
-            ),
-        );
-
-    const repositoryIntelligence =
-        buildRepositoryIntelligenceReport({
-            technologies:
-                finalTechnologies,
-
-            architectureDomains:
-                finalArchitectureDomains,
-
-            engineeringSignals:
-                finalEngineeringSignals,
-
-            reasoningSignals,
-
-            /**
-   * Always use the prioritised and conflict-resolved purpose list.
+  /**
+   * Repository purpose was already resolved before reaching this stage.
+   *
+   * Sorting is retained for backwards compatibility, but normally this
+   * should now contain a single canonical repository purpose.
    */
-            repositoryTypes:
-                finalRepositoryTypes,
+  const finalRepositoryTypes =
+    removeConflictingSecondaryTypes(
+      sortRepositoryTypesByPurpose(
+        Array.from(
+          repositoryTypes,
+        ),
+      ),
+    );
 
-            repositoryPersona,
+  console.log(
+    "[FINAL FINGERPRINT REPOSITORY TYPES]",
+    finalRepositoryTypes,
+  );
 
-            repositoryDNA,
+  const repositoryIntelligence =
+    buildRepositoryIntelligenceReport({
+      technologies:
+        finalTechnologies,
 
-            capabilities,
+      architectureDomains:
+        finalArchitectureDomains,
 
-            evidenceResults,
+      engineeringSignals:
+        finalEngineeringSignals,
 
-            engineeringQuality,
+      reasoningSignals,
 
-            productionReadiness,
+      /**
+       * Never rebuild repository purpose here.
+       * Pass through the canonical result from the resolver.
+       */
+      repositoryTypes:
+        finalRepositoryTypes,
 
-            repositoryMaturity,
+      repositoryPersona,
 
-            repositoryHealth,
+      repositoryDNA,
 
-            technicalDebt,
+      capabilities,
 
-            architectureDrift,
+      evidenceResults,
 
-            evolutionInsights,
+      engineeringQuality,
 
-            strengthReport,
+      productionReadiness,
 
-            weaknessReport,
+      repositoryMaturity,
 
-            recommendationReport,
-        });
+      repositoryHealth,
 
-    return {
-        technologies:
-            finalTechnologies,
+      technicalDebt,
 
-        architectureDomains:
-            finalArchitectureDomains,
+      architectureDrift,
 
-        engineeringSignals:
-            finalEngineeringSignals,
+      evolutionInsights,
 
-        /**
-         * Use the final sorted and conflict-resolved repository types.
-         *
-         * The previous implementation returned the unsorted Set here even
-         * though it built repositoryIntelligence with the final list.
-         * Returning the final list keeps both outputs consistent.
-         */
-        repositoryTypes:
-            finalRepositoryTypes,
+      strengthReport,
 
-        reasoningSignals,
+      weaknessReport,
 
-        evidenceResults,
+      recommendationReport,
+    });
 
-        //dependencyGraph,
-        //technologyConfidence,
+  /**
+   * Temporary diagnostic.
+   *
+   * This tells us whether buildRepositoryIntelligenceReport() preserves
+   * the canonical repository purpose or changes it internally.
+   */
+  console.log(
+    "[FINAL REPOSITORY INTELLIGENCE IDENTITY]",
+    {
+      fingerprintRepositoryTypes:
+        finalRepositoryTypes,
 
-        capabilities,
+      intelligenceRepositoryTypes:
+        repositoryIntelligence
+          .identity
+          .repositoryTypes,
 
-        repositoryDNA,
+      primaryRepositoryType:
+        repositoryIntelligence
+          .identity
+          .primaryRepositoryType,
+    },
+  );
 
-        repositoryPersona,
+  return {
+    technologies:
+      finalTechnologies,
 
-        engineeringQuality,
+    architectureDomains:
+      finalArchitectureDomains,
 
-        repositoryMaturity,
+    engineeringSignals:
+      finalEngineeringSignals,
 
-        productionReadiness,
+    repositoryTypes:
+      finalRepositoryTypes,
 
-        technicalDebt,
+    reasoningSignals,
 
-        strengthReport,
+    evidenceResults,
 
-        weaknessReport,
+    capabilities,
 
-        recommendationReport,
+    repositoryDNA,
 
-        repositoryHealth,
+    repositoryPersona,
 
-        architectureQuality,
+    engineeringQuality,
 
-        architectureDrift,
+    repositoryMaturity,
 
-        evolutionInsights,
+    productionReadiness,
 
-        repositoryIntelligence,
-    };
-};
+    technicalDebt,
+
+    strengthReport,
+
+    weaknessReport,
+
+    recommendationReport,
+
+    repositoryHealth,
+
+    architectureQuality,
+
+    architectureDrift,
+
+    evolutionInsights,
+
+    repositoryIntelligence,
+  };
+}; 
