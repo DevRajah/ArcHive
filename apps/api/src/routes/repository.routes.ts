@@ -20,6 +20,7 @@ import {
   auditRepositoryIntelligence,
   buildIntelligenceTimeline,
   compareRepositories,
+  RepositoryIntelligenceReport
 } from "@archive/detectors";
 import { knowledgeGraphService } from "../services/knowledge-graph.service";
 import { intelligenceDiffService } from "../services/intelligence-diff.service";
@@ -3625,105 +3626,147 @@ ${architectureChanges
 
   // Architecture radar data for visualization
   app.get<{ Params: { repositoryId: string } }>(
-    "/:repositoryId/architecture-radar",
-    async (request, reply) => {
-      const { repositoryId } = request.params;
+  "/:repositoryId/architecture-radar",
+  async (request, reply) => {
+    const { repositoryId } = request.params;
 
-      const repository = await prisma.repository.findUnique({
-        where: { id: repositoryId },
-        select: {
-          id: true,
-          name: true,
-          fullName: true,
-          description: true,
-          language: true,
-          userId: true,
-          architectureChanges: {
-            orderBy: {
-              createdAt: "desc",
-            },
-            select: {
-              changeType: true,
-              detectedTechnology: true,
-              fileAffected: true,
-              summary: true,
-              repositoryTypes: true,
-              reasoningSignals: true,
-              architectureDomain: true,
-              evolutionSummary: true,
-            },
+    /**
+     * Architecture Radar is a read endpoint.
+     *
+     * Future me:
+     * Do not call detectTechnologyFingerprint() from here.
+     *
+     * Repository classification belongs to the intelligence generation
+     * pipeline. Once that pipeline has resolved and persisted repository
+     * identity, read endpoints should consume that canonical snapshot
+     * rather than attempting to classify the repository again from
+     * partial ArchitectureChange history.
+     */
+    const repository = await prisma.repository.findUnique({
+      where: {
+        id: repositoryId,
+      },
+      select: {
+        id: true,
+        name: true,
+        fullName: true,
+        description: true,
+        language: true,
+        userId: true,
+
+        /**
+         * The latest intelligence snapshot is the authoritative
+         * representation of the generated repository intelligence.
+         */
+        intelligenceSnapshots: {
+          orderBy: {
+            createdAt: "desc",
+          },
+          take: 1,
+          select: {
+            id: true,
+            intelligence: true,
+            createdAt: true,
           },
         },
+      },
+    });
+
+    if (!repository) {
+      return reply.status(404).send({
+        success: false,
+        message: "Repository not found",
       });
-
-      if (!repository) {
-        return reply.status(404).send({
-          success: false,
-          message: "Repository not found",
-        });
-      }
-
-      const repositoryContext = [
-        repository.name,
-        repository.fullName,
-        repository.description || "",
-        repository.language || "",
-        ...repository.architectureChanges.map((change) =>
-          [
-            change.changeType,
-            change.detectedTechnology || "",
-            change.summary,
-            change.repositoryTypes || "",
-            change.reasoningSignals || "",
-            change.architectureDomain || "",
-            change.evolutionSummary || "",
-          ].join(" ")
-        ),
-      ].join(" ");
-
-      const fingerprint = detectTechnologyFingerprint(
-        repository.architectureChanges
-          .map((change) => change.fileAffected)
-          .filter((file): file is string => Boolean(file)),
-        repository.architectureChanges.map((change) => change.summary),
-        repositoryContext
-      );
-
-      const domains =
-        fingerprint.repositoryIntelligence.signals.architectureDomains.length > 0
-          ? fingerprint.repositoryIntelligence.signals.architectureDomains
-          : fingerprint.architectureDomains;
-
-      const domainCounts = domains.reduce<Record<string, number>>((acc, domain) => {
-        acc[domain] = (acc[domain] || 0) + 1;
-        return acc;
-      }, {});
-
-      const maxCount = Math.max(...Object.values(domainCounts), 1);
-
-      const architectureIntelligence = buildArchitectureIntelligence({
-        repositoryIntelligence: fingerprint.repositoryIntelligence,
-      });
-
-      return {
-        success: true,
-        message: "Repository architecture radar fetched successfully",
-        data: {
-          repository: {
-            id: repository.id,
-            name: repository.name,
-            fullName: repository.fullName,
-            language: repository.language,
-            userId: repository.userId,
-          },
-          radar: architectureIntelligence.radar,
-          strongestDomain: architectureIntelligence.strongestDomain,
-          repositoryIntelligence: fingerprint.repositoryIntelligence,
-          architectureIntelligence,
-        },
-      };
     }
-  );
+
+    const latestSnapshot =
+      repository.intelligenceSnapshots[0];
+
+    if (!latestSnapshot) {
+      return reply.status(404).send({
+        success: false,
+        message:
+          "Repository intelligence has not been generated yet. Reprocess the repository first.",
+      });
+    }
+
+    /**
+     * Prisma exposes JSON columns as JsonValue.
+     *
+     * The intelligence generator is responsible for writing a complete
+     * RepositoryIntelligenceReport into this snapshot. We only validate
+     * enough here to safely consume it.
+     */
+    const snapshotValue =
+      latestSnapshot.intelligence;
+
+    if (
+      !snapshotValue ||
+      typeof snapshotValue !== "object" ||
+      Array.isArray(snapshotValue)
+    ) {
+      return reply.status(500).send({
+        success: false,
+        message:
+          "Stored repository intelligence snapshot is invalid.",
+      });
+    }
+
+    /**
+     * This cast is intentionally performed only after validating that the
+     * stored JSON value is an object.
+     *
+     * Most importantly, we are NOT rebuilding repository identity here.
+     */
+    const repositoryIntelligence =
+      snapshotValue as unknown as RepositoryIntelligenceReport;
+
+    /**
+     * Architecture intelligence is derived from the canonical persisted
+     * report. This keeps the radar aligned with Repository Purpose,
+     * Narrative, Intelligence Report, and every other read surface.
+     */
+    const architectureIntelligence =
+      buildArchitectureIntelligence({
+        repositoryIntelligence,
+      });
+
+    return {
+      success: true,
+      message:
+        "Repository architecture radar fetched successfully",
+      data: {
+        repository: {
+          id: repository.id,
+          name: repository.name,
+          fullName: repository.fullName,
+          language: repository.language,
+          userId: repository.userId,
+        },
+
+        radar:
+          architectureIntelligence.radar,
+
+        strongestDomain:
+          architectureIntelligence.strongestDomain,
+
+        repositoryIntelligence,
+
+        architectureIntelligence,
+
+        /**
+         * Useful when debugging stale intelligence later.
+         * This tells us exactly which persisted snapshot powered
+         * the response.
+         */
+        intelligenceSnapshot: {
+          id: latestSnapshot.id,
+          createdAt: latestSnapshot.createdAt,
+        },
+      },
+    };
+  }
+);
 
   // Intelligence summary synthesis - combines multiple signals for a high-level overview
   app.get<{ Params: { repositoryId: string } }>(
