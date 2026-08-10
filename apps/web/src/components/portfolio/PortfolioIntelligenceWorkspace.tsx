@@ -40,6 +40,7 @@ import type {
   PortfolioHighlightRepository,
   PortfolioSummary,
 } from "@/types/portfolio.types";
+import { formatIntelligenceLabel } from "@/lib/intelligence-labels";
 
 type IntelligenceOverviewItem = {
   repository: {
@@ -152,11 +153,18 @@ function CountList({
   items,
   humanize = true,
   emptyMessage = "No portfolio signals detected yet.",
+  formatter,
 }: {
   title: string;
-  items: Array<{ name: string; count: number }>;
+  items: Array<{
+    name: string;
+    count: number;
+  }>;
   humanize?: boolean;
   emptyMessage?: string;
+  formatter?: (
+    value: string,
+  ) => string;
 }) {
   return (
     <div className="rounded-xl border border-border bg-background p-5">
@@ -174,9 +182,13 @@ function CountList({
               className="flex items-center justify-between gap-3 rounded-lg border border-border bg-card p-3"
             >
               <span className="min-w-0 truncate text-sm">
-                {humanize
-                  ? formatFilterLabel(item.name)
-                  : item.name}
+                {formatter
+                  ? formatter(item.name)
+                  : humanize
+                    ? formatFilterLabel(
+                      item.name,
+                    )
+                    : item.name}
               </span>
 
               <Badge variant="secondary">
@@ -461,6 +473,90 @@ function PortfolioHighlightCard({
   );
 }
 
+type PortfolioIdentityResult = {
+  title: string;
+  description: string;
+  isDominant: boolean;
+  topTypes: PortfolioDistributionItem[];
+};
+
+function getPortfolioIdentity(
+  repositoryTypes: PortfolioDistributionItem[],
+): PortfolioIdentityResult {
+  if (!repositoryTypes.length) {
+    return {
+      title: "Portfolio Identity Unavailable",
+      description:
+        "ArcHive does not yet have enough canonical repository-purpose data to describe this portfolio.",
+      isDominant: false,
+      topTypes: [],
+    };
+  }
+
+  const highestCount = Math.max(
+    ...repositoryTypes.map(
+      (item) => item.count,
+    ),
+  );
+
+  const topTypes =
+    repositoryTypes.filter(
+      (item) =>
+        item.count === highestCount,
+    );
+
+  /*
+   * A single repository purpose has the highest representation.
+   * We can truthfully describe it as the portfolio's dominant purpose.
+   */
+  if (topTypes.length === 1) {
+    const dominantType =
+      topTypes[0];
+
+    return {
+      title:
+        formatIntelligenceLabel(
+          dominantType.name,
+        ),
+      description:
+        `${dominantType.count.toLocaleString()} ${dominantType.count === 1
+          ? "repository is"
+          : "repositories are"
+        } classified under this canonical repository purpose.`,
+      isDominant: true,
+      topTypes,
+    };
+  }
+
+  /*
+   * Multiple repository purposes share the highest count.
+   *
+   * There is no genuine dominant purpose, so we explicitly describe
+   * the portfolio as diverse instead of arbitrarily choosing the first
+   * item returned by a sorted array.
+   */
+  const purposeNames =
+    topTypes.map((item) =>
+      formatIntelligenceLabel(
+        item.name,
+      ),
+    );
+
+  return {
+    title:
+      "Diverse Engineering Portfolio",
+
+    description:
+      `No single repository purpose dominates this portfolio. ` +
+      `The strongest representation is shared equally across ${purposeNames.join(
+        ", ",
+      )}.`,
+
+    isDominant: false,
+    topTypes,
+  };
+}
+
 export function PortfolioIntelligenceWorkspace() {
   const userId = getUserId();
 
@@ -535,28 +631,74 @@ export function PortfolioIntelligenceWorkspace() {
   const averageConfidence = getAverageConfidence(repositories);
   const topRepo = getTopRepo(repositories);
 
-  const repositoryTypes = countItems(
-    repositories,
-    "repositoryTypes"
-  );
+  /*
+ * The operational Portfolio API already provides canonical distributions.
+ *
+ * We prefer those values instead of reconstructing portfolio identity from
+ * repository-level semantic arrays. This prevents secondary implementation
+ * types from being mistaken for canonical repository purposes.
+ *
+ * The semantic overview remains useful as a fallback for non-identity
+ * presentation when portfolio operations are temporarily unavailable.
+ */
+  const semanticRepositoryTypes =
+    countItems(
+      repositories,
+      "repositoryTypes",
+    );
 
-  const technologies = countItems(
-    repositories,
-    "technologies"
-  );
+  const semanticTechnologies =
+    countItems(
+      repositories,
+      "technologies",
+    );
 
-  const domains = countItems(
-    repositories,
-    "dominantDomains"
-  );
+  const semanticDomains =
+    countItems(
+      repositories,
+      "dominantDomains",
+    );
+
+  const repositoryTypes:
+    PortfolioDistributionItem[] =
+    operationalPortfolio
+      ?.distributions
+      .repositoryTypes ??
+    semanticRepositoryTypes;
+
+  const technologies:
+    PortfolioDistributionItem[] =
+    operationalPortfolio
+      ?.distributions
+      .technologies ??
+    semanticTechnologies;
+
+  const domains:
+    PortfolioDistributionItem[] =
+    operationalPortfolio
+      ?.distributions
+      .architectureDomains ??
+    semanticDomains;
+
+  const languages:
+    PortfolioDistributionItem[] =
+    operationalPortfolio
+      ?.distributions
+      .languages ?? [];
 
   /*
-   * Languages come only from the operational portfolio endpoint. Existing
-   * semantic repository types, technologies, domains and confidence remain
-   * sourced from useIntelligenceOverview().
-   */
-  const languages: PortfolioDistributionItem[] =
-    operationalPortfolio?.distributions.languages ?? [];
+* Portfolio identity is based strictly on the canonical repository-purpose
+* distribution returned by the Portfolio API.
+*
+* We intentionally do not infer identity from technologies, descriptions,
+* repository names, or semantic labels.
+*/
+  const portfolioIdentity =
+    getPortfolioIdentity(
+      operationalPortfolio
+        ?.distributions
+        .repositoryTypes ?? [],
+    );
 
   const topRepositoryTypes = repositoryTypes.map(
     (item) => item.name
@@ -616,76 +758,111 @@ export function PortfolioIntelligenceWorkspace() {
         operationalPortfolio && (
           <>
             <IntelligenceSection
-              title="Portfolio Operations"
-              description="Repository coverage, engineering activity, recommendations, and GitHub footprint across your portfolio."
+              title="Portfolio Identity"
+              description="A portfolio-level view derived from canonical repository-purpose distribution and classification confidence."
             >
-              <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-                <PortfolioMetricCard
-                  label="Total Repositories"
-                  value={
-                    operationalPortfolio.summary.totalRepositories
-                  }
-                  description="All repositories currently imported into your ArcHive workspace."
-                  icon={Boxes}
-                />
+              <div className="grid gap-6 lg:grid-cols-[1fr_0.8fr]">
+                <div className="rounded-xl border border-border bg-background p-5">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                      <Brain className="h-4 w-4 text-primary" />
+                    </div>
 
-                <PortfolioMetricCard
-                  label="Tracked Repositories"
-                  value={
-                    operationalPortfolio.summary.trackedRepositories
-                  }
-                  description="Repositories actively monitored for engineering changes."
-                  icon={GitBranch}
-                />
+                    <div className="min-w-0">
+                      <p className="text-sm text-muted-foreground">
+                        {portfolioIdentity.isDominant
+                          ? "Dominant Portfolio Identity"
+                          : "Portfolio Identity"}
+                      </p>
 
-                <PortfolioMetricCard
-                  label="Intelligence Coverage"
-                  value={`${operationalPortfolio.summary.intelligenceCoveragePercent}%`}
-                  description="Percentage of repositories with generated intelligence."
-                  icon={CircleGauge}
-                />
+                      <h2 className="mt-2 text-2xl font-bold">
+                        {portfolioIdentity.title}
+                      </h2>
 
-                <PortfolioMetricCard
-                  label="Engineering Events"
-                  value={
-                    operationalPortfolio.summary.totalEngineeringEvents
-                  }
-                  description="Engineering events processed across the portfolio."
-                  icon={Activity}
-                />
+                      <p className="mt-3 text-sm leading-6 text-muted-foreground">
+                        {portfolioIdentity.description}
+                      </p>
+                    </div>
+                  </div>
 
-                <PortfolioMetricCard
-                  label="Architecture Changes"
-                  value={
-                    operationalPortfolio.summary
-                      .totalArchitectureChanges
-                  }
-                  description="Architecture-level changes detected across repositories."
-                  icon={Layers3}
-                />
+                  <div className="mt-5">
+                    <p className="mb-3 text-sm font-medium">
+                      Canonical Repository Purposes
+                    </p>
 
-                <PortfolioMetricCard
-                  label="Active Recommendations"
-                  value={
-                    operationalPortfolio.summary.activeRecommendations
-                  }
-                  description="Engineering recommendations currently requiring attention."
-                  icon={Lightbulb}
-                />
+                    {repositoryTypes.length > 0 ? (
+                      <div className="flex flex-wrap gap-2">
+                        {repositoryTypes.map(
+                          (item) => (
+                            <Badge
+                              key={item.name}
+                              variant="outline"
+                            >
+                              {formatIntelligenceLabel(
+                                item.name,
+                              )}
+                              <span className="ml-2 text-muted-foreground">
+                                {item.count}
+                              </span>
+                            </Badge>
+                          ),
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        No canonical repository-purpose distribution is available yet.
+                      </p>
+                    )}
+                  </div>
+                </div>
 
-                <PortfolioMetricCard
-                  label="Combined Stars"
-                  value={operationalPortfolio.summary.totalStars}
-                  description="Combined GitHub stars across imported repositories."
-                  icon={Star}
-                />
+                <div className="rounded-xl border border-border bg-background p-5">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                      <BadgeCheck className="h-4 w-4 text-primary" />
+                    </div>
 
-                <PortfolioMetricCard
-                  label="Combined Forks"
-                  value={operationalPortfolio.summary.totalForks}
-                  description="Combined GitHub forks across imported repositories."
-                  icon={GitFork}
-                />
+                    <div className="min-w-0">
+                      <p className="text-sm text-muted-foreground">
+                        Highest Classification Confidence
+                      </p>
+
+                      <h2 className="mt-2 break-words text-2xl font-bold">
+                        {topRepo?.fullName ||
+                          topRepo?.name ||
+                          "Confidence unavailable"}
+                      </h2>
+
+                      {typeof topRepo?.confidence ===
+                        "number" ? (
+                        <Badge
+                          variant="secondary"
+                          className="mt-3"
+                        >
+                          {topRepo.confidence}%
+                          confidence
+                        </Badge>
+                      ) : null}
+
+                      <p className="mt-3 text-sm leading-6 text-muted-foreground">
+                        {topRepo?.semanticLabel
+                          ? `${topRepo.semanticLabel}. This represents ArcHive's confidence in the repository classification, not an engineering-quality ranking.`
+                          : "Classification confidence is not currently available for the repositories in this portfolio."}
+                      </p>
+
+                      {topRepo ? (
+                        <Link
+                          href={`/repositories/${topRepo.id}/intelligence`}
+                          className="mt-4 inline-flex items-center text-sm font-medium text-primary hover:underline"
+                        >
+                          Open intelligence report
+
+                          <ArrowRight className="ml-2 h-4 w-4" />
+                        </Link>
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
               </div>
             </IntelligenceSection>
 
@@ -892,8 +1069,11 @@ export function PortfolioIntelligenceWorkspace() {
           >
             <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
               <CountList
-                title="Repository Types"
+                title="Repository Purposes"
                 items={repositoryTypes}
+                formatter={
+                  formatIntelligenceLabel
+                }
               />
 
               <CountList
