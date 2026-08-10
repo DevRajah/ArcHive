@@ -32,6 +32,21 @@ interface UserActivityWorkspaceProps {
   description?: string;
 }
 
+function formatMetadataValue(value: unknown) {
+  if (typeof value !== "string") {
+    return String(value);
+  }
+
+  // Backend enum-style values use uppercase snake case.
+  // Humanize those without touching filenames, sentences, URLs,
+  // timestamps, or other ordinary metadata.
+  if (/^[A-Z0-9]+(?:_[A-Z0-9]+)+$/.test(value)) {
+    return formatIntelligenceLabel(value);
+  }
+
+  return value;
+}
+
 function formatDate(value?: string | null) {
   if (!value) return "Unknown";
 
@@ -119,11 +134,11 @@ export function UserActivityWorkspace({
     data?.filters?.activityTypes?.length
       ? data.filters.activityTypes
       : [
-          "TIMELINE",
-          "ENGINEERING_EVENT",
-          "ARCHITECTURE_CHANGE",
-          "RECOMMENDATION",
-        ];
+        "TIMELINE",
+        "ENGINEERING_EVENT",
+        "ARCHITECTURE_CHANGE",
+        "RECOMMENDATION",
+      ];
 
   function handleRepositoryChange(value: string) {
     setRepositoryId(value);
@@ -164,9 +179,8 @@ export function UserActivityWorkspace({
             disabled={isFetching}
           >
             <RefreshCcw
-              className={`mr-2 h-4 w-4 ${
-                isFetching ? "animate-spin" : ""
-              }`}
+              className={`mr-2 h-4 w-4 ${isFetching ? "animate-spin" : ""
+                }`}
             />
 
             {isFetching ? "Refreshing..." : "Refresh Activity"}
@@ -178,31 +192,31 @@ export function UserActivityWorkspace({
         <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-5">
           <SummaryCard
             label="Total Activity"
-            value={data.totals?.totalActivity}
+            value={data.totals?.all}
             icon={Activity}
           />
 
           <SummaryCard
             label="Timeline Entries"
-            value={data.totals?.timelineEntries}
+            value={data.totals?.TIMELINE}
             icon={History}
           />
 
           <SummaryCard
             label="Engineering Events"
-            value={data.totals?.engineeringEvents}
+            value={data.totals?.ENGINEERING_EVENT}
             icon={GitBranch}
           />
 
           <SummaryCard
             label="Architecture Changes"
-            value={data.totals?.architectureChanges}
+            value={data.totals?.ARCHITECTURE_CHANGE}
             icon={Layers3}
           />
 
           <SummaryCard
             label="Recommendations"
-            value={data.totals?.recommendations}
+            value={data.totals?.RECOMMENDATION}
             icon={Lightbulb}
           />
         </div>
@@ -354,7 +368,7 @@ export function UserActivityWorkspace({
                 variant="outline"
                 disabled={
                   page >=
-                    (data.pagination?.totalPages ?? 1) ||
+                  (data.pagination?.totalPages ?? 1) ||
                   isFetching
                 }
                 onClick={() =>
@@ -466,7 +480,7 @@ function TimelineItem({
                   variant="outline"
                 >
                   {formatIntelligenceLabel(key)}:{" "}
-                  {String(value)}
+                  {formatMetadataValue(value)}
                 </Badge>
               ))}
             </div>

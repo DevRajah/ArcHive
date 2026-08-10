@@ -122,11 +122,11 @@ export interface PortfolioTimelineFilters {
 }
 
 export interface PortfolioTimelineTotals {
-  totalActivity: number;
-  timelineEntries: number;
-  engineeringEvents: number;
-  architectureChanges: number;
-  recommendations: number;
+  all: number;
+  TIMELINE: number;
+  ENGINEERING_EVENT: number;
+  ARCHITECTURE_CHANGE: number;
+  RECOMMENDATION: number;
 }
 
 export interface PortfolioPagination {
