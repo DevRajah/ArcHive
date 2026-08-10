@@ -1,33 +1,59 @@
+import {
+  Info,
+} from "lucide-react";
+
 import { Badge } from "@/components/ui/badge";
 
 interface ComparisonScoreCardProps {
   label: string;
+
   leftName: string;
   rightName: string;
+
   leftScore?: number | null;
   rightScore?: number | null;
+
   leftLevel?: string | null;
   rightLevel?: string | null;
+
   lowerIsBetter?: boolean;
+
+  description: string;
 }
 
 function getWinner(
   left?: number | null,
   right?: number | null,
-  lowerIsBetter?: boolean
+  lowerIsBetter?: boolean,
 ) {
-  if (typeof left !== "number" || typeof right !== "number") return "tie";
-  if (left === right) return "tie";
-
-  if (lowerIsBetter) {
-    return left < right ? "left" : "right";
+  if (
+    typeof left !== "number" ||
+    typeof right !== "number"
+  ) {
+    return "tie";
   }
 
-  return left > right ? "left" : "right";
+  if (left === right) {
+    return "tie";
+  }
+
+  if (lowerIsBetter) {
+    return left < right
+      ? "left"
+      : "right";
+  }
+
+  return left > right
+    ? "left"
+    : "right";
 }
 
-function formatScore(score?: number | null) {
-  return typeof score === "number" ? `${score}%` : "—";
+function formatScore(
+  score?: number | null,
+) {
+  return typeof score === "number"
+    ? `${score}%`
+    : "Unavailable";
 }
 
 export function ComparisonScoreCard({
@@ -39,50 +65,117 @@ export function ComparisonScoreCard({
   leftLevel,
   rightLevel,
   lowerIsBetter,
+  description,
 }: ComparisonScoreCardProps) {
-  const winner = getWinner(leftScore, rightScore, lowerIsBetter);
+  const winner =
+    getWinner(
+      leftScore,
+      rightScore,
+      lowerIsBetter,
+    );
+
+  const bothScoresAvailable =
+    typeof leftScore === "number" &&
+    typeof rightScore === "number";
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5">
-      <div className="flex items-center justify-between gap-3">
-        <h3 className="text-sm font-semibold">{label}</h3>
+    <div className="min-w-0 rounded-xl border border-border bg-card p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="font-semibold">
+            {label}
+          </p>
 
-        {winner !== "tie" && (
-          <Badge variant="secondary">
-            {winner === "left" ? leftName : rightName} leads
+          <p className="mt-1 text-xs leading-5 text-muted-foreground">
+            Repository intelligence score
+          </p>
+        </div>
+
+        {bothScoresAvailable ? (
+          winner !== "tie" ? (
+            <Badge variant="secondary">
+              {winner === "left"
+                ? leftName
+                : rightName}{" "}
+              leads
+            </Badge>
+          ) : (
+            <Badge variant="outline">
+              Balanced
+            </Badge>
+          )
+        ) : (
+          <Badge variant="outline">
+            Partial data
           </Badge>
         )}
-
-        {winner === "tie" && <Badge variant="outline">Balanced</Badge>}
       </div>
 
-      <div className="mt-5 grid gap-4 md:grid-cols-2">
-        <div className="rounded-xl border border-border bg-background p-4">
-          <p className="truncate text-sm text-muted-foreground">{leftName}</p>
-          <p className="mt-2 text-3xl font-bold">{formatScore(leftScore)}</p>
-          {leftLevel && (
-            <Badge className="mt-3" variant="secondary">
+      <div className="mt-5 grid gap-4 sm:grid-cols-2">
+        <div className="min-w-0 rounded-xl border border-border bg-background p-4">
+          <p className="truncate text-sm text-muted-foreground">
+            {leftName}
+          </p>
+
+          <p className="mt-2 text-3xl font-bold">
+            {formatScore(leftScore)}
+          </p>
+
+          {leftLevel ? (
+            <Badge
+              className="mt-3"
+              variant="secondary"
+            >
               {leftLevel}
             </Badge>
-          )}
+          ) : null}
         </div>
 
-        <div className="rounded-xl border border-border bg-background p-4">
-          <p className="truncate text-sm text-muted-foreground">{rightName}</p>
-          <p className="mt-2 text-3xl font-bold">{formatScore(rightScore)}</p>
-          {rightLevel && (
-            <Badge className="mt-3" variant="secondary">
+        <div className="min-w-0 rounded-xl border border-border bg-background p-4">
+          <p className="truncate text-sm text-muted-foreground">
+            {rightName}
+          </p>
+
+          <p className="mt-2 text-3xl font-bold">
+            {formatScore(rightScore)}
+          </p>
+
+          {rightLevel ? (
+            <Badge
+              className="mt-3"
+              variant="secondary"
+            >
               {rightLevel}
             </Badge>
-          )}
+          ) : null}
         </div>
       </div>
 
-      {lowerIsBetter && (
-        <p className="mt-3 text-xs text-muted-foreground">
-          Lower score is better for this metric.
-        </p>
-      )}
+      <details className="mt-4 rounded-lg border border-border bg-background">
+        <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-sm font-medium">
+          <Info className="h-4 w-4 text-primary" />
+
+          How is this calculated?
+        </summary>
+
+        <div className="border-t border-border px-4 py-3">
+          <p className="text-sm leading-6 text-muted-foreground">
+            {description}
+          </p>
+
+          <p className="mt-2 text-xs leading-5 text-muted-foreground">
+            This comparison displays the score already generated by
+            ArcHive&apos;s repository intelligence pipeline. The
+            Comparison page does not recalculate or reweight this score.
+          </p>
+
+          {lowerIsBetter ? (
+            <p className="mt-2 text-xs font-medium text-muted-foreground">
+              Lower values are better for this metric.
+            </p>
+          ) : null}
+        </div>
+      </details>
     </div>
   );
 }
