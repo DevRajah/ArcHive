@@ -1,6 +1,11 @@
 import axios from "axios";
 import { prisma } from "@archive/database";
-import { detectTechnologyFingerprint } from "@archive/detectors";
+import {
+  detectArchitectureStyle,
+  detectTechnologyFingerprint,
+  generateEngineeringReasoning
+} from "@archive/detectors";
+import { syncEngineeringRecommendations } from "../utils/sync-engineering-recommendations";
 import { createRepositoryIntelligenceSnapshot } from "./intelligence-snapshot.service";
 
 import { GENERATED_CHANGE_TYPE } from "../constants/intelligence.constants";
@@ -748,7 +753,7 @@ export const generateRepositoryIntelligence = async ({
   */
   const repositoryContext = [
     githubMetadata?.name ??
-      repository.name,
+    repository.name,
 
     resolvedFullName,
 
@@ -828,8 +833,84 @@ export const generateRepositoryIntelligence = async ({
     repositoryIntelligence.signals
       .reasoningSignals.length > 0
       ? repositoryIntelligence.signals
-          .reasoningSignals
+        .reasoningSignals
       : fingerprint.reasoningSignals;
+
+  const canonicalRepositoryTypes =
+    repositoryIntelligence.identity.repositoryTypes.length > 0
+      ? repositoryIntelligence.identity.repositoryTypes
+      : fingerprint.repositoryTypes;
+
+  const canonicalDomains =
+    repositoryIntelligence.signals.architectureDomains.length > 0
+      ? repositoryIntelligence.signals.architectureDomains
+      : fingerprint.architectureDomains;
+
+  const canonicalTechnologies =
+    repositoryIntelligence.signals.technologies.length > 0
+      ? repositoryIntelligence.signals.technologies
+      : fingerprint.technologies;
+
+  const canonicalCapabilities =
+    repositoryIntelligence.signals.capabilities.length > 0
+      ? repositoryIntelligence.signals.capabilities
+      : fingerprint.capabilities;
+
+  /**
+   * Build the capability shape expected by generateEngineeringReasoning().
+   *
+   * Future me:
+   * The fingerprint stores rich CapabilityResult objects, while the reasoning
+   * engine currently expects named boolean flags. Derive those flags from the
+   * canonical architecture domains rather than depending on CapabilityKey
+   * naming conventions.
+   */
+  const capabilityMap = {
+    frontendArchitecture:
+      canonicalDomains.includes("FRONTEND_ARCHITECTURE"),
+
+    apiLayer:
+      canonicalDomains.includes("API_LAYER"),
+
+    authentication:
+      canonicalDomains.includes("AUTHENTICATION"),
+
+    realtimeSystems:
+      canonicalDomains.includes("REALTIME_SYSTEMS"),
+
+    queueInfrastructure:
+      canonicalDomains.includes("QUEUE_INFRASTRUCTURE"),
+
+    databaseLayer:
+      canonicalDomains.includes("DATABASE_LAYER"),
+
+    cachingLayer:
+      canonicalDomains.includes("CACHING_LAYER"),
+
+    architectureIntelligence:
+      canonicalDomains.includes("ARCHITECTURE_INTELLIGENCE"),
+  };
+
+  /**
+ * Architecture styles are derived intelligence rather than a direct
+ * TechnologyFingerprintResult property.
+ */
+const architectureStyles =
+  detectArchitectureStyle({
+    domains: canonicalDomains,
+    technologies: canonicalTechnologies,
+    signals: reasoningSignals,
+    repositoryTypes: canonicalRepositoryTypes,
+  });
+
+  const engineeringReasoning =
+    generateEngineeringReasoning({
+      capabilities: capabilityMap,
+      domains: canonicalDomains,
+      technologies: canonicalTechnologies,
+      repositoryTypes: canonicalRepositoryTypes,
+      architectureStyles: architectureStyles,
+    });
 
   await prisma.$transaction(
     async (tx) => {
@@ -871,9 +952,8 @@ export const generateRepositoryIntelligence = async ({
             reasoningSignals.join(","),
 
           summary:
-            `${
-              githubMetadata?.name ??
-              repository.name
+            `${githubMetadata?.name ??
+            repository.name
             } intelligence was regenerated as ${primaryRepositoryType}.`,
 
           evolutionSummary:
@@ -882,6 +962,15 @@ export const generateRepositoryIntelligence = async ({
             "Repository intelligence was regenerated using the latest ArcHive intelligence engine.",
         },
       });
+
+
+      const syncedRecommendations =
+        await syncEngineeringRecommendations({
+          repositoryId,
+          recommendations:
+            engineeringReasoning.recommendations,
+          tx,
+        });
 
       /*
       |--------------------------------------------------------------------------
@@ -892,6 +981,7 @@ export const generateRepositoryIntelligence = async ({
         tx,
         repositoryId,
         fingerprint,
+        recommendations: syncedRecommendations,
       });
     }
   );

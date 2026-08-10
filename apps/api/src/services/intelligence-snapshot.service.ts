@@ -1,12 +1,23 @@
 import { Prisma } from "@prisma/client";
 import type { detectTechnologyFingerprint } from "@archive/detectors";
 
+type SnapshotRecommendation = {
+  recommendationKey: string;
+  title: string;
+  description: string;
+  status: string;
+  resolvedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
 type FingerprintResult = ReturnType<typeof detectTechnologyFingerprint>;
 
 type CreateSnapshotInput = {
   tx: Prisma.TransactionClient;
   repositoryId: string;
   fingerprint: FingerprintResult;
+  recommendations: SnapshotRecommendation[];
 };
 
 /*
@@ -42,6 +53,7 @@ export const createRepositoryIntelligenceSnapshot = async ({
   tx,
   repositoryId,
   fingerprint,
+  recommendations,
 }: CreateSnapshotInput) => {
   const repositoryIntelligence = fingerprint.repositoryIntelligence;
 
@@ -88,7 +100,15 @@ export const createRepositoryIntelligenceSnapshot = async ({
       technologies: toJsonValue(technologies),
       architectureDomains: toJsonValue(architectureDomains),
       capabilities: toJsonValue(capabilities),
-      recommendations: toJsonValue(fingerprint.recommendationReport),
+      /**
+ * Store the lifecycle-aware recommendation state that belongs to this
+ * exact intelligence generation.
+ *
+ * Do not read today's EngineeringRecommendation table later when building
+ * historical diffs. This immutable copy lets Snapshot N continue to mean
+ * "what ArcHive knew at generation N".
+ */
+      recommendations: toJsonValue(recommendations),
       intelligence: toJsonValue(repositoryIntelligence),
 
       confidenceScore: fingerprint.repositoryDNA.confidenceScore,
