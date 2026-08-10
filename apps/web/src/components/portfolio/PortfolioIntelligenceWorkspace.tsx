@@ -41,10 +41,39 @@ import type {
   PortfolioSummary,
 } from "@/types/portfolio.types";
 
+type IntelligenceOverviewItem = {
+  repository: {
+    id: string;
+    name: string;
+    fullName?: string | null;
+    language?: string | null;
+  };
+
+  semanticProfile?: {
+    semanticLabel?: string | null;
+
+    confidence?: {
+      confidenceScore?: number | null;
+      confidenceLevel?: string | null;
+    };
+
+    intelligenceProfile?: {
+      repositoryTypes?: string[];
+      domains?: string[];
+      technologies?: string[];
+    };
+  };
+
+  repositoryTypes?: string[];
+  domains?: string[];
+  technologies?: string[];
+};
+
 type PortfolioRepo = {
   id: string;
   name: string;
   fullName?: string | null;
+  language?: string | null;
   semanticLabel?: string | null;
   confidence?: number | null;
   repositoryTypes?: string[];
@@ -85,7 +114,7 @@ function getAverageConfidence(repositories: PortfolioRepo[]) {
 
   return Math.round(
     scores.reduce((total, score) => total + score, 0) /
-      scores.length
+    scores.length
   );
 }
 
@@ -271,9 +300,8 @@ function PortfolioOperationsWarning({
           disabled={isRetrying}
         >
           <RefreshCcw
-            className={`mr-2 h-4 w-4 ${
-              isRetrying ? "animate-spin" : ""
-            }`}
+            className={`mr-2 h-4 w-4 ${isRetrying ? "animate-spin" : ""
+              }`}
           />
 
           {isRetrying ? "Retrying..." : "Retry"}
@@ -360,7 +388,7 @@ function getHighlightMetric(
     case "updated":
       return `Updated ${formatDate(
         repository.lastUpdatedAt ??
-          repository.updatedAt
+        repository.updatedAt
       )}`;
 
     case "recommendations":
@@ -382,10 +410,10 @@ function PortfolioHighlightCard({
   title: string;
   repository: PortfolioHighlightRepository | null;
   metricType:
-    | "stars"
-    | "activity"
-    | "updated"
-    | "recommendations";
+  | "stars"
+  | "activity"
+  | "updated"
+  | "recommendations";
 }) {
   if (!repository) {
     return (
@@ -452,7 +480,57 @@ export function PortfolioIntelligenceWorkspace() {
     isRefetching: isOperationalPortfolioRefetching,
   } = usePortfolioOperations(userId);
 
-  const repositories = (data?.repositories || []) as PortfolioRepo[];
+  /*
+   * The intelligence-overview endpoint returns an array of repository
+   * intelligence records.
+   *
+   * We only reshape that backend data for presentation here.
+   * No repository-purpose classification happens on the frontend.
+   */
+  const repositories: PortfolioRepo[] =
+    Array.isArray(data)
+      ? (data as IntelligenceOverviewItem[]).map(
+        (item) => ({
+          id: item.repository.id,
+          name: item.repository.name,
+          fullName:
+            item.repository.fullName,
+          language:
+            item.repository.language,
+
+          semanticLabel:
+            item.semanticProfile
+              ?.semanticLabel ?? null,
+
+          confidence:
+            item.semanticProfile
+              ?.confidence
+              ?.confidenceScore ??
+            null,
+
+          repositoryTypes:
+            item.repositoryTypes ??
+            item.semanticProfile
+              ?.intelligenceProfile
+              ?.repositoryTypes ??
+            [],
+
+          dominantDomains:
+            item.domains ??
+            item.semanticProfile
+              ?.intelligenceProfile
+              ?.domains ??
+            [],
+
+          technologies:
+            item.technologies ??
+            item.semanticProfile
+              ?.intelligenceProfile
+              ?.technologies ??
+            [],
+        }),
+      )
+      : [];
 
   const averageConfidence = getAverageConfidence(repositories);
   const topRepo = getTopRepo(repositories);
@@ -749,8 +827,8 @@ export function PortfolioIntelligenceWorkspace() {
                     <h2 className="mt-2 text-2xl font-bold">
                       {repositoryTypes[0]
                         ? formatFilterLabel(
-                            repositoryTypes[0].name
-                          )
+                          repositoryTypes[0].name
+                        )
                         : "Portfolio identity pending"}
                     </h2>
 
@@ -888,10 +966,10 @@ export function PortfolioIntelligenceWorkspace() {
                     <div className="mt-4 flex flex-wrap gap-2">
                       {typeof repository.confidence ===
                         "number" && (
-                        <Badge variant="secondary">
-                          {repository.confidence}% confidence
-                        </Badge>
-                      )}
+                          <Badge variant="secondary">
+                            {repository.confidence}% confidence
+                          </Badge>
+                        )}
 
                       {repository.repositoryTypes
                         ?.slice(0, 2)
