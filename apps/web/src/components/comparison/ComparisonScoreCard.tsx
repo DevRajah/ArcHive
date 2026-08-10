@@ -1,6 +1,6 @@
-import {
-  Info,
-} from "lucide-react";
+// import {
+//   Info,
+// } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 
@@ -18,7 +18,7 @@ interface ComparisonScoreCardProps {
 
   lowerIsBetter?: boolean;
 
-  description: string;
+  //description: string;
 }
 
 function getWinner(
@@ -65,7 +65,7 @@ export function ComparisonScoreCard({
   leftLevel,
   rightLevel,
   lowerIsBetter,
-  description,
+  //description,
 }: ComparisonScoreCardProps) {
   const winner =
     getWinner(
@@ -151,7 +151,7 @@ export function ComparisonScoreCard({
         </div>
       </div>
 
-      <details className="mt-4 rounded-lg border border-border bg-background">
+      {/* <details className="mt-4 rounded-lg border border-border bg-background">
         <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-sm font-medium">
           <Info className="h-4 w-4 text-primary" />
 
@@ -175,7 +175,7 @@ export function ComparisonScoreCard({
             </p>
           ) : null}
         </div>
-      </details>
+      </details> */}
     </div>
   );
 }
