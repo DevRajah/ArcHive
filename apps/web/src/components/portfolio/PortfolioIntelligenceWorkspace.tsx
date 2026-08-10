@@ -27,7 +27,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 import { BadgeGroup } from "@/components/intelligence-v2/BadgeGroup";
 import { IntelligenceSection } from "@/components/intelligence-v2/IntelligenceSection";
-import { ScoreCard } from "@/components/intelligence-v2/ScoreCard";
 
 import { useIntelligenceOverview } from "@/hooks/useRepositories";
 import { usePortfolioOperations } from "@/hooks/usePortfolioOperations";
@@ -945,43 +944,52 @@ export function PortfolioIntelligenceWorkspace() {
       {!isLoading && !isError && (
         <>
           <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-            <ScoreCard
-              label="Intelligent Repositories"
-              score={
-                repositories.length
-                  ? Math.min(repositories.length * 10, 100)
-                  : null
+            <PortfolioMetricCard
+              label="Repositories With Intelligence"
+              value={
+                operationalPortfolio
+                  ? `${operationalPortfolio.summary.repositoriesWithIntelligence}/${operationalPortfolio.summary.totalRepositories}`
+                  : repositories.length
               }
-              level={`${repositories.length} repos`}
-              description="Repositories with available semantic intelligence."
+              description={
+                operationalPortfolio
+                  ? `${operationalPortfolio.summary.intelligenceCoveragePercent}% of imported repositories currently have generated engineering intelligence.`
+                  : "Repositories currently returned by the intelligence overview."
+              }
+              icon={Brain}
             />
 
-            <ScoreCard
-              label="Average Confidence"
-              score={averageConfidence}
-              description="Average classification confidence across available repositories."
+            <PortfolioMetricCard
+              label="Average Classification Confidence"
+              value={
+                averageConfidence !== null
+                  ? `${averageConfidence}%`
+                  : "Unavailable"
+              }
+              description="Average backend classification confidence across repositories with available semantic intelligence."
+              icon={BadgeCheck}
             />
 
-            <ScoreCard
-              label="Repository Type Diversity"
-              score={
-                repositoryTypes.length
-                  ? Math.min(repositoryTypes.length * 15, 100)
-                  : null
+            <PortfolioMetricCard
+              label="Canonical Repository Purposes"
+              value={repositoryTypes.length}
+              description={
+                repositoryTypes.length === 1
+                  ? "One canonical repository purpose is currently represented across the portfolio."
+                  : `${repositoryTypes.length} distinct canonical repository purposes are currently represented across the portfolio.`
               }
-              level={`${repositoryTypes.length} types`}
-              description="How diverse your portfolio appears across repository types."
+              icon={Layers3}
             />
 
-            <ScoreCard
-              label="Technology Coverage"
-              score={
-                technologies.length
-                  ? Math.min(technologies.length * 8, 100)
-                  : null
+            <PortfolioMetricCard
+              label="Detected Technologies"
+              value={technologies.length}
+              description={
+                technologies.length === 1
+                  ? "One distinct technology is currently represented in the portfolio intelligence distribution."
+                  : `${technologies.length} distinct technologies are currently represented in the portfolio intelligence distribution.`
               }
-              level={`${technologies.length} technologies`}
-              description="Unique technologies detected across your repositories."
+              icon={Network}
             />
           </div>
 
