@@ -6,6 +6,7 @@ import type {
   PortfolioHighlightRepository,
   PortfolioHighlights,
   PortfolioRepository,
+  PortfolioRepositoryActivity,
   PortfolioTimelineActivity,
   PortfolioTimelineParams,
   PortfolioTimelineResponse,
@@ -20,6 +21,81 @@ type ApiEnvelope<T> = {
   message?: string;
   data: T;
 };
+
+function normalizeRepositoryActivity(
+  value: unknown,
+): PortfolioRepositoryActivity | null {
+  if (
+    !value ||
+    typeof value !== "object"
+  ) {
+    return null;
+  }
+
+  const record =
+    value as Record<string, unknown>;
+
+  const repository =
+    record.repository &&
+      typeof record.repository === "object"
+      ? (record.repository as Record<string, unknown>)
+      : null;
+
+  const activity =
+    record.activity &&
+      typeof record.activity === "object"
+      ? (record.activity as Record<string, unknown>)
+      : null;
+
+  if (!repository) {
+    return null;
+  }
+
+  return {
+    repositoryId:
+      typeof repository.id === "string"
+        ? repository.id
+        : "",
+
+    repositoryName:
+      typeof repository.name === "string"
+        ? repository.name
+        : null,
+
+    repositoryFullName:
+      typeof repository.fullName === "string"
+        ? repository.fullName
+        : null,
+
+    isTracked:
+      typeof repository.isTracked === "boolean"
+        ? repository.isTracked
+        : undefined,
+
+    totalActivity:
+      Number(activity?.total ?? 0),
+
+    engineeringEvents:
+      Number(
+        activity?.engineeringEvents ?? 0,
+      ),
+
+    timelineEntries:
+      Number(
+        activity?.timelineEntries ?? 0,
+      ),
+
+    architectureChanges:
+      Number(
+        activity?.architectureChanges ?? 0,
+      ),
+
+    recommendations:
+      Number(
+        activity?.recommendations ?? 0,
+      ),
+  };
+}
 
 function unwrapResponse<T>(payload: T | ApiEnvelope<T>): T {
   if (
@@ -104,7 +180,7 @@ function normalizeHighlight(
 
   const repositoryValue =
     record.repository &&
-    typeof record.repository === "object"
+      typeof record.repository === "object"
       ? (record.repository as Record<string, unknown>)
       : record;
 
@@ -207,10 +283,10 @@ function normalizeTimelineActivity(
       (item): item is PortfolioTimelineActivity =>
         Boolean(
           item &&
-            typeof item === "object" &&
-            "id" in item &&
-            "type" in item &&
-            "createdAt" in item
+          typeof item === "object" &&
+          "id" in item &&
+          "type" in item &&
+          "createdAt" in item
         )
     )
     .sort((first, second) => {
@@ -262,10 +338,10 @@ function normalizeTrend(value: unknown): PortfolioTrendPoint[] {
 
       const totalActivity = Number(
         record.totalActivity ??
-          engineeringEvents +
-            timelineEntries +
-            architectureChanges +
-            recommendations
+        engineeringEvents +
+        timelineEntries +
+        architectureChanges +
+        recommendations
       );
 
       return {
@@ -294,8 +370,17 @@ function normalizeTrends(
 
     trend: normalizeTrend(value.trend),
 
-    repositoryActivity: Array.isArray(value.repositoryActivity)
+    repositoryActivity: Array.isArray(
+      value.repositoryActivity,
+    )
       ? value.repositoryActivity
+        .map(normalizeRepositoryActivity)
+        .filter(
+          (
+            item,
+          ): item is PortfolioRepositoryActivity =>
+            item !== null,
+        )
       : [],
 
     distributions: {
@@ -326,16 +411,33 @@ function normalizeTrends(
 
     highlights: {
       mostActiveRepository:
-        value.highlights?.mostActiveRepository ?? null,
+        normalizeRepositoryActivity(
+          value.highlights
+            ?.mostActiveRepository,
+        ),
 
       leastActiveRepository:
-        value.highlights?.leastActiveRepository ?? null,
+        normalizeRepositoryActivity(
+          value.highlights
+            ?.leastActiveRepository,
+        ),
 
-      inactiveTrackedRepositories: Array.isArray(
-        value.highlights?.inactiveTrackedRepositories
-      )
-        ? value.highlights.inactiveTrackedRepositories
-        : [],
+      inactiveTrackedRepositories:
+        Array.isArray(
+          value.highlights
+            ?.inactiveTrackedRepositories,
+        )
+          ? value.highlights.inactiveTrackedRepositories
+            .map(
+              normalizeRepositoryActivity,
+            )
+            .filter(
+              (
+                item,
+              ): item is PortfolioRepositoryActivity =>
+                item !== null,
+            )
+          : [],
     },
   };
 }
@@ -359,7 +461,7 @@ export const portfolioService = {
   ): Promise<PortfolioTimelineResponse> {
     const response = await api.get<
       PortfolioTimelineResponse |
-        ApiEnvelope<PortfolioTimelineResponse>
+      ApiEnvelope<PortfolioTimelineResponse>
     >(`/users/${userId}/portfolio/timeline`, {
       params: {
         page: params?.page,
@@ -385,7 +487,7 @@ export const portfolioService = {
   ): Promise<PortfolioTrendsResponse> {
     const response = await api.get<
       PortfolioTrendsResponse |
-        ApiEnvelope<PortfolioTrendsResponse>
+      ApiEnvelope<PortfolioTrendsResponse>
     >(`/users/${userId}/portfolio/trends`, {
       params: {
         period,

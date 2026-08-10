@@ -65,6 +65,16 @@ export default function PortfolioTrendsPage() {
         refetch,
     } = usePortfolioTrends(userId, period);
 
+ console.log(
+  "TREND REPOSITORY DETAILS",
+  JSON.stringify(data?.repositoryActivity, null, 2),
+);
+
+console.log(
+  "TREND HIGHLIGHT DETAILS",
+  JSON.stringify(data?.highlights, null, 2),
+);
+
     const repositoryRanking = useMemo(() => {
         return [...(data?.repositoryActivity ?? [])].sort(
             (first, second) =>
@@ -173,31 +183,31 @@ export default function PortfolioTrendsPage() {
                         <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-5">
                             <TrendMetricCard
                                 label="Portfolio Activity"
-                                value={data.totals?.totalPortfolioActivity}
+                                value={data.totals?.totalActivity}
                                 icon={Activity}
                             />
 
                             <TrendMetricCard
                                 label="Engineering Events"
-                                value={data.totals?.totalEngineeringEvents}
+                                value={data.totals?.engineeringEvents}
                                 icon={GitBranch}
                             />
 
                             <TrendMetricCard
                                 label="Timeline Entries"
-                                value={data.totals?.totalTimelineEntries}
+                                value={data.totals?.timelineEntries}
                                 icon={History}
                             />
 
                             <TrendMetricCard
                                 label="Architecture Changes"
-                                value={data.totals?.totalArchitectureChanges}
+                                value={data.totals?.architectureChanges}
                                 icon={Layers3}
                             />
 
                             <TrendMetricCard
                                 label="Recommendations"
-                                value={data.totals?.totalRecommendations}
+                                value={data.totals?.recommendations}
                                 icon={Lightbulb}
                             />
                         </div>
@@ -212,8 +222,9 @@ export default function PortfolioTrendsPage() {
                             </div>
 
                             <p className="mt-1 text-sm text-muted-foreground">
-                                Activity between {data.dateRange.start} and{" "}
-                                {data.dateRange.end}.
+                                Activity between{" "}
+                                {data.dateRange.startDate} and{" "}
+                                {data.dateRange.endDate}.
                             </p>
 
                             {data.trend.length === 0 ? (
