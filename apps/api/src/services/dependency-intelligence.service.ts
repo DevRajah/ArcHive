@@ -3,7 +3,7 @@ import { prisma } from "@archive/database";
 
 import type {
   DependencyOverview,
-  DependencyRiskLevel,
+  DependencyImpactLevel,
   TechnologyDependencyDetail,
   TechnologyDependencyNode,
   TechnologyImpactReport,
@@ -251,9 +251,20 @@ const clampScore = (score: number) => {
   return Math.max(0, Math.min(100, Math.round(score)));
 };
 
-const getRiskLevel = (
+/**
+ * Convert the numeric portfolio impact score into a presentation tier.
+ *
+ * Future me:
+ * This is deliberately called IMPACT, not RISK.
+ *
+ * The score is derived from repository reach, technology connectivity,
+ * architecture breadth, and capability breadth. Those factors measure the
+ * potential change radius of a technology, not whether the technology is
+ * insecure, vulnerable, unstable, or operationally dangerous.
+ */
+const getImpactLevel = (
   score: number
-): DependencyRiskLevel => {
+): DependencyImpactLevel => {
   if (score >= 71) {
     return "CRITICAL";
   }
@@ -297,7 +308,7 @@ const calculateCentralityScore = ({
   const connectionCoverage =
     totalTechnologies > 1
       ? connectedTechnologyCount /
-        (totalTechnologies - 1)
+      (totalTechnologies - 1)
       : 0;
 
   const architectureDepth = Math.min(
@@ -312,9 +323,9 @@ const calculateCentralityScore = ({
 
   return clampScore(
     repositoryCoverage * 45 +
-      connectionCoverage * 30 +
-      architectureDepth * 15 +
-      capabilityDepth * 10
+    connectionCoverage * 30 +
+    architectureDepth * 15 +
+    capabilityDepth * 10
   );
 };
 
@@ -346,7 +357,7 @@ const calculateImpactScore = ({
   const ecosystemReach =
     totalTechnologies > 1
       ? connectedTechnologyCount /
-        (totalTechnologies - 1)
+      (totalTechnologies - 1)
       : 0;
 
   const domainReach = Math.min(
@@ -361,9 +372,9 @@ const calculateImpactScore = ({
 
   return clampScore(
     repositoryReach * 50 +
-      ecosystemReach * 25 +
-      domainReach * 15 +
-      capabilityReach * 10
+    ecosystemReach * 25 +
+    domainReach * 15 +
+    capabilityReach * 10
   );
 };
 
@@ -622,31 +633,31 @@ const buildDependencyGraph = (
           const strength =
             minimumRepositoryCount > 0
               ? Number(
-                  (
-                    sharedRepositories /
-                    minimumRepositoryCount
-                  ).toFixed(2)
-                )
+                (
+                  sharedRepositories /
+                  minimumRepositoryCount
+                ).toFixed(2)
+              )
               : 0;
 
           const sourceRepositoryCoverage =
             sourceAggregate.repositoryIds.size > 0
               ? Number(
-                  (
-                    sharedRepositories /
-                    sourceAggregate.repositoryIds.size
-                  ).toFixed(2)
-                )
+                (
+                  sharedRepositories /
+                  sourceAggregate.repositoryIds.size
+                ).toFixed(2)
+              )
               : 0;
 
           const targetRepositoryCoverage =
             targetAggregate.repositoryIds.size > 0
               ? Number(
-                  (
-                    sharedRepositories /
-                    targetAggregate.repositoryIds.size
-                  ).toFixed(2)
-                )
+                (
+                  sharedRepositories /
+                  targetAggregate.repositoryIds.size
+                ).toFixed(2)
+              )
               : 0;
 
           const sharedRepositoryNames =
@@ -685,11 +696,10 @@ const buildDependencyGraph = (
               sharedRepositoryNames,
               relationshipType:
                 "TECHNOLOGY_CO_OCCURRENCE",
-              evidenceSummary: `${sourceName} and ${targetName} appear together in ${sharedRepositories} ${
-                sharedRepositories === 1
-                  ? "repository"
-                  : "repositories"
-              }.`,
+              evidenceSummary: `${sourceName} and ${targetName} appear together in ${sharedRepositories} ${sharedRepositories === 1
+                ? "repository"
+                : "repositories"
+                }.`,
             }
           );
         }
@@ -779,15 +789,18 @@ const buildDependencyGraph = (
           connectedTechnologyCount:
             connectedTechnologies.length,
 
-          /*
-           * Co-occurrence currently produces an undirected relationship.
-           * Both fields are returned for forward compatibility with future
-           * package-level dependency direction analysis.
-           */
-          dependentTechnologies:
-            connectedTechnologies,
-
-          dependedOnBy: connectedTechnologies,
+          /**
+        * Co-occurrence is currently undirected.
+        *
+        * This list means only:
+        *
+        * "These technologies appear alongside this technology across one or more
+        * repositories."
+        *
+        * Do not expose this as dependsOn / dependedOnBy until package-level or
+        * import-level direction has actually been detected.
+        */
+          connectedTechnologies,
 
           architectureDomains:
             Array.from(
@@ -812,8 +825,8 @@ const buildDependencyGraph = (
 
           centralityScore,
           impactScore,
-          riskLevel:
-            getRiskLevel(impactScore),
+          impactLevel:
+            getImpactLevel(impactScore),
         };
       }
     )
@@ -875,9 +888,9 @@ const getTechnologyRelationships = (
   return graph.relationships.filter(
     (relationship) =>
       normalize(relationship.source) ===
-        technologyKey ||
+      technologyKey ||
       normalize(relationship.target) ===
-        technologyKey
+      technologyKey
   );
 };
 
@@ -918,10 +931,9 @@ const buildImpactWarnings = ({
 
   if (strongRelationships.length > 0) {
     warnings.push(
-      `${node.technology} has ${strongRelationships.length} high-strength technology relationship${
-        strongRelationships.length === 1
-          ? ""
-          : "s"
+      `${node.technology} has ${strongRelationships.length} high-strength technology relationship${strongRelationships.length === 1
+        ? ""
+        : "s"
       }.`
     );
   }
@@ -938,21 +950,21 @@ const buildImpactWarnings = ({
 const buildImpactExplanation = (
   node: TechnologyDependencyNode
 ) => {
-  if (node.riskLevel === "CRITICAL") {
+  if (node.impactLevel === "CRITICAL") {
     return {
       headline: `${node.technology} is a critical portfolio technology`,
       description: `${node.technology} has broad repository reach and strong connections across the engineering ecosystem. Changes should be tested carefully across all affected systems.`,
     };
   }
 
-  if (node.riskLevel === "HIGH") {
+  if (node.impactLevel === "HIGH") {
     return {
       headline: `${node.technology} has a high engineering impact`,
       description: `${node.technology} supports multiple repositories, capabilities or architecture domains. Changes may affect several connected systems.`,
     };
   }
 
-  if (node.riskLevel === "MEDIUM") {
+  if (node.impactLevel === "MEDIUM") {
     return {
       headline: `${node.technology} has a moderate engineering impact`,
       description: `${node.technology} is shared across part of the portfolio and should be reviewed before major upgrades or removal.`,
@@ -1035,16 +1047,16 @@ export const dependencyIntelligenceService = {
         strongestRelationship:
           graph.relationships[0] || null,
 
-        criticalTechnologies:
+        criticalImpactTechnologies:
           graph.nodes.filter(
             (node) =>
-              node.riskLevel === "CRITICAL"
+              node.impactLevel === "CRITICAL"
           ).length,
 
-        highRiskTechnologies:
+        highImpactTechnologies:
           graph.nodes.filter(
             (node) =>
-              node.riskLevel === "HIGH"
+              node.impactLevel === "HIGH"
           ).length,
       },
 
@@ -1191,7 +1203,7 @@ export const dependencyIntelligenceService = {
         .map((relationship) => ({
           technology:
             normalize(relationship.source) ===
-            normalize(technology)
+              normalize(technology)
               ? relationship.target
               : relationship.source,
 
@@ -1307,13 +1319,13 @@ export const dependencyIntelligenceService = {
           const impactContributionScore =
             clampScore(
               relatedTechnologies.length * 5 +
-                repository.signals
-                  .architectureDomains.length *
-                  12 +
-                repository.signals
-                  .capabilities.length *
-                  8 +
-                (repository.isTracked ? 10 : 0)
+              repository.signals
+                .architectureDomains.length *
+              12 +
+              repository.signals
+                .capabilities.length *
+              8 +
+              (repository.isTracked ? 10 : 0)
             );
 
           return {
@@ -1345,7 +1357,7 @@ export const dependencyIntelligenceService = {
         .map((relationship) => ({
           technology:
             normalize(relationship.source) ===
-            normalize(technology)
+              normalize(technology)
               ? relationship.target
               : relationship.source,
 
@@ -1394,7 +1406,7 @@ export const dependencyIntelligenceService = {
 
         impactScore: node.impactScore,
 
-        riskLevel: node.riskLevel,
+        impactLevel: node.impactLevel,
       },
 
       affectedRepositories,

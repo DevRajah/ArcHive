@@ -1,4 +1,4 @@
-export type DependencyRiskLevel =
+export type DependencyImpactLevel =
   | "LOW"
   | "MEDIUM"
   | "HIGH"
@@ -12,16 +12,37 @@ export type TechnologyDependencyNode = {
 
   connectedTechnologyCount: number;
 
-  dependentTechnologies: string[];
-  dependedOnBy: string[];
+  /**
+   * Technologies observed alongside this technology across one or more
+   * repositories.
+   *
+   * Future me:
+   * This graph is currently based on repository-level co-occurrence.
+   * It does NOT prove package import direction or runtime dependency
+   * direction, so do not rename this to `dependsOn` until ArcHive has
+   * directional evidence.
+   */
+  connectedTechnologies: string[];
 
   architectureDomains: string[];
   repositoryTypes: string[];
   capabilities: string[];
 
+  /**
+   * Centrality describes how embedded the technology is across the
+   * portfolio.
+   */
   centralityScore: number;
+
+  /**
+   * Impact describes the potential portfolio-wide change radius of the
+   * technology.
+   *
+   * High impact is not automatically high engineering risk.
+   */
   impactScore: number;
-  riskLevel: DependencyRiskLevel;
+
+  impactLevel: DependencyImpactLevel;
 };
 
 export type TechnologyRelationship = {
@@ -38,6 +59,9 @@ export type TechnologyRelationship = {
   sharedRepositoryIds: string[];
   sharedRepositoryNames: string[];
 
+  /**
+   * Relationships are currently undirected portfolio-level co-occurrence.
+   */
   relationshipType: "TECHNOLOGY_CO_OCCURRENCE";
 
   evidenceSummary: string;
@@ -57,13 +81,21 @@ export type DependencyOverview = {
     totalTechnologies: number;
     totalRelationships: number;
 
-    mostCentralTechnology: TechnologyDependencyNode | null;
-    highestImpactTechnology: TechnologyDependencyNode | null;
+    mostCentralTechnology:
+      TechnologyDependencyNode | null;
 
-    strongestRelationship: TechnologyRelationship | null;
+    highestImpactTechnology:
+      TechnologyDependencyNode | null;
 
-    criticalTechnologies: number;
-    highRiskTechnologies: number;
+    strongestRelationship:
+      TechnologyRelationship | null;
+
+    /**
+     * These describe portfolio impact tiers, not vulnerability or
+     * operational risk.
+     */
+    criticalImpactTechnologies: number;
+    highImpactTechnologies: number;
   };
 
   technologies: TechnologyDependencyNode[];
@@ -139,7 +171,7 @@ export type TechnologyImpactReport = {
     capabilityCount: number;
 
     impactScore: number;
-    riskLevel: DependencyRiskLevel;
+    impactLevel: DependencyImpactLevel;
   };
 
   affectedRepositories: Array<{
