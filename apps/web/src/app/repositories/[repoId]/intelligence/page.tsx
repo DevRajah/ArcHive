@@ -88,18 +88,18 @@ type CanonicalIntelligenceReport = {
 
     assessment?: {
       engineeringQuality?: {
-        score?: number;
-        level?: string;
+        overallScore?: number;
+        overallGrade?: string;
+
         summary?: string;
-        scores?: Record<
-          string,
-          {
-            score?: number;
-            grade?: string;
-            level?: string;
-            reasons?: string[];
-          }
-        >;
+
+        scores?: Array<{
+          area: string;
+          score: number;
+          grade?: string;
+          level?: string;
+          reasons?: string[];
+        }>;
       };
 
       productionReadiness?: {
@@ -132,6 +132,7 @@ type CanonicalIntelligenceReport = {
         debtScore?: number;
         level?: string;
         summary?: string;
+        severity?: string;
       };
 
       architectureDrift?: {
@@ -384,9 +385,8 @@ export default function RepositoryIntelligencePage() {
               disabled={reprocessMutation.isPending}
             >
               <RefreshCcw
-                className={`mr-2 h-4 w-4 ${
-                  reprocessMutation.isPending ? "animate-spin" : ""
-                }`}
+                className={`mr-2 h-4 w-4 ${reprocessMutation.isPending ? "animate-spin" : ""
+                  }`}
               />
               {reprocessMutation.isPending
                 ? "Refreshing..."
@@ -399,18 +399,16 @@ export default function RepositoryIntelligencePage() {
 
         {feedback && (
           <div
-            className={`rounded-xl border p-4 ${
-              feedback.type === "success"
-                ? "border-emerald-500/30 bg-emerald-500/10"
-                : "border-destructive/30 bg-destructive/10"
-            }`}
+            className={`rounded-xl border p-4 ${feedback.type === "success"
+              ? "border-emerald-500/30 bg-emerald-500/10"
+              : "border-destructive/30 bg-destructive/10"
+              }`}
           >
             <p
-              className={`text-sm font-medium ${
-                feedback.type === "success"
-                  ? "text-emerald-500"
-                  : "text-destructive"
-              }`}
+              className={`text-sm font-medium ${feedback.type === "success"
+                ? "text-emerald-500"
+                : "text-destructive"
+                }`}
             >
               {feedback.message}
             </p>
@@ -457,7 +455,7 @@ export default function RepositoryIntelligencePage() {
               <ScoreCard
                 label="Engineering Quality"
                 score={summary?.engineeringQualityScore}
-                level={assessment?.engineeringQuality?.level}
+                level={assessment?.engineeringQuality?.overallGrade}
                 description="Architecture, maintainability, testing, observability, security, and devops quality."
               />
 
@@ -516,9 +514,9 @@ export default function RepositoryIntelligencePage() {
 
                 <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-1">
                   <ScoreCard
-                    label="DNA Maturity"
+                    label="DNA Structural Maturity"
                     score={dna?.maturityScore}
-                    description="Maturity score from repository DNA analysis."
+                    description="Structural maturity inferred from repository DNA signals. This is separate from the broader Repository Maturity assessment."
                   />
 
                   <ScoreCard
@@ -573,10 +571,12 @@ export default function RepositoryIntelligencePage() {
                 <ScoreCard
                   label="Engineering Quality"
                   score={
-                    assessment?.engineeringQuality?.score ||
+                    assessment?.engineeringQuality?.overallScore ??
                     summary?.engineeringQualityScore
                   }
-                  level={assessment?.engineeringQuality?.level}
+                  level={
+                    assessment?.engineeringQuality?.overallGrade
+                  }
                 />
 
                 <ScoreCard
@@ -618,7 +618,7 @@ export default function RepositoryIntelligencePage() {
                 <ScoreCard
                   label="Technical Debt"
                   score={assessment?.technicalDebt?.debtScore}
-                  level={assessment?.technicalDebt?.level}
+                  level={assessment?.technicalDebt?.severity}
                   lowerIsBetter
                 />
               </div>
@@ -649,56 +649,56 @@ export default function RepositoryIntelligencePage() {
               description="Detailed engineering quality areas scored by ArcHive."
             >
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                {Object.entries(
-                  assessment?.engineeringQuality?.scores || {}
-                ).length === 0 ? (
+                {!assessment?.engineeringQuality?.scores?.length ? (
                   <p className="text-sm text-muted-foreground">
                     No quality breakdown available yet.
                   </p>
                 ) : (
-                  Object.entries(
-                    assessment?.engineeringQuality?.scores || {}
-                  ).map(([area, score]) => (
-                    <div
-                      key={area}
-                      className="rounded-xl border border-border bg-background p-4"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="text-sm font-medium">
-                            {formatFilterLabel(area)}
-                          </p>
+                  assessment.engineeringQuality.scores.map(
+                    (quality, index) => (
+                      <div
+                        key={`${quality.area}-${index}`}
+                        className="rounded-xl border border-border bg-background p-4"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-sm font-medium">
+                              {formatFilterLabel(quality.area)}
+                            </p>
 
-                          <p className="mt-2 text-2xl font-bold">
-                            {formatScore(score.score)}
-                          </p>
+                            <p className="mt-2 text-2xl font-bold">
+                              {formatScore(quality.score)}
+                            </p>
+                          </div>
+
+                          <Badge variant="secondary">
+                            {quality.grade ||
+                              quality.level ||
+                              "N/A"}
+                          </Badge>
                         </div>
 
-                        <Badge variant="secondary">
-                          {score.grade || score.level || "N/A"}
-                        </Badge>
-                      </div>
-
-                      <div className="mt-4 h-2 overflow-hidden rounded-full bg-muted">
-                        <div
-                          className="h-full rounded-full bg-primary"
-                          style={{
-                            width: `${score.score || 0}%`,
-                          }}
-                        />
-                      </div>
-
-                      {score.reasons && score.reasons.length > 0 && (
-                        <div className="mt-4">
-                          <InsightList
-                            items={score.reasons}
-                            limit={2}
-                            empty="No reasons available."
+                        <div className="mt-4 h-2 overflow-hidden rounded-full bg-muted">
+                          <div
+                            className="h-full rounded-full bg-primary"
+                            style={{
+                              width: `${quality.score ?? 0}%`,
+                            }}
                           />
                         </div>
-                      )}
-                    </div>
-                  ))
+
+                        {(quality.reasons?.length ?? 0) > 0 && (
+                          <div className="mt-4">
+                            <InsightList
+                              items={quality.reasons ?? []}
+                              limit={2}
+                              empty="No reasons available."
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )
+                  )
                 )}
               </div>
             </IntelligenceSection>
@@ -709,7 +709,7 @@ export default function RepositoryIntelligencePage() {
             >
               <div className="grid gap-4 lg:grid-cols-2">
                 {!assessment?.repositoryMaturity?.assessments ||
-                assessment.repositoryMaturity.assessments.length === 0 ? (
+                  assessment.repositoryMaturity.assessments.length === 0 ? (
                   <p className="text-sm text-muted-foreground">
                     No maturity breakdown available yet.
                   </p>
@@ -1054,10 +1054,10 @@ export default function RepositoryIntelligencePage() {
 
                     {advisor?.recommendationReport?.recommendations?.length ===
                       0 && (
-                      <p className="text-sm text-muted-foreground">
-                        No recommendations available yet.
-                      </p>
-                    )}
+                        <p className="text-sm text-muted-foreground">
+                          No recommendations available yet.
+                        </p>
+                      )}
                   </div>
                 </div>
               </div>
