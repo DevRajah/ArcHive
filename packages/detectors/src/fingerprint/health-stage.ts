@@ -33,6 +33,7 @@ import type {
 import type {
   EvidenceContext,
 } from "../evidence";
+import { CapabilityResult } from "../capabilities";
 
 /**
  * Builds the repository's quality and health reports.
@@ -44,10 +45,12 @@ import type {
 export const buildHealthStage = ({
   engineeringQuality,
   evidenceContext,
+  capabilities,
   state,
 }: {
   engineeringQuality: EngineeringQualityResult;
   evidenceContext: EvidenceContext;
+  capabilities: CapabilityResult[];
   state: FingerprintState;
 }) => {
   const {
@@ -82,6 +85,7 @@ export const buildHealthStage = ({
         Array.from(repositoryTypes),
 
       reasoningSignals,
+      capabilities,
     });
 
   const repositoryMaturity =

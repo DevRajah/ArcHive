@@ -219,6 +219,7 @@ export const detectTechnologyFingerprint = (
   } = buildHealthStage({
     engineeringQuality,
     evidenceContext,
+    capabilities,
     state,
   });
 
