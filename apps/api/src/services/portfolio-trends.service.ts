@@ -15,42 +15,62 @@ type DailyTrendPoint = {
   recommendations: number;
 };
 
+/**
+ * Returns the beginning of the selected reporting period in UTC.
+ *
+ * Future me:
+ * Trend keys are generated with toISOString(), which is UTC.
+ * The period boundaries therefore need to use UTC as well.
+ *
+ * Mixing local midnight with UTC date keys caused records to exist in the
+ * repository activity totals but fail to find their corresponding daily
+ * trend bucket.
+ */
 const getPeriodStartDate = (period: PortfolioTrendPeriod) => {
   const date = new Date();
 
   if (period === "7d") {
-    date.setDate(date.getDate() - 6);
+    date.setUTCDate(date.getUTCDate() - 6);
   }
 
   if (period === "30d") {
-    date.setDate(date.getDate() - 29);
+    date.setUTCDate(date.getUTCDate() - 29);
   }
 
   if (period === "90d") {
-    date.setDate(date.getDate() - 89);
+    date.setUTCDate(date.getUTCDate() - 89);
   }
 
   if (period === "1y") {
-    date.setFullYear(date.getFullYear() - 1);
+    date.setUTCFullYear(date.getUTCFullYear() - 1);
   }
 
-  date.setHours(0, 0, 0, 0);
+  date.setUTCHours(0, 0, 0, 0);
 
   return date;
 };
 
+/**
+ * Convert every date into the same UTC YYYY-MM-DD key used by the trend map.
+ */
 const toDateKey = (date: Date) => {
   return date.toISOString().slice(0, 10);
 };
 
-const increment = (map: Map<string, number>, key?: string | null) => {
+const increment = (
+  map: Map<string, number>,
+  key?: string | null
+) => {
   const normalizedKey = key?.trim();
 
   if (!normalizedKey) {
     return;
   }
 
-  map.set(normalizedKey, (map.get(normalizedKey) || 0) + 1);
+  map.set(
+    normalizedKey,
+    (map.get(normalizedKey) || 0) + 1
+  );
 };
 
 const toCountArray = (map: Map<string, number>) => {
@@ -79,6 +99,14 @@ const splitStoredList = (value?: string | null) => {
     .filter(Boolean);
 };
 
+/**
+ * Create one UTC bucket for every calendar day in the selected period,
+ * including the current day.
+ *
+ * Future me:
+ * Do not switch this back to setDate(). The bucket keys use UTC, so the
+ * cursor must also advance in UTC.
+ */
 const createDailyTrendPoints = (
   startDate: Date,
   endDate: Date
@@ -97,7 +125,7 @@ const createDailyTrendPoints = (
       recommendations: 0,
     });
 
-    cursor.setDate(cursor.getDate() + 1);
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
   }
 
   return points;
@@ -124,6 +152,14 @@ export const portfolioTrendsService = {
     }
 
     const startDate = getPeriodStartDate(period);
+
+    /**
+     * Capture the end of this reporting request once.
+     *
+     * Every period-scoped query below uses this same value, so the returned
+     * dateRange and the records included in the analytics describe exactly
+     * the same closed interval.
+     */
     const endDate = new Date();
 
     const repositories = await prisma.repository.findMany({
@@ -142,6 +178,7 @@ export const portfolioTrendsService = {
           where: {
             createdAt: {
               gte: startDate,
+              lte: endDate,
             },
           },
           select: {
@@ -155,6 +192,7 @@ export const portfolioTrendsService = {
           where: {
             createdAt: {
               gte: startDate,
+              lte: endDate,
             },
           },
           select: {
@@ -166,6 +204,7 @@ export const portfolioTrendsService = {
           where: {
             createdAt: {
               gte: startDate,
+              lte: endDate,
             },
           },
           select: {
@@ -180,6 +219,7 @@ export const portfolioTrendsService = {
           where: {
             createdAt: {
               gte: startDate,
+              lte: endDate,
             },
           },
           select: {
@@ -190,142 +230,238 @@ export const portfolioTrendsService = {
       },
     });
 
-    const dailyPoints = createDailyTrendPoints(startDate, endDate);
-    const technologyCounts = new Map<string, number>();
-    const architectureDomainCounts = new Map<string, number>();
-    const repositoryTypeCounts = new Map<string, number>();
-    const languageCounts = new Map<string, number>();
-    const eventTypeCounts = new Map<string, number>();
-    const recommendationStatusCounts = new Map<string, number>();
+    const dailyPoints =
+      createDailyTrendPoints(startDate, endDate);
 
-    const repositoryActivity = repositories.map((repository) => {
-      increment(languageCounts, repository.language || "Unknown");
+    const technologyCounts =
+      new Map<string, number>();
 
-      repository.events.forEach((event) => {
-        const dateKey = toDateKey(event.createdAt);
-        const point = dailyPoints.get(dateKey);
+    const architectureDomainCounts =
+      new Map<string, number>();
 
-        if (point) {
-          point.engineeringEvents += 1;
-        }
+    const repositoryTypeCounts =
+      new Map<string, number>();
 
-        increment(eventTypeCounts, event.eventType);
-      });
+    const languageCounts =
+      new Map<string, number>();
 
-      repository.timelineEntries.forEach((entry) => {
-        const dateKey = toDateKey(entry.createdAt);
-        const point = dailyPoints.get(dateKey);
+    const eventTypeCounts =
+      new Map<string, number>();
 
-        if (point) {
-          point.timelineEntries += 1;
-        }
-      });
+    const recommendationStatusCounts =
+      new Map<string, number>();
 
-      repository.architectureChanges.forEach((change) => {
-        const dateKey = toDateKey(change.createdAt);
-        const point = dailyPoints.get(dateKey);
-
-        if (point) {
-          point.architectureChanges += 1;
-        }
-
+    /**
+     * Repository activity and daily trend are built from the same
+     * period-filtered records.
+     *
+     * This means their totals should agree once every record is placed into
+     * the correct UTC day bucket.
+     */
+    const repositoryActivity = repositories.map(
+      (repository) => {
+        /**
+         * Language is current repository metadata rather than an activity
+         * event. We intentionally keep it as a current portfolio composition
+         * distribution.
+         */
         increment(
-          architectureDomainCounts,
-          change.architectureDomain
+          languageCounts,
+          repository.language || "Unknown"
         );
 
-        increment(technologyCounts, change.detectedTechnology);
+        repository.events.forEach((event) => {
+          const dateKey =
+            toDateKey(event.createdAt);
 
-        splitStoredList(change.repositoryTypes).forEach(
-          (repositoryType) => {
-            increment(repositoryTypeCounts, repositoryType);
-          }
-        );
-      });
-
-      repository.engineeringRecommendations.forEach(
-        (recommendation) => {
-          const dateKey = toDateKey(recommendation.createdAt);
-          const point = dailyPoints.get(dateKey);
+          const point =
+            dailyPoints.get(dateKey);
 
           if (point) {
-            point.recommendations += 1;
+            point.engineeringEvents += 1;
           }
 
           increment(
-            recommendationStatusCounts,
-            recommendation.status
+            eventTypeCounts,
+            event.eventType
           );
-        }
+        });
+
+        repository.timelineEntries.forEach(
+          (entry) => {
+            const dateKey =
+              toDateKey(entry.createdAt);
+
+            const point =
+              dailyPoints.get(dateKey);
+
+            if (point) {
+              point.timelineEntries += 1;
+            }
+          }
+        );
+
+        repository.architectureChanges.forEach(
+          (change) => {
+            const dateKey =
+              toDateKey(change.createdAt);
+
+            const point =
+              dailyPoints.get(dateKey);
+
+            if (point) {
+              point.architectureChanges += 1;
+            }
+
+            increment(
+              architectureDomainCounts,
+              change.architectureDomain
+            );
+
+            increment(
+              technologyCounts,
+              change.detectedTechnology
+            );
+
+            splitStoredList(
+              change.repositoryTypes
+            ).forEach((repositoryType) => {
+              increment(
+                repositoryTypeCounts,
+                repositoryType
+              );
+            });
+          }
+        );
+
+        repository.engineeringRecommendations.forEach(
+          (recommendation) => {
+            const dateKey =
+              toDateKey(recommendation.createdAt);
+
+            const point =
+              dailyPoints.get(dateKey);
+
+            if (point) {
+              point.recommendations += 1;
+            }
+
+            /**
+             * This distribution represents the current status of
+             * recommendations that were created inside the selected period.
+             *
+             * It does not currently represent all lifetime recommendations.
+             */
+            increment(
+              recommendationStatusCounts,
+              recommendation.status
+            );
+          }
+        );
+
+        const engineeringEvents =
+          repository.events.length;
+
+        const timelineEntries =
+          repository.timelineEntries.length;
+
+        const architectureChanges =
+          repository.architectureChanges.length;
+
+        const recommendations =
+          repository.engineeringRecommendations.length;
+
+        const totalActivity =
+          engineeringEvents +
+          timelineEntries +
+          architectureChanges +
+          recommendations;
+
+        return {
+          repository: {
+            id: repository.id,
+            name: repository.name,
+            fullName: repository.fullName,
+            language: repository.language,
+            isTracked: repository.isTracked,
+            updatedAt: repository.updatedAt,
+          },
+
+          activity: {
+            total: totalActivity,
+            engineeringEvents,
+            timelineEntries,
+            architectureChanges,
+            recommendations,
+          },
+        };
+      }
+    );
+
+    const sortedRepositoryActivity = [
+      ...repositoryActivity,
+    ].sort(
+      (a, b) =>
+        b.activity.total - a.activity.total
+    );
+
+    const trackedRepositories =
+      repositories.filter(
+        (repository) => repository.isTracked
       );
 
-      const engineeringEvents = repository.events.length;
-      const timelineEntries = repository.timelineEntries.length;
-      const architectureChanges =
-        repository.architectureChanges.length;
-      const recommendations =
-        repository.engineeringRecommendations.length;
+    /**
+     * "Inactive tracked" means no activity of any of the four measured types
+     * occurred during the selected reporting period.
+     */
+    const inactiveTrackedRepositories =
+      trackedRepositories
+        .filter((repository) => {
+          const hasRecentActivity =
+            repository.events.length > 0 ||
+            repository.timelineEntries.length > 0 ||
+            repository.architectureChanges.length > 0 ||
+            repository.engineeringRecommendations.length > 0;
 
-      const totalActivity =
-        engineeringEvents +
-        timelineEntries +
-        architectureChanges +
-        recommendations;
-
-      return {
-        repository: {
+          return !hasRecentActivity;
+        })
+        .map((repository) => ({
           id: repository.id,
           name: repository.name,
           fullName: repository.fullName,
-          language: repository.language,
-          isTracked: repository.isTracked,
           updatedAt: repository.updatedAt,
-        },
-        activity: {
-          total: totalActivity,
-          engineeringEvents,
-          timelineEntries,
-          architectureChanges,
-          recommendations,
-        },
-      };
-    });
+        }));
 
-    const sortedRepositoryActivity = repositoryActivity.sort(
-      (a, b) => b.activity.total - a.activity.total
-    );
-
-    const trackedRepositories = repositories.filter(
-      (repository) => repository.isTracked
-    );
-
-    const inactiveTrackedRepositories = trackedRepositories
-      .filter((repository) => {
-        const hasRecentActivity =
-          repository.events.length > 0 ||
-          repository.timelineEntries.length > 0 ||
-          repository.architectureChanges.length > 0 ||
-          repository.engineeringRecommendations.length > 0;
-
-        return !hasRecentActivity;
-      })
-      .map((repository) => ({
-        id: repository.id,
-        name: repository.name,
-        fullName: repository.fullName,
-        updatedAt: repository.updatedAt,
-      }));
-
-    const trend = Array.from(dailyPoints.values()).sort((a, b) =>
+    const trend = Array.from(
+      dailyPoints.values()
+    ).sort((a, b) =>
       a.date.localeCompare(b.date)
     );
 
+    /**
+     * Totals deliberately come from the daily trend.
+     *
+     * This gives us an important analytics invariant:
+     *
+     * sum(all daily buckets) === top-level totals
+     *
+     * Repository activity should independently arrive at the same totals
+     * because both use the same period-filtered database records.
+     */
     const totals = trend.reduce(
       (summary, point) => {
-        summary.engineeringEvents += point.engineeringEvents;
-        summary.timelineEntries += point.timelineEntries;
-        summary.architectureChanges += point.architectureChanges;
-        summary.recommendations += point.recommendations;
+        summary.engineeringEvents +=
+          point.engineeringEvents;
+
+        summary.timelineEntries +=
+          point.timelineEntries;
+
+        summary.architectureChanges +=
+          point.architectureChanges;
+
+        summary.recommendations +=
+          point.recommendations;
+
         summary.totalActivity +=
           point.engineeringEvents +
           point.timelineEntries +
@@ -346,41 +482,72 @@ export const portfolioTrendsService = {
     return {
       user,
       period,
+
       dateRange: {
         startDate,
         endDate,
       },
+
       totals,
+
       trend,
+
       distributions: {
-        technologies: toCountArray(technologyCounts),
-        architectureDomains: toCountArray(
-          architectureDomainCounts
-        ),
-        repositoryTypes: toCountArray(repositoryTypeCounts),
-        languages: toCountArray(languageCounts),
-        engineeringEventTypes: toCountArray(eventTypeCounts),
-        recommendationStatuses: toCountArray(
-          recommendationStatusCounts
-        ),
+        technologies:
+          toCountArray(technologyCounts),
+
+        architectureDomains:
+          toCountArray(
+            architectureDomainCounts
+          ),
+
+        repositoryTypes:
+          toCountArray(
+            repositoryTypeCounts
+          ),
+
+        languages:
+          toCountArray(languageCounts),
+
+        engineeringEventTypes:
+          toCountArray(eventTypeCounts),
+
+        recommendationStatuses:
+          toCountArray(
+            recommendationStatusCounts
+          ),
       },
-      repositoryActivity: sortedRepositoryActivity,
+
+      repositoryActivity:
+        sortedRepositoryActivity,
+
       highlights: {
         mostActiveRepository:
-          sortedRepositoryActivity[0] || null,
+          sortedRepositoryActivity[0] ||
+          null,
+
         leastActiveRepository:
-          sortedRepositoryActivity.length > 0
+          sortedRepositoryActivity.length >
+          0
             ? sortedRepositoryActivity[
-                sortedRepositoryActivity.length - 1
+                sortedRepositoryActivity.length -
+                  1
               ]
             : null,
+
         inactiveTrackedRepositories,
-        activeRepositoryCount: repositoryActivity.filter(
-          (item) => item.activity.total > 0
-        ).length,
-        inactiveRepositoryCount: repositoryActivity.filter(
-          (item) => item.activity.total === 0
-        ).length,
+
+        activeRepositoryCount:
+          repositoryActivity.filter(
+            (item) =>
+              item.activity.total > 0
+          ).length,
+
+        inactiveRepositoryCount:
+          repositoryActivity.filter(
+            (item) =>
+              item.activity.total === 0
+          ).length,
       },
     };
   },

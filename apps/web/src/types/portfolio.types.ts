@@ -169,16 +169,16 @@ export interface PortfolioTrendPoint {
 }
 
 export interface PortfolioTrendTotals {
-  totalEngineeringEvents: number;
-  totalTimelineEntries: number;
-  totalArchitectureChanges: number;
-  totalRecommendations: number;
-  totalPortfolioActivity: number;
+  engineeringEvents: number;
+  timelineEntries: number;
+  architectureChanges: number;
+  recommendations: number;
+  totalActivity: number;
 }
 
 export interface PortfolioDateRange {
-  start: string;
-  end: string;
+  startDate: string;
+  endDate: string;
 }
 
 export interface PortfolioRepositoryActivity {
