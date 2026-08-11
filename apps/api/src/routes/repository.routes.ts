@@ -31,6 +31,10 @@ import { generateRepositoryIntelligence } from "../services/repository-intellige
 
 import { syncEngineeringRecommendations } from "../utils/sync-engineering-recommendations";
 
+import {
+  readAuditReasoningSignals,
+  readAuditStringArray,
+} from "../services/intelligence-audit-signals.service";
 type CreateRepositoryBody = {
   name: string;
   owner: string;
@@ -2573,94 +2577,149 @@ ${architectureChanges
 
 
   // intelligence audit analysis
-  app.get<{ Params: { repositoryId: string } }>(
-    "/:repositoryId/intelligence-audit",
-    async (request, reply) => {
-      const { repositoryId } = request.params;
+// intelligence audit analysis
+app.get<{ Params: { repositoryId: string } }>(
+  "/:repositoryId/intelligence-audit",
+  async (request, reply) => {
+    const { repositoryId } = request.params;
 
-      const repository = await prisma.repository.findUnique({
-        where: { id: repositoryId },
+    /**
+     * Intelligence Audit is a CURRENT-STATE intelligence endpoint.
+     *
+     * Future me:
+     * Do not rebuild current repository intelligence from ArchitectureChange.
+     *
+     * ArchitectureChange contains historical event-level evidence and stores
+     * reasoningSignals as a legacy string field.
+     *
+     * RepositoryIntelligenceSnapshot contains the authoritative full-repository
+     * intelligence generated during reprocessing, including structured signal
+     * arrays with their original logical boundaries intact.
+     */
+    const repository =
+      await prisma.repository.findUnique({
+        where: {
+          id: repositoryId,
+        },
+
         select: {
           id: true,
           name: true,
           fullName: true,
+
+          intelligenceSnapshots: {
+            orderBy: [
+              {
+                createdAt: "desc",
+              },
+              {
+                id: "desc",
+              },
+            ],
+
+            take: 1,
+
+            select: {
+              id: true,
+
+              repositoryTypes: true,
+              technologies: true,
+              architectureDomains: true,
+              intelligence: true,
+
+              createdAt: true,
+            },
+          },
         },
       });
 
-      if (!repository) {
-        return reply.status(404).send({
-          success: false,
-          message: "Repository not found",
-        });
-      }
-
-      const architectureChanges = await prisma.architectureChange.findMany({
-        where: { repositoryId },
-        select: {
-          architectureDomain: true,
-          detectedTechnology: true,
-          repositoryTypes: true,
-          reasoningSignals: true,
-        },
+    if (!repository) {
+      return reply.status(404).send({
+        success: false,
+        message: "Repository not found",
       });
+    }
 
-      const domains = Array.from(
-        new Set(
-          architectureChanges
-            .map((change) => change.architectureDomain)
-            .filter((domain): domain is string => Boolean(domain))
-        )
+    const latestSnapshot =
+      repository.intelligenceSnapshots[0];
+
+    /**
+     * Do not silently downgrade to historical ArchitectureChange evidence.
+     *
+     * The intelligence report already follows the same rule: if canonical
+     * repository intelligence has not been generated yet, reprocessing is
+     * required.
+     */
+    if (!latestSnapshot) {
+      return reply.status(404).send({
+        success: false,
+        message:
+          "Repository intelligence has not been generated yet. Reprocess the repository first.",
+      });
+    }
+
+    /**
+     * These dedicated snapshot columns represent the complete canonical
+     * signal sets generated during the latest repository refresh.
+     */
+    const repositoryTypes =
+      readAuditStringArray(
+        latestSnapshot.repositoryTypes
       );
 
-      const technologies = Array.from(
-        new Set(
-          architectureChanges
-            .map((change) => change.detectedTechnology)
-            .filter((technology): technology is string => Boolean(technology))
-        )
+    const domains =
+      readAuditStringArray(
+        latestSnapshot.architectureDomains
       );
 
-      const repositoryTypes = Array.from(
-        new Set(
-          architectureChanges
-            .flatMap((change) => change.repositoryTypes?.split(",") || [])
-            .map((type) => type.trim())
-            .filter(Boolean)
-        )
+    const technologies =
+      readAuditStringArray(
+        latestSnapshot.technologies
       );
 
-      const reasoningSignals = Array.from(
-        new Set(
-          architectureChanges
-            .flatMap((change) => change.reasoningSignals?.split(" | ") || [])
-            .map((signal) => signal.trim())
-            .filter(Boolean)
-        )
+    /**
+     * reasoningSignals lives inside the full intelligence JSON payload.
+     *
+     * Unlike ArchitectureChange.reasoningSignals, this value is already a
+     * structured string[] produced by the detector pipeline.
+     */
+    const reasoningSignals =
+      readAuditReasoningSignals(
+        latestSnapshot.intelligence
       );
 
-      const audit = auditRepositoryIntelligence({
+    const audit =
+      auditRepositoryIntelligence({
         repositoryTypes,
         domains,
         technologies,
         reasoningSignals,
       });
 
-      return {
-        success: true,
-        message: "Repository intelligence audit fetched successfully",
-        data: {
-          repository,
-          audit,
-          signals: {
-            repositoryTypes,
-            domains,
-            technologies,
-            reasoningSignals,
-          },
+    return {
+      success: true,
+      message:
+        "Repository intelligence audit fetched successfully",
+
+      data: {
+        repository: {
+          id: repository.id,
+          name: repository.name,
+          fullName: repository.fullName,
         },
-      };
-    }
-  );
+
+        audit,
+
+        signals: {
+          repositoryTypes,
+          domains,
+          technologies,
+          reasoningSignals,
+        },
+      },
+    };
+  }
+);
 
 
   // comprehensive intelligence report

@@ -7,6 +7,9 @@ import {
   getImpactLevel,
 } from "../dependency-intelligence-scoring";
 
+//Command to run this test file:
+// npx tsx --test apps/api/src/services/__tests__/dependency-intelligence-scoring.test.ts
+
 /**
  * Dependency Intelligence scoring regression tests.
  *
