@@ -1,6 +1,7 @@
 "use client";
 
 import type { LucideIcon } from "lucide-react";
+
 import {
   Boxes,
   CircleDot,
@@ -12,7 +13,9 @@ import {
   Workflow,
 } from "lucide-react";
 
-import type { KnowledgeGraphSummary as KnowledgeGraphSummaryData } from "@/types/knowledge-graph.types";
+import type {
+  KnowledgeGraphSummary as KnowledgeGraphSummaryData,
+} from "@/types/knowledge-graph.types";
 
 interface SummaryItem {
   label: string;
@@ -27,8 +30,16 @@ interface KnowledgeGraphSummaryProps {
   showSimilarity?: boolean;
 }
 
+/**
+ * Keeps the summary cards defensive.
+ *
+ * The backend should always return numeric totals, but if a field is
+ * temporarily missing during development, the UI should still render
+ * safely instead of crashing.
+ */
 function safeNumber(value?: number | null) {
-  return typeof value === "number" && Number.isFinite(value)
+  return typeof value === "number" &&
+    Number.isFinite(value)
     ? value
     : 0;
 }
@@ -43,8 +54,11 @@ export function KnowledgeGraphSummary({
       ? [
           {
             label: "Repositories",
-            value: safeNumber(summary?.repositories),
-            description: "Repository nodes represented in this graph.",
+            value: safeNumber(
+              summary?.totalRepositories,
+            ),
+            description:
+              "Repository nodes represented in this graph.",
             icon: Boxes,
           },
         ]
@@ -52,43 +66,61 @@ export function KnowledgeGraphSummary({
 
     {
       label: "Graph Nodes",
-      value: safeNumber(summary?.totalNodes),
-      description: "All engineering entities represented in the graph.",
+      value: safeNumber(
+        summary?.totalNodes,
+      ),
+      description:
+        "All engineering entities represented in the graph.",
       icon: CircleDot,
     },
 
     {
       label: "Relationships",
-      value: safeNumber(summary?.totalEdges),
-      description: "Connections detected between graph entities.",
+      value: safeNumber(
+        summary?.totalEdges,
+      ),
+      description:
+        "Connections detected between graph entities.",
       icon: Share2,
     },
 
     {
       label: "Technologies",
-      value: safeNumber(summary?.technologies),
-      description: "Technology nodes detected across the graph.",
+      value: safeNumber(
+        summary?.totalTechnologies,
+      ),
+      description:
+        "Technology nodes detected across the graph.",
       icon: Workflow,
     },
 
     {
       label: "Architecture Domains",
-      value: safeNumber(summary?.architectureDomains),
-      description: "Architecture domains represented in the graph.",
+      value: safeNumber(
+        summary?.totalArchitectureDomains,
+      ),
+      description:
+        "Architecture domains represented in the graph.",
       icon: Layers3,
     },
 
     {
       label: "Repository Types",
-      value: safeNumber(summary?.repositoryTypes),
-      description: "Repository classifications represented in the graph.",
+      value: safeNumber(
+        summary?.totalRepositoryTypes,
+      ),
+      description:
+        "Repository classifications represented in the graph.",
       icon: Network,
     },
 
     {
       label: "Capabilities",
-      value: safeNumber(summary?.capabilities),
-      description: "Engineering capabilities connected to repositories.",
+      value: safeNumber(
+        summary?.totalCapabilities,
+      ),
+      description:
+        "Engineering capabilities connected to repositories.",
       icon: Puzzle,
     },
 
@@ -97,7 +129,7 @@ export function KnowledgeGraphSummary({
           {
             label: "Similarity Relationships",
             value: safeNumber(
-              summary?.repositorySimilarityRelationships
+              summary?.similarityRelationships,
             ),
             description:
               "Repository-to-repository similarity connections.",

@@ -43,15 +43,16 @@ export interface KnowledgeGraphEdge {
 }
 
 export interface KnowledgeGraphSummary {
+  totalRepositories: number;
   totalNodes: number;
   totalEdges: number;
-  repositories?: number;
-  technologies: number;
-  architectureDomains: number;
-  repositoryTypes: number;
-  capabilities: number;
+  totalTechnologies: number;
+  totalArchitectureDomains: number;
+  totalRepositoryTypes: number;
+  totalCapabilities: number;
+  similarityRelationships: number;
+
   sharedTechnologies?: number;
-  repositorySimilarityRelationships?: number;
 }
 
 export interface KnowledgeGraphRepositoryDetails {
