@@ -17,6 +17,15 @@ interface KnowledgeGraphFiltersProps {
   ) => void;
 }
 
+interface FilterOption {
+  value: string;
+  label: string;
+}
+
+/**
+ * Most knowledge graph filters use the same value for both filtering
+ * and display, so we can keep those as simple strings.
+ */
 function getUniqueValues(
   nodes: KnowledgeGraphNode[],
   type: string
@@ -33,15 +42,53 @@ function getUniqueValues(
   );
 }
 
+/**
+ * Repository nodes are slightly different.
+ *
+ * Their value is the repository ID used internally by the graph,
+ * while their label contains the human-readable repository name.
+ *
+ * We keep both so the filter can use the stable repository ID
+ * without exposing UUIDs in the UI.
+ */
+function getRepositoryOptions(
+  nodes: KnowledgeGraphNode[]
+): FilterOption[] {
+  const repositories = nodes
+    .filter((node) => node.type === "REPOSITORY")
+    .map((node) => ({
+      value: node.value || node.id,
+      label: node.label || node.value || node.id,
+    }));
+
+  const uniqueRepositories = new Map<
+    string,
+    FilterOption
+  >();
+
+  repositories.forEach((repository) => {
+    if (!uniqueRepositories.has(repository.value)) {
+      uniqueRepositories.set(
+        repository.value,
+        repository
+      );
+    }
+  });
+
+  return Array.from(
+    uniqueRepositories.values()
+  ).sort((first, second) =>
+    first.label.localeCompare(second.label)
+  );
+}
+
 export function KnowledgeGraphFilters({
   nodes,
   filters,
   onChange,
 }: KnowledgeGraphFiltersProps) {
-  const repositories = getUniqueValues(
-    nodes,
-    "REPOSITORY"
-  );
+  const repositories =
+    getRepositoryOptions(nodes);
 
   const technologies = getUniqueValues(
     nodes,
@@ -93,8 +140,8 @@ export function KnowledgeGraphFilters({
   }
 
   return (
-    <div className="rounded-xl border border-border bg-card p-4">
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+    <div className="rounded-xl border border-border bg-card p-5">
+      <div className="grid gap-4 lg:grid-cols-2">
         <FilterSelect
           label="Repository"
           value={filters.repository}
@@ -107,7 +154,10 @@ export function KnowledgeGraphFilters({
         <FilterSelect
           label="Technology"
           value={filters.technology}
-          options={technologies}
+          options={technologies.map((item) => ({
+            value: item,
+            label: item,
+          }))}
           onChange={(value) =>
             updateFilter("technology", value)
           }
@@ -116,7 +166,12 @@ export function KnowledgeGraphFilters({
         <FilterSelect
           label="Architecture Domain"
           value={filters.architectureDomain}
-          options={architectureDomains}
+          options={architectureDomains.map(
+            (item) => ({
+              value: item,
+              label: item,
+            })
+          )}
           onChange={(value) =>
             updateFilter(
               "architectureDomain",
@@ -128,7 +183,10 @@ export function KnowledgeGraphFilters({
         <FilterSelect
           label="Capability"
           value={filters.capability}
-          options={capabilities}
+          options={capabilities.map((item) => ({
+            value: item,
+            label: item,
+          }))}
           onChange={(value) =>
             updateFilter("capability", value)
           }
@@ -137,7 +195,10 @@ export function KnowledgeGraphFilters({
         <FilterSelect
           label="Repository Type"
           value={filters.repositoryType}
-          options={repositoryTypes}
+          options={repositoryTypes.map((item) => ({
+            value: item,
+            label: item,
+          }))}
           onChange={(value) =>
             updateFilter("repositoryType", value)
           }
@@ -186,12 +247,12 @@ function FilterSelect({
 }: {
   label: string;
   value: string;
-  options: string[];
+  options: FilterOption[];
   onChange: (value: string) => void;
 }) {
   return (
     <label className="space-y-2">
-      <span className="text-xs font-medium text-muted-foreground">
+      <span className="text-sm text-muted-foreground">
         {label}
       </span>
 
@@ -208,10 +269,10 @@ function FilterSelect({
 
         {options.map((option) => (
           <option
-            key={option}
-            value={option}
+            key={option.value}
+            value={option.value}
           >
-            {option}
+            {option.label}
           </option>
         ))}
       </select>
