@@ -25,7 +25,7 @@ import { PortfolioNavigation } from "@/components/portfolio/PortfolioNavigation"
 
 import { DependencyEmptyState } from "@/components/dependencies/DependencyEmptyState";
 import { DependencyScoreCard } from "@/components/dependencies/DependencyScoreCard";
-import { RiskLevelBadge } from "@/components/dependencies/RiskLevelBadge";
+import { ImpactLevelBadge } from "@/components/dependencies/ImpactLevelBadge";
 import { TechnologyRelationshipCard } from "@/components/dependencies/TechnologyRelationshipCard";
 
 import { Badge } from "@/components/ui/badge";
@@ -38,7 +38,7 @@ import { getUserId } from "@/lib/auth";
 
 import type {
     DependencyOverviewSort,
-    DependencyRiskLevel,
+    DependencyImpactLevel,
     TechnologyDependencyNode,
 } from "@/types/dependency-intelligence.types";
 import { EngineeringDependencyGraph } from "@/components/dependencies/EngineeringDependencyGraph";
@@ -52,7 +52,7 @@ function getStatus(error: unknown) {
         : null;
 }
 
-function riskRank(value?: DependencyRiskLevel) {
+function impactRank(value?: DependencyImpactLevel) {
     if (value === "CRITICAL") return 4;
     if (value === "HIGH") return 3;
     if (value === "MEDIUM") return 2;
@@ -92,7 +92,7 @@ export default function DependencyIntelligencePage() {
         useState(1);
 
     const [search, setSearch] = useState("");
-    const [risk, setRisk] = useState("");
+    const [impact, setImpact] = useState("");
     const [minimumCentrality, setMinimumCentrality] = useState(0);
     const [minimumImpact, setMinimumImpact] = useState(0);
     const [trackedOnly, setTrackedOnly] = useState(false);
@@ -123,7 +123,7 @@ export default function DependencyIntelligencePage() {
             .filter((technology) => {
                 return (
                     technology.technology.toLowerCase().includes(query) &&
-                    (!risk || technology.riskLevel === risk) &&
+                    (!impact || technology.impactLevel === impact) &&
                     technology.centralityScore >= minimumCentrality &&
                     technology.impactScore >= minimumImpact &&
                     (!trackedOnly || technology.trackedRepositoryCount > 0)
@@ -145,10 +145,10 @@ export default function DependencyIntelligencePage() {
                     );
                 }
 
-                if (sort === "RISK") {
+                if (sort === "IMPACT_LEVEL") {
                     return (
-                        riskRank(second.riskLevel) -
-                        riskRank(first.riskLevel)
+                        impactRank(second.impactLevel) -
+                        impactRank(first.impactLevel)
                     );
                 }
 
@@ -162,7 +162,7 @@ export default function DependencyIntelligencePage() {
         data?.technologies,
         minimumCentrality,
         minimumImpact,
-        risk,
+        impact,
         search,
         sort,
         trackedOnly,
@@ -275,7 +275,7 @@ export default function DependencyIntelligencePage() {
         setTechnologyPage(1);
     }, [
         search,
-        risk,
+        impact,
         minimumCentrality,
         minimumImpact,
         trackedOnly,
@@ -420,14 +420,14 @@ export default function DependencyIntelligencePage() {
                             />
 
                             <DependencyScoreCard
-                                label="Critical Technologies"
-                                value={data.summary.criticalTechnologies}
+                                label="Critical Impact Technologies"
+                                value={data.summary.criticalImpactTechnologies}
                                 icon={AlertTriangle}
                             />
 
                             <DependencyScoreCard
-                                label="High-Risk Technologies"
-                                value={data.summary.highRiskTechnologies}
+                                label="High Impact Technologies"
+                                value={data.summary.highImpactTechnologies}
                                 icon={AlertTriangle}
                             />
                         </div>
@@ -470,11 +470,11 @@ export default function DependencyIntelligencePage() {
                                 </div>
 
                                 <select
-                                    value={risk}
-                                    onChange={(event) => setRisk(event.target.value)}
+                                    value={impact}
+                                    onChange={(event) => setImpact(event.target.value)}
                                     className="h-10 rounded-md border border-input bg-background px-3 text-sm"
                                 >
-                                    <option value="">All risk levels</option>
+                                    <option value="">All impact levels</option>
                                     <option value="LOW">Low</option>
                                     <option value="MEDIUM">Medium</option>
                                     <option value="HIGH">High</option>
@@ -500,7 +500,7 @@ export default function DependencyIntelligencePage() {
                                     <option value="CONNECTIONS">
                                         Most Connections
                                     </option>
-                                    <option value="RISK">Risk Level</option>
+                                    <option value="IMPACT">Impact Level</option>
                                     <option value="ALPHABETICAL">
                                         Alphabetical
                                     </option>
@@ -761,7 +761,7 @@ function TechnologyDependencyCard({
                     {technology.technology}
                 </h2>
 
-                <RiskLevelBadge riskLevel={technology.riskLevel} />
+                <ImpactLevelBadge impactLevel={technology.impactLevel} />
             </div>
 
             <div className="mt-5 grid grid-cols-2 gap-3">

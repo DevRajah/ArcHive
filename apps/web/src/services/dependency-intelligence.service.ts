@@ -1,16 +1,24 @@
 import { api } from "@/lib/api";
 
-import type { ApiResponse } from "@/types/api.types";
+import type {
+  ApiResponse,
+} from "@/types/api.types";
+
 import type {
   DependencyOverview,
   RelatedDependencyTechnology,
   TechnologyDependencyDetail,
+  TechnologyDependencyNode,
   TechnologyImpactReport,
   TechnologyRelationship,
 } from "@/types/dependency-intelligence.types";
 
-function safeArray<T>(value?: T[] | null): T[] {
-  return Array.isArray(value) ? value : [];
+function safeArray<T>(
+  value?: T[] | null
+): T[] {
+  return Array.isArray(value)
+    ? value
+    : [];
 }
 
 function normalizeRelationship(
@@ -28,18 +36,74 @@ function normalizeRelationship(
     targetRepositoryCoverage:
       relationship.targetRepositoryCoverage ?? 0,
 
-    strength: relationship.strength ?? 0,
+    strength:
+      relationship.strength ?? 0,
 
-    sharedRepositoryIds: safeArray(
-      relationship.sharedRepositoryIds
-    ),
+    sharedRepositoryIds:
+      safeArray(
+        relationship.sharedRepositoryIds
+      ),
 
-    sharedRepositoryNames: safeArray(
-      relationship.sharedRepositoryNames
-    ),
+    sharedRepositoryNames:
+      safeArray(
+        relationship.sharedRepositoryNames
+      ),
 
     evidenceSummary:
       relationship.evidenceSummary ?? null,
+  };
+}
+
+/*
+ * Keeps all technology-node normalization in one place.
+ *
+ * The backend now models dependency intelligence as undirected
+ * technology connectivity / co-occurrence, so the canonical field is
+ * connectedTechnologies rather than directional dependency arrays.
+ */
+function normalizeTechnologyNode(
+  technology: TechnologyDependencyNode
+): TechnologyDependencyNode {
+  return {
+    ...technology,
+
+    repositoryCount:
+      technology.repositoryCount ?? 0,
+
+    trackedRepositoryCount:
+      technology.trackedRepositoryCount ?? 0,
+
+    connectedTechnologyCount:
+      technology.connectedTechnologyCount ?? 0,
+
+    connectedTechnologies:
+      safeArray(
+        technology.connectedTechnologies
+      ),
+
+    architectureDomains:
+      safeArray(
+        technology.architectureDomains
+      ),
+
+    repositoryTypes:
+      safeArray(
+        technology.repositoryTypes
+      ),
+
+    capabilities:
+      safeArray(
+        technology.capabilities
+      ),
+
+    centralityScore:
+      technology.centralityScore ?? 0,
+
+    impactScore:
+      technology.impactScore ?? 0,
+
+    impactLevel:
+      technology.impactLevel || "LOW",
   };
 }
 
@@ -52,11 +116,13 @@ function normalizeRelatedTechnology(
     sharedRepositories:
       technology.sharedRepositories ?? 0,
 
-    strength: technology.strength ?? 0,
+    strength:
+      technology.strength ?? 0,
 
-    sharedRepositoryNames: safeArray(
-      technology.sharedRepositoryNames
-    ),
+    sharedRepositoryNames:
+      safeArray(
+        technology.sharedRepositoryNames
+      ),
   };
 }
 
@@ -80,10 +146,18 @@ function normalizeOverview(
         data.summary?.totalRelationships ?? 0,
 
       mostCentralTechnology:
-        data.summary?.mostCentralTechnology ?? null,
+        data.summary?.mostCentralTechnology
+          ? normalizeTechnologyNode(
+              data.summary.mostCentralTechnology
+            )
+          : null,
 
       highestImpactTechnology:
-        data.summary?.highestImpactTechnology ?? null,
+        data.summary?.highestImpactTechnology
+          ? normalizeTechnologyNode(
+              data.summary.highestImpactTechnology
+            )
+          : null,
 
       strongestRelationship:
         data.summary?.strongestRelationship
@@ -92,60 +166,28 @@ function normalizeOverview(
             )
           : null,
 
-      criticalTechnologies:
-        data.summary?.criticalTechnologies ?? 0,
+      criticalImpactTechnologies:
+        data.summary
+          ?.criticalImpactTechnologies ?? 0,
 
-      highRiskTechnologies:
-        data.summary?.highRiskTechnologies ?? 0,
+      highImpactTechnologies:
+        data.summary
+          ?.highImpactTechnologies ?? 0,
     },
 
-    technologies: safeArray(data.technologies).map(
-      (technology) => ({
-        ...technology,
+    technologies:
+      safeArray(
+        data.technologies
+      ).map(
+        normalizeTechnologyNode
+      ),
 
-        repositoryCount:
-          technology.repositoryCount ?? 0,
-
-        trackedRepositoryCount:
-          technology.trackedRepositoryCount ?? 0,
-
-        connectedTechnologyCount:
-          technology.connectedTechnologyCount ?? 0,
-
-        dependentTechnologies: safeArray(
-          technology.dependentTechnologies
-        ),
-
-        dependedOnBy: safeArray(
-          technology.dependedOnBy
-        ),
-
-        architectureDomains: safeArray(
-          technology.architectureDomains
-        ),
-
-        repositoryTypes: safeArray(
-          technology.repositoryTypes
-        ),
-
-        capabilities: safeArray(
-          technology.capabilities
-        ),
-
-        centralityScore:
-          technology.centralityScore ?? 0,
-
-        impactScore:
-          technology.impactScore ?? 0,
-
-        riskLevel:
-          technology.riskLevel || "LOW",
-      })
-    ),
-
-    relationships: safeArray(
-      data.relationships
-    ).map(normalizeRelationship),
+    relationships:
+      safeArray(
+        data.relationships
+      ).map(
+        normalizeRelationship
+      ),
   };
 }
 
@@ -155,50 +197,73 @@ function normalizeDetail(
   return {
     ...data,
 
-    repositories: safeArray(data.repositories).map(
-      (repository) => ({
+    /*
+     * Dependency Detail uses the same canonical technology-node
+     * representation as the portfolio overview.
+     */
+    technology:
+      normalizeTechnologyNode(
+        data.technology
+      ),
+
+    repositories:
+      safeArray(
+        data.repositories
+      ).map((repository) => ({
         ...repository,
 
         relationshipCount:
           repository.relationshipCount ?? 0,
 
-        technologies: safeArray(
-          repository.technologies
-        ),
+        technologies:
+          safeArray(
+            repository.technologies
+          ),
 
-        architectureDomains: safeArray(
-          repository.architectureDomains
-        ),
+        architectureDomains:
+          safeArray(
+            repository.architectureDomains
+          ),
 
-        repositoryTypes: safeArray(
-          repository.repositoryTypes
-        ),
+        repositoryTypes:
+          safeArray(
+            repository.repositoryTypes
+          ),
 
-        capabilities: safeArray(
-          repository.capabilities
-        ),
-      })
-    ),
+        capabilities:
+          safeArray(
+            repository.capabilities
+          ),
+      })),
 
-    relationships: safeArray(
-      data.relationships
-    ).map(normalizeRelationship),
+    relationships:
+      safeArray(
+        data.relationships
+      ).map(
+        normalizeRelationship
+      ),
 
-    relatedTechnologies: safeArray(
-      data.relatedTechnologies
-    ).map(normalizeRelatedTechnology),
+    relatedTechnologies:
+      safeArray(
+        data.relatedTechnologies
+      ).map(
+        normalizeRelatedTechnology
+      ),
 
-    architectureDomains: safeArray(
-      data.architectureDomains
-    ),
+    architectureDomains:
+      safeArray(
+        data.architectureDomains
+      ),
 
-    repositoryTypes: safeArray(
-      data.repositoryTypes
-    ),
+    repositoryTypes:
+      safeArray(
+        data.repositoryTypes
+      ),
 
-    capabilities: safeArray(
-      data.capabilities
-    ),
+    capabilities:
+      safeArray(
+        data.capabilities
+      ),
   };
 }
 
@@ -208,48 +273,63 @@ function normalizeImpact(
   return {
     ...data,
 
-    affectedRepositories: safeArray(
-      data.affectedRepositories
-    ).map((repository) => ({
-      ...repository,
+    affectedRepositories:
+      safeArray(
+        data.affectedRepositories
+      ).map((repository) => ({
+        ...repository,
 
-      impactContributionScore:
-        repository.impactContributionScore ?? 0,
+        impactContributionScore:
+          repository
+            .impactContributionScore ?? 0,
 
-      relatedTechnologies: safeArray(
-        repository.relatedTechnologies
+        relatedTechnologies:
+          safeArray(
+            repository.relatedTechnologies
+          ),
+
+        architectureDomains:
+          safeArray(
+            repository.architectureDomains
+          ),
+
+        repositoryTypes:
+          safeArray(
+            repository.repositoryTypes
+          ),
+
+        capabilities:
+          safeArray(
+            repository.capabilities
+          ),
+      })),
+
+    relatedTechnologies:
+      safeArray(
+        data.relatedTechnologies
+      ).map(
+        normalizeRelatedTechnology
       ),
 
-      architectureDomains: safeArray(
-        repository.architectureDomains
+    architectureDomains:
+      safeArray(
+        data.architectureDomains
       ),
 
-      repositoryTypes: safeArray(
-        repository.repositoryTypes
+    repositoryTypes:
+      safeArray(
+        data.repositoryTypes
       ),
 
-      capabilities: safeArray(
-        repository.capabilities
+    capabilities:
+      safeArray(
+        data.capabilities
       ),
-    })),
 
-    relatedTechnologies: safeArray(
-      data.relatedTechnologies
-    ).map(normalizeRelatedTechnology),
-
-    architectureDomains: safeArray(
-      data.architectureDomains
-    ),
-
-    repositoryTypes: safeArray(
-      data.repositoryTypes
-    ),
-
-    capabilities: safeArray(
-      data.capabilities
-    ),
-
-    warnings: safeArray(data.warnings),
+    warnings:
+      safeArray(
+        data.warnings
+      ),
 
     explanation: {
       headline:
@@ -269,9 +349,13 @@ export const dependencyIntelligenceService = {
   ): Promise<DependencyOverview> {
     const response = await api.get<
       ApiResponse<DependencyOverview>
-    >(`/users/${userId}/dependencies`);
+    >(
+      `/users/${userId}/dependencies`
+    );
 
-    return normalizeOverview(response.data.data);
+    return normalizeOverview(
+      response.data.data
+    );
   },
 
   async getTechnologyDependencyDetail(
@@ -286,7 +370,9 @@ export const dependencyIntelligenceService = {
       )}`
     );
 
-    return normalizeDetail(response.data.data);
+    return normalizeDetail(
+      response.data.data
+    );
   },
 
   async getTechnologyImpact(
@@ -301,6 +387,8 @@ export const dependencyIntelligenceService = {
       )}`
     );
 
-    return normalizeImpact(response.data.data);
+    return normalizeImpact(
+      response.data.data
+    );
   },
 };

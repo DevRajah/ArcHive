@@ -1,16 +1,22 @@
-import { AlertTriangle, CircleAlert, ShieldCheck } from "lucide-react";
+import {
+  AlertTriangle,
+  CircleAlert,
+  ShieldCheck,
+} from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
-import type { DependencyRiskLevel } from "@/types/dependency-intelligence.types";
+import type {
+  DependencyImpactLevel,
+} from "@/types/dependency-intelligence.types";
 
-export function RiskLevelBadge({
-  riskLevel,
+export function ImpactLevelBadge({
+  impactLevel,
 }: {
-  riskLevel?: DependencyRiskLevel | null;
+  impactLevel?: DependencyImpactLevel | null;
 }) {
-  const value = riskLevel || "LOW";
+  const value = impactLevel || "LOW";
 
   const configuration =
     value === "CRITICAL"
@@ -42,7 +48,10 @@ export function RiskLevelBadge({
   return (
     <Badge
       variant="outline"
-      className={cn("gap-1.5", configuration.className)}
+      className={cn(
+        "gap-1.5",
+        configuration.className
+      )}
     >
       <Icon className="h-3.5 w-3.5" />
       {value}

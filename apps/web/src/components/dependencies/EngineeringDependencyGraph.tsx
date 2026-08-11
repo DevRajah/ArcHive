@@ -19,7 +19,7 @@ import {
   ZoomOut,
 } from "lucide-react";
 
-import { RiskLevelBadge } from "@/components/dependencies/RiskLevelBadge";
+import { ImpactLevelBadge } from "@/components/dependencies/ImpactLevelBadge";
 import { RelationshipStrength } from "@/components/dependencies/RelationshipStrength";
 
 import { Badge } from "@/components/ui/badge";
@@ -114,8 +114,8 @@ function getNodeRadius(
   );
 }
 
-function getNodeFill(riskLevel: string) {
-  switch (riskLevel) {
+function getNodeFill(impactLevel: string) {
+  switch (impactLevel) {
     case "CRITICAL":
       return "#fee2e2";
 
@@ -130,8 +130,8 @@ function getNodeFill(riskLevel: string) {
   }
 }
 
-function getNodeStroke(riskLevel: string) {
-  switch (riskLevel) {
+function getNodeStroke(impactLevel: string) {
+  switch (impactLevel) {
     case "CRITICAL":
       return "#dc2626";
 
@@ -432,7 +432,7 @@ export function EngineeringDependencyGraph({
       );
 
       context.fillStyle =
-        getNodeFill(node.riskLevel);
+        getNodeFill(node.impactLevel);
 
       context.fill();
 
@@ -443,7 +443,7 @@ export function EngineeringDependencyGraph({
           : 1.2;
 
       context.strokeStyle =
-        getNodeStroke(node.riskLevel);
+        getNodeStroke(node.impactLevel);
 
       context.stroke();
 
@@ -757,8 +757,8 @@ export function EngineeringDependencyGraph({
                 </h2>
               </div>
 
-              <RiskLevelBadge
-                riskLevel={selectedNode.riskLevel}
+              <ImpactLevelBadge
+                impactLevel={selectedNode.impactLevel}
               />
             </div>
 

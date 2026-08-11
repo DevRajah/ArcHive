@@ -1,4 +1,4 @@
-export type DependencyRiskLevel =
+export type DependencyImpactLevel =
   | "LOW"
   | "MEDIUM"
   | "HIGH"
@@ -13,52 +13,77 @@ export interface DependencyUser {
 export interface TechnologyRelationship {
   source: string;
   target: string;
+
   sharedRepositories: number;
+
   sourceRepositoryCoverage: number;
   targetRepositoryCoverage: number;
+
   strength: number;
+
   sharedRepositoryIds: string[];
   sharedRepositoryNames: string[];
+
   relationshipType: string;
+
   evidenceSummary: string | null;
 }
 
 export interface TechnologyDependencyNode {
   technology: string;
+
   repositoryCount: number;
   trackedRepositoryCount: number;
+
   connectedTechnologyCount: number;
 
-  dependentTechnologies: string[];
-  dependedOnBy: string[];
+  /*
+   * Dependency Intelligence currently models technology affinity through
+   * co-occurrence across repositories.
+   *
+   * We therefore keep this relationship neutral instead of pretending
+   * that ArcHive has proven runtime dependency direction.
+   */
+  connectedTechnologies: string[];
 
   architectureDomains: string[];
   repositoryTypes: string[];
   capabilities: string[];
 
   centralityScore: number;
+
+  /*
+   * Impact represents potential portfolio blast radius / importance,
+   * not evidence that the technology itself is inherently risky.
+   */
   impactScore: number;
-  riskLevel: DependencyRiskLevel;
+  impactLevel: DependencyImpactLevel;
 }
 
 export interface DependencyOverviewSummary {
   totalRepositories: number;
   trackedRepositories: number;
+
   totalTechnologies: number;
   totalRelationships: number;
 
   mostCentralTechnology: TechnologyDependencyNode | null;
+
   highestImpactTechnology: TechnologyDependencyNode | null;
+
   strongestRelationship: TechnologyRelationship | null;
 
-  criticalTechnologies: number;
-  highRiskTechnologies: number;
+  criticalImpactTechnologies: number;
+  highImpactTechnologies: number;
 }
 
 export interface DependencyOverview {
   user: DependencyUser;
+
   summary: DependencyOverviewSummary;
+
   technologies: TechnologyDependencyNode[];
+
   relationships: TechnologyRelationship[];
 }
 
@@ -69,62 +94,93 @@ export interface NamedDependencyCount {
 
 export interface TechnologyDependencyRepository {
   id: string;
+
   name: string;
   fullName: string | null;
+
   language: string | null;
+
   isTracked: boolean;
 
   relationshipCount: number;
+
   lastUpdatedAt: string | null;
   updatedAt?: string | null;
 
   technologies: string[];
+
   architectureDomains: string[];
+
   repositoryTypes: string[];
+
   capabilities: string[];
 }
 
 export interface RelatedDependencyTechnology {
   technology: string;
+
   sharedRepositories: number;
+
   strength: number;
+
   sharedRepositoryNames: string[];
 }
 
 export interface TechnologyDependencyDetail {
   user: DependencyUser;
+
   technology: TechnologyDependencyNode;
+
   repositories: TechnologyDependencyRepository[];
+
   relationships: TechnologyRelationship[];
+
   relatedTechnologies: RelatedDependencyTechnology[];
+
   architectureDomains: NamedDependencyCount[];
+
   repositoryTypes: NamedDependencyCount[];
+
   capabilities: NamedDependencyCount[];
 }
 
+
 export interface TechnologyImpactSummary {
   affectedRepositoryCount: number;
+
   trackedRepositoryCount: number;
+
   relatedTechnologyCount: number;
+
   architectureDomainCount: number;
+
   repositoryTypeCount: number;
+
   capabilityCount: number;
+
   impactScore: number;
-  riskLevel: DependencyRiskLevel;
+
+  impactLevel: DependencyImpactLevel;
 }
 
 export interface AffectedRepository {
   id: string;
+
   name: string;
   fullName: string | null;
+
   language: string | null;
+
   isTracked: boolean;
 
   impactContributionScore: number;
 
   relatedTechnologies: string[];
+
   architectureDomains: string[];
+
   repositoryTypes: string[];
+
   capabilities: string[];
 }
 
@@ -135,21 +191,27 @@ export interface TechnologyImpactExplanation {
 
 export interface TechnologyImpactReport {
   user: DependencyUser;
+
   technology: string;
+
   summary: TechnologyImpactSummary;
 
   affectedRepositories: AffectedRepository[];
+
   relatedTechnologies: RelatedDependencyTechnology[];
 
   /*
-   * The real Impact API returns these as unique string collections,
+   * The Impact API returns these as unique string collections,
    * unlike the dependency detail endpoint, which returns ranked counts.
    */
   architectureDomains: string[];
+
   repositoryTypes: string[];
+
   capabilities: string[];
 
   warnings: string[];
+
   explanation: TechnologyImpactExplanation;
 }
 
@@ -158,5 +220,5 @@ export type DependencyOverviewSort =
   | "IMPACT"
   | "REPOSITORIES"
   | "CONNECTIONS"
-  | "RISK"
+  | "IMPACT_LEVEL"
   | "ALPHABETICAL";

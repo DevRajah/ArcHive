@@ -26,8 +26,7 @@ import { PortfolioNavigation } from "@/components/portfolio/PortfolioNavigation"
 import { DependencyEmptyState } from "@/components/dependencies/DependencyEmptyState";
 import { DependencyScoreCard } from "@/components/dependencies/DependencyScoreCard";
 import { RelationshipStrength } from "@/components/dependencies/RelationshipStrength";
-import { RiskLevelBadge } from "@/components/dependencies/RiskLevelBadge";
-
+import { ImpactLevelBadge } from "@/components/dependencies/ImpactLevelBadge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -156,8 +155,8 @@ export default function TechnologyImpactPage() {
                                             {data.technology} Impact Report
                                         </h1>
 
-                                        <RiskLevelBadge
-                                            riskLevel={data.summary.riskLevel}
+                                        <ImpactLevelBadge
+                                            impactLevel={data.summary.impactLevel}
                                         />
 
                                         <Badge variant="secondary">
@@ -241,8 +240,8 @@ export default function TechnologyImpactPage() {
                             />
 
                             <DependencyScoreCard
-                                label="Risk Level"
-                                value={data.summary.riskLevel}
+                                label="Impact Level"
+                                value={data.summary.impactLevel}
                                 icon={AlertTriangle}
                             />
                         </div>
