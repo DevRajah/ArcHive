@@ -10,6 +10,12 @@ import type {
   TechnologyRelationship,
 } from "../types/dependency-intelligence.types";
 
+import {
+  calculateCentralityScore,
+  calculateImpactScore,
+  calculateRepositoryImpactContribution,
+  getImpactLevel,
+} from "./dependency-intelligence-scoring";
 type RepositoryDependencySource = {
   id: string;
   name: string;
@@ -247,136 +253,218 @@ const toCountArray = (
     });
 };
 
-const clampScore = (score: number) => {
-  return Math.max(0, Math.min(100, Math.round(score)));
-};
+// const clampScore = (score: number) => {
+//   return Math.max(0, Math.min(100, Math.round(score)));
+// };
 
-/**
- * Convert the numeric portfolio impact score into a presentation tier.
- *
- * Future me:
- * This is deliberately called IMPACT, not RISK.
- *
- * The score is derived from repository reach, technology connectivity,
- * architecture breadth, and capability breadth. Those factors measure the
- * potential change radius of a technology, not whether the technology is
- * insecure, vulnerable, unstable, or operationally dangerous.
- */
-const getImpactLevel = (
-  score: number
-): DependencyImpactLevel => {
-  if (score >= 71) {
-    return "CRITICAL";
-  }
+// /**
+//  * Convert the numeric portfolio impact score into a presentation tier.
+//  *
+//  * Future me:
+//  * This is deliberately called IMPACT, not RISK.
+//  *
+//  * The score is derived from repository reach, technology connectivity,
+//  * architecture breadth, and capability breadth. Those factors measure the
+//  * potential change radius of a technology, not whether the technology is
+//  * insecure, vulnerable, unstable, or operationally dangerous.
+//  */
+// export const getImpactLevel = (
+//     score: number
+// ): DependencyImpactLevel => {
+//   if (score >= 71) {
+//     return "CRITICAL";
+//   }
 
-  if (score >= 46) {
-    return "HIGH";
-  }
+//   if (score >= 46) {
+//     return "HIGH";
+//   }
 
-  if (score >= 21) {
-    return "MEDIUM";
-  }
+//   if (score >= 21) {
+//     return "MEDIUM";
+//   }
 
-  return "LOW";
-};
+//   return "LOW";
+// };
 
-const calculateCentralityScore = ({
-  repositoryCount,
-  totalRepositories,
-  connectedTechnologyCount,
-  totalTechnologies,
-  architectureDomainCount,
-  capabilityCount,
-}: {
-  repositoryCount: number;
-  totalRepositories: number;
-  connectedTechnologyCount: number;
-  totalTechnologies: number;
-  architectureDomainCount: number;
-  capabilityCount: number;
-}) => {
-  /*
-   * Centrality measures how deeply embedded a technology is across the
-   * engineering portfolio. Repository coverage carries the highest weight,
-   * followed by technology connectivity and architectural diversity.
-   */
-  const repositoryCoverage =
-    totalRepositories > 0
-      ? repositoryCount / totalRepositories
-      : 0;
+// /**
+//  * Returns the lower bound of a Wilson score interval for repository coverage.
+//  *
+//  * Future me:
+//  * Raw coverage can overstate certainty in tiny portfolios.
+//  *
+//  * 3/3 and 100/100 are both 100% observed coverage, but the second result is
+//  * supported by much more evidence.
+//  *
+//  * This helper does not change the observed coverage itself. It gives ArcHive
+//  * a deterministic way to moderate confidence when the sample size is small.
+//  */
+// const calculateWilsonLowerBound = (
+//   successes: number,
+//   total: number,
+//   z = 1.96
+// ) => {
+//   if (total <= 0 || successes <= 0) {
+//     return 0;
+//   }
 
-  const connectionCoverage =
-    totalTechnologies > 1
-      ? connectedTechnologyCount /
-      (totalTechnologies - 1)
-      : 0;
+//   const boundedSuccesses =
+//     Math.min(successes, total);
 
-  const architectureDepth = Math.min(
-    architectureDomainCount / 8,
-    1
-  );
+//   const proportion =
+//     boundedSuccesses / total;
 
-  const capabilityDepth = Math.min(
-    capabilityCount / 10,
-    1
-  );
+//   const zSquared = z * z;
 
-  return clampScore(
-    repositoryCoverage * 45 +
-    connectionCoverage * 30 +
-    architectureDepth * 15 +
-    capabilityDepth * 10
-  );
-};
+//   const denominator =
+//     1 + zSquared / total;
 
-const calculateImpactScore = ({
-  repositoryCount,
-  totalRepositories,
-  connectedTechnologyCount,
-  totalTechnologies,
-  architectureDomainCount,
-  capabilityCount,
-}: {
-  repositoryCount: number;
-  totalRepositories: number;
-  connectedTechnologyCount: number;
-  totalTechnologies: number;
-  architectureDomainCount: number;
-  capabilityCount: number;
-}) => {
-  /*
-   * Impact gives more weight to repository reach and connected technologies.
-   * A technology used broadly across repositories and architecture domains
-   * has a larger potential change radius than an isolated dependency.
-   */
-  const repositoryReach =
-    totalRepositories > 0
-      ? repositoryCount / totalRepositories
-      : 0;
+//   const centre =
+//     proportion +
+//     zSquared / (2 * total);
 
-  const ecosystemReach =
-    totalTechnologies > 1
-      ? connectedTechnologyCount /
-      (totalTechnologies - 1)
-      : 0;
+//   const margin =
+//     z *
+//     Math.sqrt(
+//       (proportion * (1 - proportion)) /
+//       total +
+//       zSquared /
+//       (4 * total * total)
+//     );
 
-  const domainReach = Math.min(
-    architectureDomainCount / 8,
-    1
-  );
+//   return Math.max(
+//     0,
+//     (centre - margin) / denominator
+//   );
+// };
 
-  const capabilityReach = Math.min(
-    capabilityCount / 10,
-    1
-  );
+// /**
+//  * Preserve observed portfolio coverage as the dominant signal while adding
+//  * a confidence-aware adjustment for small samples.
+//  *
+//  * ArcHive is measuring actual portfolio exposure, not estimating a hidden
+//  * population, so raw coverage should still matter most.
+//  */
+// const calculateConfidenceAdjustedCoverage = (
+//   repositoryCount: number,
+//   totalRepositories: number
+// ) => {
+//   if (totalRepositories <= 0) {
+//     return 0;
+//   }
 
-  return clampScore(
-    repositoryReach * 50 +
-    ecosystemReach * 25 +
-    domainReach * 15 +
-    capabilityReach * 10
-  );
-};
+//   const observedCoverage =
+//     repositoryCount / totalRepositories;
+
+//   const confidenceCoverage =
+//     calculateWilsonLowerBound(
+//       repositoryCount,
+//       totalRepositories
+//     );
+
+//   return (
+//     observedCoverage * 0.7 +
+//     confidenceCoverage * 0.3
+//   );
+// };
+
+// export const calculateCentralityScore = ({  repositoryCount,
+//   totalRepositories,
+//   connectedTechnologyCount,
+//   totalTechnologies,
+//   architectureDomainCount,
+//   capabilityCount,
+// }: {
+//   repositoryCount: number;
+//   totalRepositories: number;
+//   connectedTechnologyCount: number;
+//   totalTechnologies: number;
+//   architectureDomainCount: number;
+//   capabilityCount: number;
+// }) => {
+//   /*
+//    * Centrality measures how deeply embedded a technology is across the
+//    * engineering portfolio. Repository coverage carries the highest weight,
+//    * followed by technology connectivity and architectural diversity.
+//    */
+//   const repositoryCoverage =
+//     calculateConfidenceAdjustedCoverage(
+//       repositoryCount,
+//       totalRepositories
+//     );
+
+//   const connectionCoverage =
+//     totalTechnologies > 1
+//       ? connectedTechnologyCount /
+//       (totalTechnologies - 1)
+//       : 0;
+
+//   const architectureDepth = Math.min(
+//     architectureDomainCount / 8,
+//     1
+//   );
+
+//   const capabilityDepth = Math.min(
+//     capabilityCount / 10,
+//     1
+//   );
+
+//   return clampScore(
+//     repositoryCoverage * 45 +
+//     connectionCoverage * 30 +
+//     architectureDepth * 15 +
+//     capabilityDepth * 10
+//   );
+// };
+
+// export const calculateImpactScore = ({
+//   repositoryCount,
+//   totalRepositories,
+//   connectedTechnologyCount,
+//   totalTechnologies,
+//   architectureDomainCount,
+//   capabilityCount,
+// }: {
+//   repositoryCount: number;
+//   totalRepositories: number;
+//   connectedTechnologyCount: number;
+//   totalTechnologies: number;
+//   architectureDomainCount: number;
+//   capabilityCount: number;
+// }) => {
+//   /*
+//    * Impact gives more weight to repository reach and connected technologies.
+//    * A technology used broadly across repositories and architecture domains
+//    * has a larger potential change radius than an isolated dependency.
+//    */
+//   const repositoryReach =
+//     calculateConfidenceAdjustedCoverage(
+//       repositoryCount,
+//       totalRepositories
+//     );
+
+//   const ecosystemReach =
+//     totalTechnologies > 1
+//       ? connectedTechnologyCount /
+//       (totalTechnologies - 1)
+//       : 0;
+
+//   const domainReach = Math.min(
+//     architectureDomainCount / 8,
+//     1
+//   );
+
+//   const capabilityReach = Math.min(
+//     capabilityCount / 10,
+//     1
+//   );
+
+//   return clampScore(
+//     repositoryReach * 50 +
+//     ecosystemReach * 25 +
+//     domainReach * 15 +
+//     capabilityReach * 10
+//   );
+// };
 
 const getRelationshipKey = (
   source: string,
@@ -1317,16 +1405,21 @@ export const dependencyIntelligenceService = {
            * capability density.
            */
           const impactContributionScore =
-            clampScore(
-              relatedTechnologies.length * 5 +
-              repository.signals
-                .architectureDomains.length *
-              12 +
-              repository.signals
-                .capabilities.length *
-              8 +
-              (repository.isTracked ? 10 : 0)
-            );
+            calculateRepositoryImpactContribution({
+              relatedTechnologyCount:
+                relatedTechnologies.length,
+
+              architectureDomainCount:
+                repository.signals
+                  .architectureDomains.length,
+
+              capabilityCount:
+                repository.signals
+                  .capabilities.length,
+
+              isTracked:
+                repository.isTracked,
+            });
 
           return {
             id: repository.id,
