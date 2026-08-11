@@ -218,6 +218,7 @@ export const detectTechnologyFingerprint = (
     repositoryHealth,
   } = buildHealthStage({
     engineeringQuality,
+    evidenceContext,
     state,
   });
 

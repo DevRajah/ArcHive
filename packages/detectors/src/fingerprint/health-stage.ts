@@ -30,6 +30,10 @@ import type {
   FingerprintState,
 } from "./shared";
 
+import type {
+  EvidenceContext,
+} from "../evidence";
+
 /**
  * Builds the repository's quality and health reports.
  *
@@ -39,9 +43,11 @@ import type {
  */
 export const buildHealthStage = ({
   engineeringQuality,
+  evidenceContext,
   state,
 }: {
   engineeringQuality: EngineeringQualityResult;
+  evidenceContext: EvidenceContext;
   state: FingerprintState;
 }) => {
   const {
@@ -52,9 +58,30 @@ export const buildHealthStage = ({
     reasoningSignals,
   } = state;
 
+  /**
+   * Production readiness is intentionally independent from Engineering
+   * Quality.
+   *
+   * Engineering Quality evaluates software-engineering practices.
+   * Production Readiness evaluates operational deployment evidence.
+   */
   const productionReadiness =
     buildProductionReadiness({
-      engineeringQuality,
+      evidenceContext,
+
+      technologies:
+        Array.from(technologies),
+
+      architectureDomains:
+        Array.from(architectureDomains),
+
+      engineeringSignals:
+        Array.from(engineeringSignals),
+
+      repositoryTypes:
+        Array.from(repositoryTypes),
+
+      reasoningSignals,
     });
 
   const repositoryMaturity =
@@ -85,11 +112,15 @@ export const buildHealthStage = ({
       reasoningSignals,
     });
 
+  /**
+   * Technical debt is intentionally derived from engineering-quality gaps.
+   *
+   * Production Readiness and Repository Maturity are separate intelligence
+   * dimensions and should not be converted back into technical-debt items.
+   */
   const technicalDebt =
     buildTechnicalDebtReport({
       engineeringQuality,
-      productionReadiness,
-      repositoryMaturity,
     });
 
   const strengthReport =

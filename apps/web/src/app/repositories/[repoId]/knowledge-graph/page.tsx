@@ -118,9 +118,9 @@ function normalizeRichNodes(
       (node): node is KnowledgeGraphNode =>
         Boolean(
           node &&
-            typeof node.id === "string" &&
-            typeof node.type === "string" &&
-            typeof node.label === "string"
+          typeof node.id === "string" &&
+          typeof node.type === "string" &&
+          typeof node.label === "string"
         )
     )
     .map((node) => ({
@@ -128,7 +128,7 @@ function normalizeRichNodes(
       value: node.value ?? node.label,
       metadata:
         node.metadata &&
-        typeof node.metadata === "object"
+          typeof node.metadata === "object"
           ? node.metadata
           : null,
     }));
@@ -146,15 +146,15 @@ function normalizeRichEdges(
       (edge): edge is KnowledgeGraphEdge =>
         Boolean(
           edge &&
-            typeof edge.source === "string" &&
-            typeof edge.target === "string"
+          typeof edge.source === "string" &&
+          typeof edge.target === "string"
         )
     )
     .map((edge, index) => {
       const type = inferRelationshipType(
         edge.type ||
-          edge.label ||
-          edge.relationship
+        edge.label ||
+        edge.relationship
       );
 
       return {
@@ -284,9 +284,9 @@ function normalizeLegacyGraph(
     if (
       normalized === repositoryId.toLowerCase() ||
       normalized ===
-        data.repository?.name?.toLowerCase() ||
+      data.repository?.name?.toLowerCase() ||
       normalized ===
-        data.repository?.fullName?.toLowerCase()
+      data.repository?.fullName?.toLowerCase()
     ) {
       return repositoryNode;
     }
@@ -416,38 +416,35 @@ function createSummary(
   edges: KnowledgeGraphEdge[]
 ): KnowledgeGraphSummaryData {
   return {
-    totalNodes: nodes.length,
-    totalEdges: edges.length,
-
-    repositories: nodes.filter(
+    totalRepositories: nodes.filter(
       (node) => node.type === "REPOSITORY"
     ).length,
 
-    technologies: nodes.filter(
+    totalNodes: nodes.length,
+
+    totalEdges: edges.length,
+
+    totalTechnologies: nodes.filter(
       (node) => node.type === "TECHNOLOGY"
     ).length,
 
-    architectureDomains: nodes.filter(
-      (node) =>
-        node.type === "ARCHITECTURE_DOMAIN"
+    totalArchitectureDomains: nodes.filter(
+      (node) => node.type === "ARCHITECTURE_DOMAIN"
     ).length,
 
-    repositoryTypes: nodes.filter(
-      (node) =>
-        node.type === "REPOSITORY_TYPE"
+    totalRepositoryTypes: nodes.filter(
+      (node) => node.type === "REPOSITORY_TYPE"
     ).length,
 
-    capabilities: nodes.filter(
+    totalCapabilities: nodes.filter(
       (node) => node.type === "CAPABILITY"
     ).length,
 
-    sharedTechnologies: 0,
-
-    repositorySimilarityRelationships:
-      edges.filter(
-        (edge) =>
-          edge.type === "REPOSITORY_SIMILARITY"
-      ).length,
+    similarityRelationships: edges.filter(
+      (edge) =>
+        edge.type === "REPOSITORY_SIMILARITY" ||
+        edge.type === "SIMILAR_TO"
+    ).length,
   };
 }
 
@@ -573,11 +570,10 @@ export default function RepositoryKnowledgeGraphPage() {
                 disabled={isFetching}
               >
                 <RefreshCcw
-                  className={`mr-2 h-4 w-4 ${
-                    isFetching
+                  className={`mr-2 h-4 w-4 ${isFetching
                       ? "animate-spin"
                       : ""
-                  }`}
+                    }`}
                 />
 
                 {isFetching
@@ -615,11 +611,10 @@ export default function RepositoryKnowledgeGraphPage() {
                 disabled={isFetching}
               >
                 <RefreshCcw
-                  className={`mr-2 h-4 w-4 ${
-                    isFetching
+                  className={`mr-2 h-4 w-4 ${isFetching
                       ? "animate-spin"
                       : ""
-                  }`}
+                    }`}
                 />
 
                 Retry
