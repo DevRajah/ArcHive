@@ -35,6 +35,10 @@ import {
   readAuditReasoningSignals,
   readAuditStringArray,
 } from "../services/intelligence-audit-signals.service";
+
+import {
+  extractCanonicalRepositorySignals,
+} from "../services/repository-similarity-signals.service";
 import { calculateInfrastructureDepth } from "../services/capability-infrastructure-depth.service";
 type CreateRepositoryBody = {
   name: string;
@@ -2598,30 +2602,62 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
   );
 
   // related repositories analysis
+  // related repositories analysis
   app.get<{ Params: { repositoryId: string } }>(
     "/:repositoryId/related",
     async (request, reply) => {
-      const { repositoryId } = request.params;
+      const { repositoryId } =
+        request.params;
 
-      const sourceRepository = await prisma.repository.findUnique({
-        where: {
-          id: repositoryId,
-          isTracked: true,
-        },
-        select: {
-          id: true,
-          name: true,
-          fullName: true,
-          userId: true,
-          architectureChanges: {
-            select: {
-              architectureDomain: true,
-              detectedTechnology: true,
-              repositoryTypes: true,
+      /**
+       * Related repositories compares CURRENT repository intelligence.
+       *
+       * Future me:
+       * Do not reconstruct similarity intelligence from ArchitectureChange.
+       *
+       * ArchitectureChange is historical event evidence. It may contain only
+       * the technology/domain involved in a particular change and therefore
+       * does not represent the complete current repository.
+       *
+       * RepositoryIntelligenceSnapshot is the canonical current-state source.
+       */
+      const sourceRepository =
+        await prisma.repository.findUnique({
+          where: {
+            id: repositoryId,
+            isTracked: true,
+          },
+
+          select: {
+            id: true,
+            name: true,
+            fullName: true,
+            userId: true,
+
+            intelligenceSnapshots: {
+              orderBy: [
+                {
+                  createdAt: "desc",
+                },
+                {
+                  id: "desc",
+                },
+              ],
+
+              take: 1,
+
+              select: {
+                id: true,
+                primaryRepositoryType: true,
+                repositoryTypes: true,
+                architectureDomains: true,
+                technologies: true,
+                capabilities: true,
+                createdAt: true,
+              },
             },
           },
-        },
-      });
+        });
 
       if (!sourceRepository) {
         return reply.status(404).send({
@@ -2630,118 +2666,344 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
         });
       }
 
-      const repositories = await prisma.repository.findMany({
-        where: {
-          userId: sourceRepository.userId,
-          isTracked: true,
-          id: {
-            not: repositoryId,
-          },
-        },
-        select: {
-          id: true,
-          name: true,
-          fullName: true,
-          architectureChanges: {
-            select: {
-              architectureDomain: true,
-              detectedTechnology: true,
-              repositoryTypes: true,
+      const sourceSnapshot =
+        sourceRepository
+          .intelligenceSnapshots[0];
+
+      if (!sourceSnapshot) {
+        return reply.status(404).send({
+          success: false,
+          message:
+            "Repository intelligence has not been generated yet. Reprocess the repository first.",
+        });
+      }
+
+      /**
+       * Compare only repositories belonging to the same user and only tracked
+       * repositories, preserving the existing endpoint behaviour.
+       *
+       * Each candidate also supplies its latest canonical intelligence
+       * snapshot.
+       */
+      const repositories =
+        await prisma.repository.findMany({
+          where: {
+            userId:
+              sourceRepository.userId,
+
+            isTracked: true,
+
+            id: {
+              not: repositoryId,
             },
           },
-        },
-      });
 
-      const extractRepositoryIntelligence = (
-        changes: {
-          architectureDomain: string | null;
-          detectedTechnology: string | null;
-          repositoryTypes: string | null;
-        }[]
-      ) => {
-        const domains = Array.from(
-          new Set(
-            changes
-              .map((change) => change.architectureDomain)
-              .filter((domain): domain is string => Boolean(domain))
-          )
-        );
+          select: {
+            id: true,
+            name: true,
+            fullName: true,
 
-        const technologies = Array.from(
-          new Set(
-            changes
-              .map((change) => change.detectedTechnology)
-              .filter((technology): technology is string => Boolean(technology))
-          )
-        );
+            intelligenceSnapshots: {
+              orderBy: [
+                {
+                  createdAt: "desc",
+                },
+                {
+                  id: "desc",
+                },
+              ],
 
-        const repositoryTypes = Array.from(
+              take: 1,
+
+              select: {
+                id: true,
+                primaryRepositoryType: true,
+                repositoryTypes: true,
+                architectureDomains: true,
+                technologies: true,
+                capabilities: true,
+                createdAt: true,
+              },
+            },
+          },
+        });
+
+      /**
+       * Prisma JSON fields arrive as JsonValue.
+       *
+       * Keep JSON parsing here defensive so malformed or older snapshots
+       * cannot crash repository discovery.
+       */
+      const readStringArray = (
+        value: unknown
+      ): string[] => {
+        if (!Array.isArray(value)) {
+          return [];
+        }
+
+        return Array.from(
           new Set(
-            changes
-              .flatMap((change) => change.repositoryTypes?.split(",") || [])
-              .map((type) => type.trim())
+            value
+              .filter(
+                (
+                  item
+                ): item is string =>
+                  typeof item ===
+                  "string"
+              )
+              .map((item) =>
+                item.trim()
+              )
               .filter(Boolean)
           )
         );
+      };
+
+      /**
+       * Capabilities are stored as structured CapabilityResult objects.
+       *
+       * Similarity needs only their canonical keys. Confidence and reasoning
+       * remain available in the snapshot but do not independently increase the
+       * score.
+       */
+      const readCapabilityKeys = (
+        value: unknown
+      ): string[] => {
+        if (!Array.isArray(value)) {
+          return [];
+        }
+
+        const keys = value
+          .map((capability) => {
+            if (
+              !capability ||
+              typeof capability !==
+              "object" ||
+              Array.isArray(capability)
+            ) {
+              return null;
+            }
+
+            const record =
+              capability as Record<
+                string,
+                unknown
+              >;
+
+            return typeof record.key ===
+              "string"
+              ? record.key.trim()
+              : null;
+          })
+          .filter(
+            (
+              key
+            ): key is string =>
+              Boolean(key)
+          );
+
+        return Array.from(
+          new Set(keys)
+        );
+      };
+
+      const extractSnapshotIntelligence = (
+        snapshot: {
+          primaryRepositoryType:
+          string | null;
+
+          repositoryTypes:
+          unknown;
+
+          architectureDomains:
+          unknown;
+
+          technologies:
+          unknown;
+
+          capabilities:
+          unknown;
+        }
+      ) => {
+        const repositoryTypes =
+          readStringArray(
+            snapshot.repositoryTypes
+          );
+
+        /**
+         * Some older snapshots may contain the primary type without it being
+         * duplicated inside repositoryTypes.
+         *
+         * Include it once so repository identity comparison remains complete.
+         */
+        if (
+          snapshot.primaryRepositoryType &&
+          !repositoryTypes.includes(
+            snapshot.primaryRepositoryType
+          )
+        ) {
+          repositoryTypes.unshift(
+            snapshot.primaryRepositoryType
+          );
+        }
 
         return {
-          domains,
-          technologies,
           repositoryTypes,
+
+          domains:
+            readStringArray(
+              snapshot.architectureDomains
+            ),
+
+          technologies:
+            readStringArray(
+              snapshot.technologies
+            ),
+
+          capabilities:
+            readCapabilityKeys(
+              snapshot.capabilities
+            ),
         };
       };
 
-      const sourceIntelligence = extractRepositoryIntelligence(
-        sourceRepository.architectureChanges
-      );
+      const sourceIntelligence =
+        extractCanonicalRepositorySignals(
+          sourceSnapshot
+        );
 
-      const relatedRepositories = repositories
-        .map((repo) => {
-          const targetIntelligence = extractRepositoryIntelligence(
-            repo.architectureChanges
-          );
+      const relatedRepositories =
+        repositories
+          .flatMap((repo) => {
+            const targetSnapshot =
+              repo
+                .intelligenceSnapshots[0];
 
-          const similarity = calculateRepositorySimilarity({
-            sourceRepositoryTypes: sourceIntelligence.repositoryTypes,
-            sourceDomains: sourceIntelligence.domains,
-            sourceTechnologies: sourceIntelligence.technologies,
+            /**
+             * A repository without current intelligence cannot be compared
+             * reliably.
+             *
+             * Do not silently reconstruct it from historical changes because
+             * that would put candidates on different evidence models.
+             */
+            if (!targetSnapshot) {
+              return [];
+            }
 
-            targetRepositoryTypes: targetIntelligence.repositoryTypes,
-            targetDomains: targetIntelligence.domains,
-            targetTechnologies: targetIntelligence.technologies,
-          });
+            const targetIntelligence =
+              extractSnapshotIntelligence(
+                targetSnapshot
+              );
 
-          return {
-            repository: {
-              id: repo.id,
-              name: repo.name,
-              fullName: repo.fullName,
-            },
-            similarity,
-          };
-        })
-        .filter((item) => item.similarity.similarityScore > 0)
-        .sort(
-          (a, b) =>
-            b.similarity.similarityScore - a.similarity.similarityScore
-        )
-        .slice(0, 8);
+            const similarity =
+              calculateRepositorySimilarity(
+                {
+                  sourceRepositoryTypes:
+                    sourceIntelligence.repositoryTypes,
+
+                  sourceDomains:
+                    sourceIntelligence.domains,
+
+                  sourceTechnologies:
+                    sourceIntelligence.technologies,
+
+                  sourceCapabilities:
+                    sourceIntelligence.capabilities,
+
+                  targetRepositoryTypes:
+                    targetIntelligence.repositoryTypes,
+
+                  targetDomains:
+                    targetIntelligence.domains,
+
+                  targetTechnologies:
+                    targetIntelligence.technologies,
+
+                  targetCapabilities:
+                    targetIntelligence.capabilities,
+                }
+              );
+
+            return [
+              {
+                repository: {
+                  id: repo.id,
+                  name: repo.name,
+                  fullName:
+                    repo.fullName,
+                },
+
+                similarity,
+
+                /**
+                 * Additive evidence.
+                 *
+                 * This lets us inspect exactly what ArcHive compared without
+                 * changing the existing repository/similarity response shape.
+                 */
+                intelligence: {
+                  repositoryTypes:
+                    targetIntelligence.repositoryTypes,
+
+                  domains:
+                    targetIntelligence.domains,
+
+                  technologies:
+                    targetIntelligence.technologies,
+
+                  capabilities:
+                    targetIntelligence.capabilities,
+
+                  generatedAt:
+                    targetSnapshot.createdAt,
+                },
+              },
+            ];
+          })
+          .filter(
+            (item) =>
+              item.similarity
+                .similarityScore > 0
+          )
+          .sort(
+            (a, b) =>
+              b.similarity
+                .similarityScore -
+              a.similarity
+                .similarityScore
+          )
+          .slice(0, 8);
 
       return {
         success: true,
-        message: "Related repositories fetched successfully",
+        message:
+          "Related repositories fetched successfully",
+
         data: {
           repository: {
-            id: sourceRepository.id,
-            name: sourceRepository.name,
-            fullName: sourceRepository.fullName,
+            id:
+              sourceRepository.id,
+
+            name:
+              sourceRepository.name,
+
+            fullName:
+              sourceRepository.fullName,
           },
+
+          /**
+           * Existing property retained, but it now represents the complete
+           * canonical snapshot instead of ArchitectureChange reconstruction.
+           */
           sourceIntelligence,
+
           relatedRepositories,
         },
       };
     }
   );
+
+
   // engineering reasoning analysis
   app.get<{ Params: { repositoryId: string } }>(
     "/:repositoryId/engineering-reasoning",
