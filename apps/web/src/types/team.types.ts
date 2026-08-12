@@ -526,7 +526,12 @@ export interface ListTeamInvitationsResponse {
 
 export interface CreateTeamInvitationPayload {
   actorUserId: string;
-  inviteeUserId: string;
+
+  // The invitee is selected using their GitHub username.
+  // The backend handles whitespace, an optional leading @,
+  // and case-insensitive matching.
+  username: string;
+
   role: TeamInvitationRole;
 }
 

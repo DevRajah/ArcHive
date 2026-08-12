@@ -89,8 +89,8 @@ export function InviteTeamUserDialog({
     );
 
   const [
-    inviteeUserId,
-    setInviteeUserId,
+    username,
+    setUsername,
   ] = useState("");
 
   const [role, setRole] =
@@ -98,24 +98,26 @@ export function InviteTeamUserDialog({
       "MEMBER",
     );
 
-  const [userError, setUserError] =
-    useState("");
+  const [
+    usernameError,
+    setUsernameError,
+  ] = useState("");
 
   const isSubmitting =
     invitationMutation.isPending;
 
   useEffect(() => {
     if (!open) {
-      setInviteeUserId("");
+      setUsername("");
       setRole("MEMBER");
-      setUserError("");
+      setUsernameError("");
     }
   }, [open]);
 
   function resetForm() {
-    setInviteeUserId("");
+    setUsername("");
     setRole("MEMBER");
-    setUserError("");
+    setUsernameError("");
     invitationMutation.reset();
   }
 
@@ -129,16 +131,19 @@ export function InviteTeamUserDialog({
   }
 
   async function handleSubmit(
-    event: FormEvent<HTMLFormElement>,
+    event: FormEvent,
   ) {
     event.preventDefault();
 
-    const cleanedUserId =
-      inviteeUserId.trim();
+    // We only clean surrounding whitespace here.
+    // The backend remains responsible for removing an optional
+    // leading @ and performing case-insensitive username matching.
+    const cleanedUsername =
+      username.trim();
 
-    if (!cleanedUserId) {
-      setUserError(
-        "Select or enter an ArcHive user.",
+    if (!cleanedUsername) {
+      setUsernameError(
+        "A GitHub username is required.",
       );
 
       return;
@@ -149,8 +154,7 @@ export function InviteTeamUserDialog({
         await invitationMutation.mutateAsync(
           {
             actorUserId,
-            inviteeUserId:
-              cleanedUserId,
+            username: cleanedUsername,
             role,
           },
         );
@@ -160,9 +164,12 @@ export function InviteTeamUserDialog({
 
       toast.success(
         response.message ||
-          "Team invitation sent successfully.",
+          `Invitation sent to ${response.data.invitee.username}.`,
       );
     } catch (error) {
+      // Backend validation messages are intentionally surfaced
+      // so the user knows whether the account was not found,
+      // is already a member, or already has a pending invitation.
       toast.error(
         getErrorMessage(error),
       );
@@ -193,8 +200,8 @@ export function InviteTeamUserDialog({
       >
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl border bg-muted/40">
-              <UserPlus className="h-5 w-5 text-muted-foreground" />
+            <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl border border-border bg-muted/40">
+              <UserPlus className="h-5 w-5" />
             </div>
 
             <DialogTitle>
@@ -209,37 +216,38 @@ export function InviteTeamUserDialog({
 
           <div className="space-y-5 py-6">
             <div className="space-y-2">
-              <Label htmlFor="invitee-user-id">
-                ArcHive User
+              <Label htmlFor="invitee-username">
+                GitHub Username
               </Label>
 
               <Input
-                id="invitee-user-id"
-                value={inviteeUserId}
+                id="invitee-username"
+                value={username}
                 disabled={isSubmitting}
-                placeholder="ArcHive user UUID"
+                placeholder="Enter GitHub username"
+                autoComplete="off"
                 aria-invalid={
-                  Boolean(userError)
+                  Boolean(usernameError)
                 }
                 onChange={(event) => {
-                  setInviteeUserId(
+                  setUsername(
                     event.target.value,
                   );
 
-                  if (userError) {
-                    setUserError("");
+                  if (usernameError) {
+                    setUsernameError("");
                   }
                 }}
               />
 
-              {userError ? (
+              {usernameError ? (
                 <p className="text-sm text-destructive">
-                  {userError}
+                  {usernameError}
                 </p>
               ) : (
                 <p className="text-xs leading-5 text-muted-foreground">
-                  Enter the existing ArcHive user ID. Username search
-                  requires a separate user-search backend endpoint.
+                  Enter the GitHub username of an existing ArcHive
+                  user. You can use DevRajah or @DevRajah.
                 </p>
               )}
             </div>
@@ -297,7 +305,7 @@ export function InviteTeamUserDialog({
               type="submit"
               disabled={
                 isSubmitting ||
-                !inviteeUserId.trim()
+                !username.trim()
               }
             >
               {isSubmitting ? (
