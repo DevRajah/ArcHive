@@ -132,6 +132,15 @@ export const QUERY_KEYS = {
       repositoryId,
     ],
 
+  REPOSITORY_COMPARISON: (
+    repositoryId: string,
+    targetRepositoryId: string
+  ) => [
+      "repository-comparison",
+      repositoryId,
+      targetRepositoryId,
+    ],
+
   REPOSITORY_KNOWLEDGE_GRAPH: (
     repositoryId: string
   ) => [

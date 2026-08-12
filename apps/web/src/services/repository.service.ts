@@ -25,6 +25,9 @@ import {
   IntelligenceSearchResponse,
 } from "@/types/intelligence-search.types";
 import { RepositoryIntelligenceDiffResponse } from "@/types/repository-intelligence-diff.types";
+import type {
+  RepositoryComparisonResponse,
+} from "@/types/repository-comparison.types";
 
 function requireUserId() {
   const userId = getUserId();
@@ -168,6 +171,26 @@ export const repositoryService = {
     const response = await api.get<
       ApiResponse<RepositoryRelatedResponse>
     >(`/repositories/${repositoryId}/related`);
+
+    return response.data.data;
+  },
+
+  /**
+ * Fetches ArcHive's canonical repository-to-repository comparison.
+ *
+ * Important:
+ * The backend owns the similarity calculation. The frontend should
+ * display these scores rather than trying to recalculate similarity.
+ */
+  async getRepositoryComparison(
+    repositoryId: string,
+    targetRepositoryId: string
+  ): Promise<RepositoryComparisonResponse> {
+    const response = await api.get<
+      ApiResponse<RepositoryComparisonResponse>
+    >(
+      `/repositories/${repositoryId}/compare/${targetRepositoryId}`
+    );
 
     return response.data.data;
   },

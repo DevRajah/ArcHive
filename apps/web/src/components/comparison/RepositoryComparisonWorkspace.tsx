@@ -30,6 +30,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 
 import {
+    useRepositoryComparison,
     useRepositoryIntelligenceReport,
     useTrackedRepositories,
 } from "@/hooks/useRepositories";
@@ -723,6 +724,34 @@ function InsightColumn({
     );
 }
 
+function ComparisonDimension({
+    label,
+    score,
+    maximum,
+}: {
+    label: string;
+    score: number;
+    maximum: number;
+}) {
+    return (
+        <div className="rounded-xl border border-border bg-background p-4">
+            <p className="text-sm text-muted-foreground">
+                {label}
+            </p>
+
+            <div className="mt-2 flex items-baseline gap-1">
+                <span className="text-2xl font-semibold">
+                    {score}
+                </span>
+
+                <span className="text-sm text-muted-foreground">
+                    / {maximum}
+                </span>
+            </div>
+        </div>
+    );
+}
+
 export function RepositoryComparisonWorkspace() {
     const {
         data: repositoriesData,
@@ -739,10 +768,27 @@ export function RepositoryComparisonWorkspace() {
         setLeftRepoId,
     ] = useState("");
 
+
     const [
         rightRepoId,
         setRightRepoId,
     ] = useState("");
+
+
+    /**
+ * Backend-owned structural comparison.
+ *
+ * Unlike the individual intelligence reports below, this endpoint
+ * tells us how similar the two repositories are to each other.
+ */
+    const {
+        data: canonicalComparison,
+        isLoading: isComparisonLoading,
+        isError: isComparisonError,
+    } = useRepositoryComparison(
+        leftRepoId,
+        rightRepoId
+    );
 
     const {
         data: leftData,
@@ -846,7 +892,8 @@ export function RepositoryComparisonWorkspace() {
             </div>
 
             {(isLeftLoading ||
-                isRightLoading) ? (
+                isRightLoading ||
+                isComparisonLoading) ? (
                 <div className="grid gap-6 md:grid-cols-2">
                     <Skeleton className="h-40 rounded-xl" />
                     <Skeleton className="h-40 rounded-xl" />
@@ -857,6 +904,92 @@ export function RepositoryComparisonWorkspace() {
                 right &&
                 comparisonSummary ? (
                 <>
+
+                    {canonicalComparison ? (
+                        <section className="rounded-xl border border-border bg-card p-6">
+                            <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
+                                <div className="min-w-0">
+                                    <div className="flex flex-wrap items-center gap-3">
+                                        <h2 className="text-lg font-semibold">
+                                            Engineering Similarity
+                                        </h2>
+
+                                        <Badge variant="secondary">
+                                            {formatIntelligenceLabel(
+                                                canonicalComparison.comparison.similarityLevel
+                                            )}
+                                        </Badge>
+                                    </div>
+
+                                    <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
+                                        Canonical structural similarity calculated by ArcHive
+                                        from repository identity, architecture domains,
+                                        capabilities, and technologies.
+                                    </p>
+                                </div>
+
+                                <div className="shrink-0 rounded-xl border border-border bg-background px-6 py-4 text-center">
+                                    <p className="text-3xl font-bold tracking-tight">
+                                        {canonicalComparison.comparison.similarityScore}%
+                                    </p>
+
+                                    <p className="mt-1 text-xs text-muted-foreground">
+                                        similarity
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                                <ComparisonDimension
+                                    label="Repository Identity"
+                                    score={
+                                        canonicalComparison.comparison.scoreBreakdown
+                                            .repositoryTypeScore
+                                    }
+                                    maximum={25}
+                                />
+
+                                <ComparisonDimension
+                                    label="Architecture Domains"
+                                    score={
+                                        canonicalComparison.comparison.scoreBreakdown
+                                            .architectureDomainScore
+                                    }
+                                    maximum={25}
+                                />
+
+                                <ComparisonDimension
+                                    label="Capabilities"
+                                    score={
+                                        canonicalComparison.comparison.scoreBreakdown
+                                            .capabilityScore
+                                    }
+                                    maximum={30}
+                                />
+
+                                <ComparisonDimension
+                                    label="Technologies"
+                                    score={
+                                        canonicalComparison.comparison.scoreBreakdown
+                                            .technologyScore
+                                    }
+                                    maximum={20}
+                                />
+                            </div>
+                        </section>
+                    ) : null}
+
+                    {isComparisonError ? (
+                        <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-5">
+                            <p className="font-medium text-destructive">
+                                Failed to load canonical repository comparison.
+                            </p>
+
+                            <p className="mt-1 text-sm text-muted-foreground">
+                                Individual repository intelligence is still available below.
+                            </p>
+                        </div>
+                    ) : null}
                     <section className="rounded-xl border border-border bg-card p-6">
                         <div className="flex items-start gap-3">
                             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
@@ -1170,9 +1303,12 @@ export function RepositoryComparisonWorkspace() {
                             right.name
                         }
                         leftItems={
+                            canonicalComparison?.sourceIntelligence.capabilities ||
                             left.enabledCapabilities
                         }
+
                         rightItems={
+                            canonicalComparison?.targetIntelligence.capabilities ||
                             right.enabledCapabilities
                         }
                         description="Enabled engineering capabilities shared by both repositories and capabilities unique to either side. These are factual set counts, not a similarity percentage."
@@ -1185,9 +1321,12 @@ export function RepositoryComparisonWorkspace() {
                             right.name
                         }
                         leftItems={
+                            canonicalComparison?.sourceIntelligence.domains ||
                             left.architectureDomains
                         }
+
                         rightItems={
+                            canonicalComparison?.targetIntelligence.domains ||
                             right.architectureDomains
                         }
                         description="Architecture domains detected in both repositories and domains unique to each repository."
@@ -1200,13 +1339,52 @@ export function RepositoryComparisonWorkspace() {
                             right.name
                         }
                         leftItems={
+                            canonicalComparison?.sourceIntelligence.technologies ||
                             left.technologies
                         }
                         rightItems={
+                            canonicalComparison?.targetIntelligence.technologies ||
                             right.technologies
                         }
                         description="Detected technologies shared between both repositories and technologies unique to each repository."
                     />
+
+                    {canonicalComparison &&
+                        (
+                            canonicalComparison.comparison.keyDifferences.length > 0 ||
+                            canonicalComparison.comparison.recommendations.length > 0
+                        ) ? (
+                        <section>
+                            <div className="mb-4">
+                                <h2 className="text-lg font-semibold">
+                                    Comparison Intelligence
+                                </h2>
+
+                                <p className="mt-1 text-sm text-muted-foreground">
+                                    Differences and recommendations generated specifically
+                                    from the relationship between these two repositories.
+                                </p>
+                            </div>
+
+                            <div className="grid gap-5 lg:grid-cols-2">
+                                <InsightColumn
+                                    title="Key Differences"
+                                    items={
+                                        canonicalComparison.comparison.keyDifferences
+                                    }
+                                    emptyMessage="No significant structural differences detected."
+                                />
+
+                                <InsightColumn
+                                    title="Comparison Recommendations"
+                                    items={
+                                        canonicalComparison.comparison.recommendations
+                                    }
+                                    emptyMessage="No comparison-specific recommendations available."
+                                />
+                            </div>
+                        </section>
+                    ) : null}
 
                     <section>
                         <div className="mb-4">

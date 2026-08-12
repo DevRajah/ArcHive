@@ -207,6 +207,37 @@ export function useRelatedRepositories(
   });
 }
 
+
+/**
+ * Loads the canonical comparison between two repositories.
+ *
+ * The backend calculates similarity using repository identity,
+ * architecture domains, capabilities, and technologies.
+ */
+export function useRepositoryComparison(
+  repositoryId: string,
+  targetRepositoryId: string
+) {
+  return useQuery({
+    queryKey: QUERY_KEYS.REPOSITORY_COMPARISON(
+      repositoryId,
+      targetRepositoryId
+    ),
+
+    queryFn: () =>
+      repositoryService.getRepositoryComparison(
+        repositoryId,
+        targetRepositoryId
+      ),
+
+    enabled: Boolean(
+      repositoryId &&
+      targetRepositoryId &&
+      repositoryId !== targetRepositoryId
+    ),
+  });
+}
+
 export function useRepositoryMarkdownReport(
   repositoryId: string
 ) {
