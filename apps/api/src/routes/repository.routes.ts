@@ -1884,139 +1884,254 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
   );
 
 
-  // Target and compare repos
-
+  // Target and compare repositories
   app.get<{
     Params: {
       repositoryId: string;
       targetRepositoryId: string;
     };
-  }>("/:repositoryId/compare/:targetRepositoryId", async (request, reply) => {
-    const { repositoryId, targetRepositoryId } = request.params;
+  }>(
+    "/:repositoryId/compare/:targetRepositoryId",
+    async (request, reply) => {
+      const {
+        repositoryId,
+        targetRepositoryId,
+      } = request.params;
 
-    if (repositoryId === targetRepositoryId) {
-      return reply.status(400).send({
-        success: false,
-        message: "Cannot compare a repository with itself",
-      });
-    }
-
-    const repositories = await prisma.repository.findMany({
-      where: {
-        id: {
-          in: [repositoryId, targetRepositoryId],
-        },
-        isTracked: true,
-      },
-      select: {
-        id: true,
-        name: true,
-        fullName: true,
-        architectureChanges: {
-          select: {
-            repositoryTypes: true,
-            detectedTechnology: true,
-            architectureDomain: true,
-            reasoningSignals: true,
-          },
-        },
-      },
-    });
-
-    const sourceRepository = repositories.find((repo) => repo.id === repositoryId);
-    const targetRepository = repositories.find(
-      (repo) => repo.id === targetRepositoryId
-    );
-
-    if (!sourceRepository || !targetRepository) {
-      return reply.status(404).send({
-        success: false,
-        message: "One or both tracked repositories were not found",
-      });
-    }
-
-    type ArchitectureChangeSignalRow = {
-      repositoryTypes: string | null;
-      detectedTechnology: string | null;
-      architectureDomain: string | null;
-      reasoningSignals: string | null;
-    };
-
-    const splitSignalList = (value: string | null) => {
-      if (!value) {
-        return [];
+      /**
+       * Comparing a repository against itself does not provide useful
+       * engineering intelligence and would always produce perfect overlap.
+       */
+      if (repositoryId === targetRepositoryId) {
+        return reply.status(400).send({
+          success: false,
+          message:
+            "Cannot compare a repository with itself",
+        });
       }
 
-      return value
-        .split(/[,|]/)
-        .map((item) => item.trim())
-        .filter(Boolean);
-    };
+      /**
+       * Repository comparison is a CURRENT-STATE intelligence feature.
+       *
+       * Future me:
+       * Do not rebuild current repository intelligence from ArchitectureChange.
+       *
+       * ArchitectureChange represents historical architecture events.
+       * RepositoryIntelligenceSnapshot represents the latest full-repository
+       * analysis and is therefore the correct source for comparison.
+       *
+       * This deliberately follows the same canonical intelligence path used
+       * by Related Repositories.
+       */
+      const repositories =
+        await prisma.repository.findMany({
+          where: {
+            id: {
+              in: [
+                repositoryId,
+                targetRepositoryId,
+              ],
+            },
+            isTracked: true,
+          },
 
-    const extractSignals = (changes: ArchitectureChangeSignalRow[]) => {
-      const repositoryTypes = Array.from(
-        new Set(changes.flatMap((change) => splitSignalList(change.repositoryTypes)))
-      );
+          select: {
+            id: true,
+            name: true,
+            fullName: true,
 
-      const technologies = Array.from(
-        new Set(
-          changes
-            .map((change) => change.detectedTechnology)
-            .filter((value): value is string => Boolean(value))
-        )
-      );
+            intelligenceSnapshots: {
+              orderBy: [
+                {
+                  createdAt: "desc",
+                },
+                {
+                  id: "desc",
+                },
+              ],
 
-      const architectureDomains = Array.from(
-        new Set(
-          changes
-            .map((change) => change.architectureDomain)
-            .filter((value): value is string => Boolean(value))
-        )
-      );
+              take: 1,
 
-      const engineeringSignals = Array.from(
-        new Set(changes.flatMap((change) => splitSignalList(change.reasoningSignals)))
-      );
+              select: {
+                id: true,
+                primaryRepositoryType: true,
+                repositoryTypes: true,
+                architectureDomains: true,
+                technologies: true,
+                capabilities: true,
+                createdAt: true,
+              },
+            },
+          },
+        });
+
+      const sourceRepository =
+        repositories.find(
+          (repository) =>
+            repository.id === repositoryId
+        );
+
+      const targetRepository =
+        repositories.find(
+          (repository) =>
+            repository.id === targetRepositoryId
+        );
+
+      if (
+        !sourceRepository ||
+        !targetRepository
+      ) {
+        return reply.status(404).send({
+          success: false,
+          message:
+            "One or both tracked repositories were not found",
+        });
+      }
+
+      const sourceSnapshot =
+        sourceRepository
+          .intelligenceSnapshots[0];
+
+      const targetSnapshot =
+        targetRepository
+          .intelligenceSnapshots[0];
+
+      /**
+       * We intentionally refuse to fall back to ArchitectureChange here.
+       *
+       * A fallback would make the endpoint silently compare repositories using
+       * different generations of intelligence depending on whether a snapshot
+       * happened to exist.
+       *
+       * Reprocessing is the correct recovery path.
+       */
+      if (
+        !sourceSnapshot ||
+        !targetSnapshot
+      ) {
+        return reply.status(409).send({
+          success: false,
+          message:
+            "Both repositories must have generated intelligence before they can be compared. Reprocess the repositories first.",
+        });
+      }
+
+      /**
+       * Use the shared canonical extractor.
+       *
+       * This keeps Related Repositories and Repository Compare aligned around
+       * exactly the same source-of-truth fields:
+       *
+       * - repository types
+       * - architecture domains
+       * - technologies
+       * - capabilities
+       */
+      const sourceSignals =
+        extractCanonicalRepositorySignals(
+          sourceSnapshot
+        );
+
+      const targetSignals =
+        extractCanonicalRepositorySignals(
+          targetSnapshot
+        );
+
+      /**
+       * compareRepositories currently expects architectureDomains and
+       * engineeringSignals.
+       *
+       * The canonical extractor exposes domains, so adapt that field here.
+       *
+       * We deliberately leave engineeringSignals empty for now rather than
+       * reconstructing them from historical ArchitectureChange rows.
+       *
+       * Capabilities will become a first-class comparison dimension in the
+       * comparison-engine refactor immediately after this route migration.
+       */
+      const comparison =
+        compareRepositories({
+          source: {
+            name: sourceRepository.name,
+
+            repositoryTypes:
+              sourceSignals.repositoryTypes,
+
+            technologies:
+              sourceSignals.technologies,
+
+            architectureDomains:
+              sourceSignals.domains,
+
+            capabilities:
+              sourceSignals.capabilities,
+
+            engineeringSignals: [],
+          },
+
+          target: {
+            name: targetRepository.name,
+
+            repositoryTypes:
+              targetSignals.repositoryTypes,
+
+            technologies:
+              targetSignals.technologies,
+
+            architectureDomains:
+              targetSignals.domains,
+
+            capabilities:
+              targetSignals.capabilities,
+
+            engineeringSignals: [],
+          },
+        });
 
       return {
-        repositoryTypes,
-        technologies,
-        architectureDomains,
-        engineeringSignals,
+        success: true,
+        message:
+          "Repository comparison fetched successfully",
+
+        data: {
+          sourceRepository: {
+            id: sourceRepository.id,
+            name: sourceRepository.name,
+            fullName:
+              sourceRepository.fullName,
+          },
+
+          targetRepository: {
+            id: targetRepository.id,
+            name: targetRepository.name,
+            fullName:
+              targetRepository.fullName,
+          },
+
+          comparison,
+
+          /**
+           * Additive debugging/explainability data.
+           *
+           * Existing frontend consumers can continue using `comparison`.
+           * These fields expose exactly which canonical intelligence entered
+           * the comparison without breaking the existing response contract.
+           */
+          sourceIntelligence: {
+            ...sourceSignals,
+            generatedAt:
+              sourceSnapshot.createdAt,
+          },
+
+          targetIntelligence: {
+            ...targetSignals,
+            generatedAt:
+              targetSnapshot.createdAt,
+          },
+        },
       };
-    };
-    const sourceSignals = extractSignals(sourceRepository.architectureChanges);
-    const targetSignals = extractSignals(targetRepository.architectureChanges);
-
-    const comparison = compareRepositories({
-      source: {
-        name: sourceRepository.name,
-        ...sourceSignals,
-      },
-      target: {
-        name: targetRepository.name,
-        ...targetSignals,
-      },
-    });
-
-    return {
-      success: true,
-      message: "Repository comparison fetched successfully",
-      data: {
-        sourceRepository: {
-          id: sourceRepository.id,
-          name: sourceRepository.name,
-          fullName: sourceRepository.fullName,
-        },
-        targetRepository: {
-          id: targetRepository.id,
-          name: targetRepository.name,
-          fullName: targetRepository.fullName,
-        },
-        comparison,
-      },
-    };
-  });
+    }
+  );
 
 
   // Reprocess All Repos
