@@ -1037,57 +1037,86 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
           canonicalRepositoryTypes;
       }
 
-      /*
-       * These aggregates remain only for backwards-compatible legacy data.
-       * They are NOT used to determine canonical repository purpose anymore.
+      /**
+       * Canonical signal collections.
+       *
+       * Future me:
+       * Do not reconstruct current repository intelligence from ArchitectureChange.
+       *
+       * ArchitectureChange remains useful historical evidence, but the latest
+       * RepositoryIntelligenceSnapshot already contains the complete current-state
+       * signal model produced by the full repository analysis.
        */
-      const legacyRepositoryTypes = Array.from(
-        new Set(
-          repository.architectureChanges
-            .flatMap(
-              (change) =>
-                change.repositoryTypes?.split(",") || []
-            )
-            .map((type) => type.trim())
-            .filter(Boolean)
-        )
-      );
+      const repositoryTypes =
+        canonicalRepositoryTypes;
 
-      const technologies = Array.from(
-        new Set(
-          repository.architectureChanges
-            .map((change) => change.detectedTechnology)
-            .filter(
-              (technology): technology is string =>
-                Boolean(technology)
-            )
+      const technologies =
+        Array.isArray(
+          repositoryIntelligence?.signals?.technologies
         )
-      );
-
-      const architectureDomains = Array.from(
-        new Set(
-          repository.architectureChanges
-            .map((change) => change.architectureDomain)
-            .filter(
-              (domain): domain is string =>
-                Boolean(domain)
+          ? Array.from(
+            new Set(
+              repositoryIntelligence.signals.technologies
+                .filter(
+                  (value: unknown): value is string =>
+                    typeof value === "string"
+                )
+                .map((value: string) =>
+                  value.trim()
+                )
+                .filter(Boolean)
             )
-        )
-      );
+          )
+          : [];
 
-      const reasoningSignals = Array.from(
-        new Set(
-          repository.architectureChanges
-            .flatMap(
-              (change) =>
-                change.reasoningSignals?.split(",") || []
+      const architectureDomains =
+        Array.isArray(
+          repositoryIntelligence?.signals?.architectureDomains
+        )
+          ? Array.from(
+            new Set(
+              repositoryIntelligence.signals.architectureDomains
+                .filter(
+                  (value: unknown): value is string =>
+                    typeof value === "string"
+                )
+                .map((value: string) =>
+                  value.trim()
+                )
+                .filter(Boolean)
             )
-            .map((signal) => signal.trim())
-            .filter(Boolean)
-        )
-      );
+          )
+          : [];
 
-      const engineeringSignals = reasoningSignals;
+      /**
+       * reasoningSignals already exists as string[] in canonical intelligence.
+       *
+       * Never split these values on commas. A comma may be legitimate prose inside
+       * one evidence statement.
+       */
+      const reasoningSignals =
+        readAuditReasoningSignals(
+          latestSnapshot.intelligence
+        );
+
+      const engineeringSignals =
+        Array.isArray(
+          repositoryIntelligence?.signals?.engineeringSignals
+        )
+          ? Array.from(
+            new Set(
+              repositoryIntelligence.signals.engineeringSignals
+                .filter(
+                  (value: unknown): value is string =>
+                    typeof value === "string"
+                )
+                .map((value: string) =>
+                  value.trim()
+                )
+                .filter(Boolean)
+            )
+          )
+          : [];
 
       /*
        * Summary now derives from the persisted canonical snapshot too.
@@ -1150,7 +1179,7 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
           repositoryIntelligence,
 
           legacy: {
-            repositoryTypes: legacyRepositoryTypes,
+            repositoryTypes,
             technologies,
             architectureDomains,
             engineeringSignals,
@@ -1162,18 +1191,56 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
   );
 
   //detailed architecture analysis
+  // detailed architecture analysis
   app.get<{ Params: { repositoryId: string } }>(
     "/:repositoryId/architecture",
     async (request, reply) => {
       const { repositoryId } = request.params;
 
-      const repository = await prisma.repository.findUnique({
-        where: { id: repositoryId },
-        select: {
-          id: true,
-          userId: true,
-        },
-      });
+      /**
+       * This endpoint intentionally exposes historical ArchitectureChange rows.
+       *
+       * Current repository classification, however, must come from the latest
+       * RepositoryIntelligenceSnapshot.
+       *
+       * Future me:
+       * Do not infer current repository identity from historical architecture
+       * events. ArchitectureChange describes what changed, while the snapshot
+       * describes what ArcHive currently understands the repository to be.
+       */
+      const repository =
+        await prisma.repository.findUnique({
+          where: {
+            id: repositoryId,
+          },
+
+          select: {
+            id: true,
+            userId: true,
+
+            intelligenceSnapshots: {
+              orderBy: [
+                {
+                  createdAt: "desc",
+                },
+                {
+                  id: "desc",
+                },
+              ],
+
+              take: 1,
+
+              select: {
+                id: true,
+                primaryRepositoryType: true,
+                repositoryTypes: true,
+                architectureDomains: true,
+                technologies: true,
+                createdAt: true,
+              },
+            },
+          },
+        });
 
       if (!repository) {
         return reply.status(404).send({
@@ -1182,31 +1249,110 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
         });
       }
 
-      const architectureChanges = await prisma.architectureChange.findMany({
-        where: {
-          repositoryId,
-        },
-        orderBy: {
-          createdAt: "desc",
-        },
-        select: {
-          id: true,
-          changeType: true,
-          detectedTechnology: true,
-          fileAffected: true,
-          summary: true,
-          architectureDomain: true,
-          evolutionSummary: true,
-          createdAt: true,
-          repositoryTypes: true
-        },
-      });
+      const latestSnapshot =
+        repository.intelligenceSnapshots[0];
+
+      if (!latestSnapshot) {
+        return reply.status(404).send({
+          success: false,
+          message:
+            "Repository intelligence has not been generated yet. Reprocess the repository first.",
+        });
+      }
+
+      /**
+       * Historical architecture evolution.
+       *
+       * These rows remain event/history data and should not be replaced by the
+       * current snapshot.
+       */
+      const architectureChanges =
+        await prisma.architectureChange.findMany({
+          where: {
+            repositoryId,
+          },
+
+          orderBy: {
+            createdAt: "desc",
+          },
+
+          select: {
+            id: true,
+            changeType: true,
+            detectedTechnology: true,
+            fileAffected: true,
+            summary: true,
+            architectureDomain: true,
+            evolutionSummary: true,
+            createdAt: true,
+
+            /**
+             * Keep the value stored with the historical event.
+             *
+             * It may differ from today's canonical repository classification,
+             * which is why the endpoint also returns canonicalRepositoryTypes.
+             */
+            repositoryTypes: true,
+          },
+        });
+
+      const canonicalRepositoryTypes =
+        readAuditStringArray(
+          latestSnapshot.repositoryTypes
+        );
+
+      const canonicalArchitectureDomains =
+        readAuditStringArray(
+          latestSnapshot.architectureDomains
+        );
+
+      const canonicalTechnologies =
+        readAuditStringArray(
+          latestSnapshot.technologies
+        );
 
       return {
         success: true,
-        message: "Repository architecture changes fetched successfully",
+
+        message:
+          "Repository architecture changes fetched successfully",
+
+        /**
+         * Preserve the existing data array contract.
+         */
         data: architectureChanges,
-        repositoryTypes: true
+
+        /**
+         * FIX:
+         * This used to incorrectly return `true`.
+         *
+         * It now represents the repository's current canonical classification.
+         */
+        repositoryTypes:
+          canonicalRepositoryTypes,
+
+        /**
+         * Additional current-state architecture context.
+         *
+         * These are additive fields, so existing consumers of `data` do not
+         * need to change.
+         */
+        currentArchitecture: {
+          primaryRepositoryType:
+            latestSnapshot.primaryRepositoryType,
+
+          repositoryTypes:
+            canonicalRepositoryTypes,
+
+          architectureDomains:
+            canonicalArchitectureDomains,
+
+          technologies:
+            canonicalTechnologies,
+
+          generatedAt:
+            latestSnapshot.createdAt,
+        },
       };
     }
   );
