@@ -305,6 +305,7 @@ export default function TeamWorkspacePage() {
                 ) : activeTab === "settings" ? (
                     <TeamWorkspaceSettings
                         team={team}
+                        actorUserId={userId}
                         canDeleteTeam={
                             permissions.canDeleteTeam
                         }

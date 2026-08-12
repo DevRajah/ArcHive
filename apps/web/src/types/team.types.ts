@@ -80,6 +80,11 @@ export interface TeamDetailsResponse {
   data: TeamDetails;
 }
 
+export interface DeleteTeamResponse {
+  success: true;
+  message: string;
+}
+
 export interface TeamRepositoryRanking {
   repositoryId: string;
   repositoryName: string;

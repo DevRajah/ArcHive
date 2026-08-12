@@ -13,6 +13,7 @@ import type {
     AddTeamMemberResponse,
     AddTeamRepositoryPayload,
     AddTeamRepositoryResponse,
+    DeleteTeamResponse,
     CreateTeamPayload,
     CreateTeamResponse,
     DeleteTeamReportResponse,
@@ -335,6 +336,46 @@ export function useUpdateTeamMemberRole(
                 queryKey:
                     TEAM_QUERY_KEYS.team(
                         teamId,
+                        userId,
+                    ),
+            });
+        },
+    });
+}
+
+/**
+ * Permanently delete a Team Workspace.
+ *
+ * Once deletion succeeds we invalidate the user's Team list so
+ * navigation and dashboards cannot retain the deleted workspace.
+ */
+export function useDeleteTeam(
+    userId: string,
+) {
+    const queryClient =
+        useQueryClient();
+
+    return useMutation<
+        DeleteTeamResponse,
+        Error,
+        {
+            teamId: string;
+            actorUserId: string;
+        }
+    >({
+        mutationFn: ({
+            teamId,
+            actorUserId,
+        }) =>
+            teamService.deleteTeam(
+                teamId,
+                actorUserId,
+            ),
+
+        onSuccess: () => {
+            queryClient.invalidateQueries({
+                queryKey:
+                    TEAM_QUERY_KEYS.teams(
                         userId,
                     ),
             });

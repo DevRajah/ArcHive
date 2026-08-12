@@ -19,6 +19,7 @@ import type {
     RemoveTeamRepositoryResponse,
     TeamDashboard,
     TeamDetailsResponse,
+    DeleteTeamResponse,
     TeamExecutiveReport,
     UpdateTeamMemberRolePayload,
     UpdateTeamMemberRoleResponse,
@@ -60,6 +61,29 @@ class TeamService {
             await api.post<CreateTeamResponse>(
                 "/teams",
                 payload,
+            );
+
+        return data;
+    }
+
+    /**
+ * Permanently delete a Team Workspace.
+ *
+ * Only the Team owner is allowed to perform this action.
+ * The backend remains responsible for permission enforcement.
+ */
+    async deleteTeam(
+        teamId: string,
+        actorUserId: string,
+    ): Promise<DeleteTeamResponse> {
+        const { data } =
+            await api.delete<DeleteTeamResponse>(
+                `/teams/${teamId}`,
+                {
+                    params: {
+                        actorUserId,
+                    },
+                },
             );
 
         return data;

@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 import {
   CalendarDays,
   Crown,
@@ -25,6 +27,10 @@ import {
 
 import { Separator } from "@/components/ui/separator";
 
+import {
+  DeleteTeamWorkspaceDialog,
+} from "@/components/teams/settings/DeleteTeamWorkspaceDialog";
+
 import { TeamRoleBadge } from "@/components/teams/TeamRoleBadge";
 
 import type {
@@ -33,31 +39,62 @@ import type {
 
 interface TeamWorkspaceSettingsProps {
   team: TeamDetails;
+
+  /**
+   * The currently authenticated ArcHive user.
+   *
+   * This remains a UUID because the backend uses it to verify
+   * that the actor is allowed to perform privileged Team actions.
+   */
+  actorUserId: string;
+
+  /**
+   * The frontend permission model controls whether the destructive
+   * action should be visible.
+   *
+   * The backend still performs its own authorization check when
+   * deletion is requested.
+   */
   canDeleteTeam: boolean;
 }
 
-function formatDate(value: string) {
+function formatDate(
+  value: string,
+) {
   const date = new Date(value);
 
-  if (Number.isNaN(date.getTime())) {
+  if (
+    Number.isNaN(
+      date.getTime(),
+    )
+  ) {
     return "Not available";
   }
 
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-  }).format(date);
+  return new Intl.DateTimeFormat(
+    "en-GB",
+    {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+    },
+  ).format(date);
 }
 
 export function TeamWorkspaceSettings({
   team,
+  actorUserId,
   canDeleteTeam,
 }: TeamWorkspaceSettingsProps) {
+  const [
+    deleteDialogOpen,
+    setDeleteDialogOpen,
+  ] = useState(false);
+
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-semibold">
+        <h2 className="text-2xl font-bold tracking-tight">
           Workspace Settings
         </h2>
 
@@ -127,7 +164,9 @@ export function TeamWorkspaceSettings({
 
                 <div className="mt-2">
                   <TeamRoleBadge
-                    role={team.currentUserRole}
+                    role={
+                      team.currentUserRole
+                    }
                   />
                 </div>
               </div>
@@ -173,7 +212,10 @@ export function TeamWorkspaceSettings({
 
                 <div>
                   <p className="font-medium">
-                    Created {formatDate(team.createdAt)}
+                    Created{" "}
+                    {formatDate(
+                      team.createdAt,
+                    )}
                   </p>
 
                   <p className="mt-1 text-sm text-muted-foreground">
@@ -187,7 +229,10 @@ export function TeamWorkspaceSettings({
 
                 <div>
                   <p className="font-medium">
-                    Updated {formatDate(team.updatedAt)}
+                    Updated{" "}
+                    {formatDate(
+                      team.updatedAt,
+                    )}
                   </p>
 
                   <p className="mt-1 text-sm text-muted-foreground">
@@ -210,13 +255,19 @@ export function TeamWorkspaceSettings({
 
             <CardContent>
               <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-full border bg-muted/40">
+                <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full border bg-muted/40">
                   {team.createdBy.avatarUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
-                      src={team.createdBy.avatarUrl}
-                      alt={team.createdBy.username}
-                      className="h-full w-full rounded-full object-cover"
+                      src={
+                        team.createdBy
+                          .avatarUrl
+                      }
+                      alt={
+                        team.createdBy
+                          .username
+                      }
+                      className="h-full w-full object-cover"
                     />
                   ) : (
                     <UserRound className="h-5 w-5 text-muted-foreground" />
@@ -225,7 +276,10 @@ export function TeamWorkspaceSettings({
 
                 <div>
                   <p className="font-semibold">
-                    {team.createdBy.username}
+                    {
+                      team.createdBy
+                        .username
+                    }
                   </p>
 
                   <p className="mt-1 text-xs text-muted-foreground">
@@ -279,41 +333,63 @@ export function TeamWorkspaceSettings({
       </div>
 
       {canDeleteTeam ? (
-        <Card className="border-destructive/30">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-destructive">
-              <Trash2 className="h-5 w-5" />
-              Danger Zone
-            </CardTitle>
+        <>
+          <Card className="border-destructive/30">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-destructive">
+                <Trash2 className="h-5 w-5" />
+                Danger Zone
+              </CardTitle>
 
-            <p className="text-sm text-muted-foreground">
-              Destructive workspace actions require owner access.
-            </p>
-          </CardHeader>
+              <p className="text-sm text-muted-foreground">
+                Destructive workspace actions require owner access.
+              </p>
+            </CardHeader>
 
-          <CardContent>
-            <div className="flex flex-col gap-4 rounded-xl border border-destructive/20 bg-destructive/5 p-5 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="font-semibold">
-                  Delete Team Workspace
-                </p>
+            <CardContent>
+              <div className="flex flex-col gap-4 rounded-xl border border-destructive/20 bg-destructive/5 p-5 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                  <p className="font-semibold">
+                    Delete Team Workspace
+                  </p>
 
-                <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                  Team deletion is unavailable until the backend exposes and
-                  confirms the delete contract.
-                </p>
+                  <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
+                    Permanently delete this Team Workspace and its associated
+                    workspace data. This action cannot be undone.
+                  </p>
+                </div>
+
+                <Button
+                  type="button"
+                  variant="destructive"
+                  className="shrink-0"
+                  onClick={() =>
+                    setDeleteDialogOpen(
+                      true,
+                    )
+                  }
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete Workspace
+                </Button>
               </div>
+            </CardContent>
+          </Card>
 
-              <Button
-                variant="destructive"
-                disabled
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete Workspace
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+          <DeleteTeamWorkspaceDialog
+            teamId={team.id}
+            teamName={team.name}
+            actorUserId={
+              actorUserId
+            }
+            open={
+              deleteDialogOpen
+            }
+            onOpenChange={
+              setDeleteDialogOpen
+            }
+          />
+        </>
       ) : null}
     </div>
   );
