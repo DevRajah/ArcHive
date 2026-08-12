@@ -35,6 +35,7 @@ import {
   readAuditReasoningSignals,
   readAuditStringArray,
 } from "../services/intelligence-audit-signals.service";
+import { calculateInfrastructureDepth } from "../services/capability-infrastructure-depth.service";
 type CreateRepositoryBody = {
   name: string;
   owner: string;
@@ -1084,30 +1085,51 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
         );
 
       /**
-       * Architecture maturity should no longer be reconstructed from the
-       * legacy boolean capability map.
-       *
-       * Use the canonical maturity score persisted by the repository
-       * intelligence pipeline.
-       */
-      const architectureMaturityScore =
+    * Canonical repository intelligence scores.
+    *
+    * Future me:
+    * These names describe what the snapshot actually stores.
+    *
+    * maturityScore measures overall repository maturity.
+    * capabilityScore measures the strength/confidence of detected capabilities.
+    */
+      const repositoryMaturityScore =
         latestSnapshot.maturityScore ?? 0;
 
-      /**
-       * Keep this field for API compatibility.
-       *
-       * capabilityScore already represents the strength of detected canonical
-       * capabilities.
-       */
-      const engineeringComplexityScore =
+      const capabilityScore =
         latestSnapshot.capabilityScore ?? 0;
 
+      /**
+       * Preserve the existing API fields temporarily so current frontend consumers
+       * do not break.
+       *
+       * These are compatibility aliases only.
+       *
+       * architectureMaturityScore historically represented a custom capability
+       * weighting, but the endpoint now uses canonical repository intelligence.
+       *
+       * engineeringComplexityScore historically represented a custom complexity
+       * calculation, but it should not pretend that capability confidence is the
+       * same thing as engineering complexity.
+       */
+      const architectureMaturityScore =
+        repositoryMaturityScore;
+
+      const engineeringComplexityScore =
+        capabilityScore;
+
+      /**
+      * Infrastructure depth is derived from actual canonical infrastructure
+      * capabilities, not overall repository maturity.
+      */
+      const infrastructureDepthAssessment =
+        calculateInfrastructureDepth(
+          capabilityKeys
+        );
+
       const infrastructureDepth =
-        architectureMaturityScore >= 70
-          ? "HIGH"
-          : architectureMaturityScore >= 40
-            ? "MEDIUM"
-            : "EARLY";
+        infrastructureDepthAssessment.level;
+
 
       return {
         success: true,
@@ -1127,9 +1149,29 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
           capabilities,
 
           scores: {
+            repositoryMaturityScore,
+            capabilityScore,
+
+            /**
+ * Infrastructure-specific breadth score.
+ */
+            infrastructureDepthScore:
+              infrastructureDepthAssessment.score,
+
+            infrastructureDepth,
             architectureMaturityScore,
             engineeringComplexityScore,
-            infrastructureDepth,
+
+            infrastructureDepthEvidence: {
+              detected:
+                infrastructureDepthAssessment.detected,
+
+              detectedCount:
+                infrastructureDepthAssessment.detected.length,
+
+              totalPossible:
+                infrastructureDepthAssessment.totalPossible,
+            },
           },
 
           repositoryPurpose,
