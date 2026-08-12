@@ -62,7 +62,7 @@ export function AddTeamMemberDialog({
       actorUserId,
     );
 
-  const [userId, setUserId] =
+  const [username, setUsername] =
     useState("");
 
   const [role, setRole] =
@@ -70,17 +70,19 @@ export function AddTeamMemberDialog({
       "MEMBER",
     );
 
-  const [userIdError, setUserIdError] =
-    useState("");
+  const [
+    usernameError,
+    setUsernameError,
+  ] = useState("");
 
   const isSubmitting =
     addMemberMutation.isPending;
 
   useEffect(() => {
     if (!open) {
-      setUserId("");
+      setUsername("");
       setRole("MEMBER");
-      setUserIdError("");
+      setUsernameError("");
     }
   }, [open]);
 
@@ -89,24 +91,33 @@ export function AddTeamMemberDialog({
       return;
     }
 
-    setUserId("");
+    setUsername("");
     setRole("MEMBER");
-    setUserIdError("");
+    setUsernameError("");
+
     addMemberMutation.reset();
+
     onOpenChange(false);
   }
 
   async function handleSubmit(
-    event: FormEvent<HTMLFormElement>,
+    event: FormEvent,
   ) {
     event.preventDefault();
 
-    const cleanedUserId =
-      userId.trim();
+    /*
+     * Keep the user's casing and optional @ intact.
+     *
+     * The backend is the source of truth for username
+     * normalization and performs case-insensitive matching.
+     * We only remove accidental surrounding whitespace.
+     */
+    const cleanedUsername =
+      username.trim();
 
-    if (!cleanedUserId) {
-      setUserIdError(
-        "A user ID is required.",
+    if (!cleanedUsername) {
+      setUsernameError(
+        "A GitHub username is required.",
       );
 
       return;
@@ -117,21 +128,64 @@ export function AddTeamMemberDialog({
         await addMemberMutation.mutateAsync(
           {
             actorUserId,
-            userId: cleanedUserId,
+            username:
+              cleanedUsername,
             role,
           },
         );
 
       handleClose();
 
+      const addedUsername =
+        response.data?.username;
+
       toast.success(
-        response.message ||
-          "Team member added successfully.",
+        addedUsername
+          ? `${addedUsername} was added to the team.`
+          : response.message ||
+              "Team member added successfully.",
       );
-    } catch {
-      toast.error(
-        "The member could not be added. Confirm the user ID and try again.",
-      );
+    } catch (error) {
+      /*
+       * The backend now returns useful validation messages for
+       * unknown usernames, duplicate members and permission errors.
+       *
+       * Our API client may expose that message differently depending
+       * on the error shape, so we fall back to a useful generic message.
+       */
+      let message =
+        "The member could not be added. Check the GitHub username and try again.";
+
+      if (
+        error &&
+        typeof error === "object" &&
+        "response" in error
+      ) {
+        const responseError =
+          error as {
+            response?: {
+              data?: {
+                message?: string;
+              };
+            };
+          };
+
+        if (
+          responseError.response?.data
+            ?.message
+        ) {
+          message =
+            responseError.response.data
+              .message;
+        }
+      } else if (
+        error instanceof Error &&
+        error.message
+      ) {
+        message = error.message;
+      }
+
+      toast.error(message);
     }
   }
 
@@ -151,7 +205,9 @@ export function AddTeamMemberDialog({
             event.preventDefault();
           }
         }}
-        onPointerDownOutside={(event) => {
+        onPointerDownOutside={(
+          event,
+        ) => {
           if (isSubmitting) {
             event.preventDefault();
           }
@@ -159,51 +215,57 @@ export function AddTeamMemberDialog({
       >
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl border bg-muted/50">
-              <UserPlus className="h-5 w-5 text-muted-foreground" />
-            </div>
-
             <DialogTitle>
               Add Team Member
             </DialogTitle>
 
             <DialogDescription>
-              Add an existing ArcHive user and assign their workspace role.
+              Add an existing ArcHive user
+              by GitHub username and assign
+              their workspace role.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-5 py-6">
             <div className="space-y-2">
-              <Label htmlFor="team-member-user-id">
-                ArcHive User ID
+              <Label htmlFor="team-member-username">
+                GitHub Username
               </Label>
 
               <Input
-                id="team-member-user-id"
-                value={userId}
+                id="team-member-username"
+                value={username}
                 disabled={isSubmitting}
-                placeholder="User UUID"
-                aria-invalid={
-                  Boolean(userIdError)
-                }
+                placeholder="e.g. DevRajah or @DevRajah"
+                autoComplete="off"
+                autoCapitalize="none"
+                spellCheck={false}
+                aria-invalid={Boolean(
+                  usernameError,
+                )}
                 onChange={(event) => {
-                  setUserId(
+                  setUsername(
                     event.target.value,
                   );
 
-                  if (userIdError) {
-                    setUserIdError("");
+                  if (usernameError) {
+                    setUsernameError(
+                      "",
+                    );
                   }
                 }}
               />
 
-              {userIdError ? (
+              {usernameError ? (
                 <p className="text-sm text-destructive">
-                  {userIdError}
+                  {usernameError}
                 </p>
               ) : (
                 <p className="text-xs leading-5 text-muted-foreground">
-                  The backend currently requires the existing ArcHive user ID.
+                  Enter the GitHub username
+                  of an existing ArcHive
+                  user. You can include the
+                  @ symbol.
                 </p>
               )}
             </div>
@@ -216,7 +278,9 @@ export function AddTeamMemberDialog({
               <Select
                 value={role}
                 disabled={isSubmitting}
-                onValueChange={(value) =>
+                onValueChange={(
+                  value,
+                ) =>
                   setRole(
                     value as AddTeamMemberRole,
                   )
@@ -242,7 +306,8 @@ export function AddTeamMemberDialog({
               </Select>
 
               <p className="text-xs leading-5 text-muted-foreground">
-                Ownership cannot be assigned through this form.
+                Ownership cannot be assigned
+                through this form.
               </p>
             </div>
           </div>
@@ -261,7 +326,7 @@ export function AddTeamMemberDialog({
               type="submit"
               disabled={
                 isSubmitting ||
-                !userId.trim()
+                !username.trim()
               }
             >
               {isSubmitting ? (

@@ -216,7 +216,11 @@ export type AddTeamMemberRole =
 
 export interface AddTeamMemberPayload {
   actorUserId: string;
-  userId: string;
+
+  // The person being added is identified by their GitHub username.
+  // The backend handles case-insensitive matching and an optional leading @.
+  username: string;
+
   role: AddTeamMemberRole;
 }
 
