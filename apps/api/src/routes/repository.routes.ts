@@ -988,8 +988,19 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
        * being rediscovered from architecture domains.
        */
       const capabilities = {
+        /**
+         * Some compatibility flags map directly to canonical capability results.
+         *
+         * Others represent architecture-domain concepts and therefore must come
+         * from the canonical architecture-domain collection instead.
+         *
+         * Future me:
+         * Do not create fake CapabilityResult keys merely to make this legacy
+         * boolean object look symmetrical.
+         */
+
         frontendArchitecture:
-          capabilityKeys.has(
+          domains.includes(
             "FRONTEND_ARCHITECTURE"
           ),
 
@@ -1029,22 +1040,22 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
           ),
 
         dependencyManagement:
-          capabilityKeys.has(
+          domains.includes(
             "DEPENDENCY_MANAGEMENT"
           ),
 
         typeContracts:
-          capabilityKeys.has(
+          domains.includes(
             "TYPE_CONTRACTS"
           ),
 
         stateManagement:
-          capabilityKeys.has(
+          domains.includes(
             "STATE_MANAGEMENT"
           ),
 
         architectureIntelligence:
-          capabilityKeys.has(
+          domains.includes(
             "ARCHITECTURE_INTELLIGENCE"
           ),
       };
