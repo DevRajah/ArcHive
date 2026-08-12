@@ -1358,7 +1358,6 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
   );
 
 
-  //capabilities analysis
   // capabilities analysis
   app.get<{ Params: { repositoryId: string } }>(
     "/:repositoryId/capabilities",
@@ -1733,21 +1732,57 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
 
 
   // purpose analysis
+  // purpose analysis
   app.get<{ Params: { repositoryId: string } }>(
     "/:repositoryId/purpose",
     async (request, reply) => {
       const { repositoryId } = request.params;
 
-      const repository = await prisma.repository.findUnique({
-        where: { id: repositoryId },
-        select: {
-          id: true,
-          name: true,
-          fullName: true,
-          description: true,
-          language: true,
-        },
-      });
+      /**
+       * Repository purpose is current-state intelligence.
+       *
+       * Future me:
+       * Do not infer the repository's current purpose from ArchitectureChange
+       * history. Historical events may contain older or partial classifications.
+       *
+       * The latest RepositoryIntelligenceSnapshot is the authoritative source
+       * for the repository's current identity and reasoning evidence.
+       */
+      const repository =
+        await prisma.repository.findUnique({
+          where: {
+            id: repositoryId,
+          },
+
+          select: {
+            id: true,
+            name: true,
+            fullName: true,
+            description: true,
+            language: true,
+
+            intelligenceSnapshots: {
+              orderBy: [
+                {
+                  createdAt: "desc",
+                },
+                {
+                  id: "desc",
+                },
+              ],
+
+              take: 1,
+
+              select: {
+                id: true,
+                primaryRepositoryType: true,
+                repositoryTypes: true,
+                intelligence: true,
+                createdAt: true,
+              },
+            },
+          },
+        });
 
       if (!repository) {
         return reply.status(404).send({
@@ -1756,42 +1791,89 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
         });
       }
 
-      const architectureChanges = await prisma.architectureChange.findMany({
-        where: { repositoryId },
-        select: {
-          repositoryTypes: true,
-          reasoningSignals: true,
-        },
-      });
+      const latestSnapshot =
+        repository.intelligenceSnapshots[0];
 
-      const repositoryTypes = Array.from(
-        new Set(
-          architectureChanges
-            .flatMap((change) => change.repositoryTypes?.split(",") || [])
-            .map((type) => type.trim())
-            .filter(Boolean)
-        )
-      );
+      /**
+       * Do not silently downgrade to historical ArchitectureChange data when
+       * canonical repository intelligence has not been generated.
+       */
+      if (!latestSnapshot) {
+        return reply.status(404).send({
+          success: false,
+          message:
+            "Repository intelligence has not been generated yet. Reprocess the repository first.",
+        });
+      }
 
-      const reasoningSignals = Array.from(
-        new Set(
-          architectureChanges
-            .flatMap((change) => change.reasoningSignals?.split(" | ") || [])
-            .map((signal) => signal.trim())
-            .filter(Boolean)
-        )
-      );
+      /**
+       * Canonical repository classifications.
+       */
+      const repositoryTypes =
+        readAuditStringArray(
+          latestSnapshot.repositoryTypes
+        );
 
-      const repositoryPurpose = inferRepositoryPurpose(repositoryTypes);
+      /**
+       * Canonical reasoning signals already preserve their logical boundaries.
+       *
+       * Do not split these strings on commas or pipe characters.
+       */
+      const reasoningSignals =
+        readAuditReasoningSignals(
+          latestSnapshot.intelligence
+        );
+
+      /**
+       * Repository purpose is a semantic interpretation of repository type.
+       *
+       * Example:
+       *
+       * DEVTOOL_PLATFORM
+       *       ↓
+       * DEVELOPER_TOOLING
+       *
+       * These are intentionally different abstraction layers.
+       */
+      const repositoryPurpose =
+        inferRepositoryPurpose(
+          repositoryTypes
+        );
 
       return {
         success: true,
-        message: "Repository purpose fetched successfully",
+
+        message:
+          "Repository purpose fetched successfully",
+
         data: {
-          repository,
+          repository: {
+            id: repository.id,
+            name: repository.name,
+            fullName:
+              repository.fullName,
+            description:
+              repository.description,
+            language:
+              repository.language,
+          },
+
           repositoryPurpose,
+
           repositoryTypes,
+
           reasoningSignals,
+
+          /**
+           * Additional canonical identity context.
+           *
+           * This is additive and does not break existing frontend consumers.
+           */
+          primaryRepositoryType:
+            latestSnapshot.primaryRepositoryType,
+
+          generatedAt:
+            latestSnapshot.createdAt,
         },
       };
     }
