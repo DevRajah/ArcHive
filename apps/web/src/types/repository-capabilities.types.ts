@@ -1,62 +1,80 @@
 export interface RepositoryCapabilitiesResponse {
-    repository: {
-        id: string;
-        name: string;
-        fullName: string;
+  repository: {
+    id: string;
+    name: string;
+    fullName: string;
+  };
+
+  capabilities: {
+    frontendArchitecture?: boolean;
+    apiLayer?: boolean;
+    authentication?: boolean;
+    realtimeSystems?: boolean;
+    queueInfrastructure?: boolean;
+    databaseLayer?: boolean;
+    cachingLayer?: boolean;
+    devopsInfrastructure?: boolean;
+    dependencyManagement?: boolean;
+    typeContracts?: boolean;
+    stateManagement?: boolean;
+    architectureIntelligence?: boolean;
+  };
+
+  capabilityResults?: Array<{
+    key: string;
+    reason: string;
+    confidence: number;
+  }>;
+
+  scores: {
+    repositoryMaturityScore: number;
+
+    /**
+     * Canonical capability breadth/strength score.
+     */
+    capabilityScore: number;
+
+    /**
+     * Coverage of infrastructure-oriented capabilities.
+     */
+    infrastructureDepthScore: number;
+
+    infrastructureDepth: string;
+
+    infrastructureDepthEvidence?: {
+      detected: string[];
+      detectedCount: number;
+      totalPossible: number;
     };
 
-    capabilities: {
-        frontendArchitecture?: boolean;
-        apiLayer?: boolean;
-        authentication?: boolean;
-        realtimeSystems?: boolean;
-        queueInfrastructure?: boolean;
-        databaseLayer?: boolean;
-        cachingLayer?: boolean;
-        devopsInfrastructure?: boolean;
-        dependencyManagement?: boolean;
-        typeContracts?: boolean;
-        stateManagement?: boolean;
-        architectureIntelligence?: boolean;
-    };
+    /**
+     * @deprecated
+     * Backend compatibility alias.
+     * Use repositoryMaturityScore instead.
+     */
+    architectureMaturityScore?: number;
 
-    scores: {
-        repositoryMaturityScore: number;
-        capabilityScore: number;
+    /**
+     * @deprecated
+     * Backend compatibility alias.
+     * Use capabilityScore instead.
+     */
+    engineeringComplexityScore?: number;
+  };
 
-        infrastructureDepthScore: number;
-        infrastructureDepth: string;
+  repositoryPurpose?: {
+    purposeType: string;
+    label: string;
+    description: string;
+  } | null;
 
-        infrastructureDepthEvidence?: {
-            detected: string[];
-            detectedCount: number;
-            totalPossible: number;
-        };
+  detectedDomains: string[];
+  detectedTechnologies: string[];
 
-        /**
-         * @deprecated
-         * Use repositoryMaturityScore instead.
-         */
-        architectureMaturityScore: number;
+  reasoningSignals?: string[];
 
-        /**
-         * @deprecated
-         * Use capabilityScore instead.
-         */
-        engineeringComplexityScore: number;
-    };
+  detectedRepositoryTypes?: string[];
+  repositoryTypes?: string[];
 
-    repositoryPurpose?: {
-        purposeType: string;
-        label: string;
-        description: string;
-    } | null;
-
-    detectedDomains: string[];
-    detectedTechnologies: string[];
-    reasoningSignals?: string[];
-    detectedRepositoryTypes?: string[];
-    repositoryTypes?: string[];
-
-    architectureStyles?: string[];
+  architectureStyles?: string[];
 }

@@ -29,57 +29,21 @@ import {
   useRepositoryCapabilities,
   useRepositoryIntelligenceReport,
 } from "@/hooks/useRepositories";
+
 import { formatFilterLabel } from "@/lib/filters";
 
-type CapabilityReport = {
-  repository?: {
-    id?: string;
-    name?: string;
-    fullName?: string;
-  };
+import type {
+  RepositoryCapabilitiesResponse,
+} from "@/types/repository-capabilities.types";
 
-  capabilities?: Record<string, boolean>;
-
-  scores?: {
-    /**
-     * Canonical scores returned by the capabilities endpoint.
-     */
-    repositoryMaturityScore?: number;
-    capabilityScore?: number;
-    infrastructureDepthScore?: number;
-    infrastructureDepth?: string;
-
-    infrastructureDepthEvidence?: {
-      detected?: string[];
-      detectedCount?: number;
-      totalPossible?: number;
-    };
-
-    /**
-     * Legacy compatibility aliases.
-     *
-     * Future me:
-     * Keep these only while older API responses may still exist.
-     * New UI logic should prefer the canonical fields above.
-     */
-    architectureMaturityScore?: number;
-    engineeringComplexityScore?: number;
-  };
-
-  detectedDomains?: string[];
-  detectedTechnologies?: string[];
-  detectedRepositoryTypes?: string[];
-  repositoryTypes?: string[];
-
-  repositoryPurpose?: {
-    purposeType?: string;
-    label?: string;
-    description?: string;
-  } | null;
-
-  reasoningSignals?: string[];
-};
-
+/**
+ * This page combines the dedicated capability endpoint with the broader
+ * repository intelligence report.
+ *
+ * Keep this local shape limited to the intelligence fields the page actually
+ * consumes. Capability-specific fields belong in
+ * RepositoryCapabilitiesResponse instead.
+ */
 type CanonicalIntelligenceReport = {
   repository?: {
     id?: string;
@@ -90,12 +54,16 @@ type CanonicalIntelligenceReport = {
   summary?: {
     primaryRepositoryType?: string;
     persona?: string;
+
     healthStatus?: string;
     healthScore?: number;
+
     maturityLevel?: string;
     maturityScore?: number;
+
     productionReadinessLevel?: string;
     productionReadinessScore?: number;
+
     engineeringQualityScore?: number;
   };
 
@@ -103,11 +71,13 @@ type CanonicalIntelligenceReport = {
     identity?: {
       repositoryTypes?: string[];
       repositoryPersona?: string;
+
       repositoryDNA?: {
         engineeringProfile?: string;
         maturityScore?: number;
         complexityScore?: number;
         confidenceScore?: number;
+
         strongestCapabilities?: string[];
         dominantTechnologies?: string[];
         dominantArchitecture?: string[];
@@ -117,9 +87,12 @@ type CanonicalIntelligenceReport = {
     signals?: {
       technologies?: string[];
       architectureDomains?: string[];
+
       engineeringSignals?: string[];
       reasoningSignals?: string[];
+
       capabilities?: Record<string, boolean>;
+
       evidenceResults?: string[];
     };
 
@@ -151,23 +124,43 @@ type CanonicalIntelligenceReport = {
   };
 };
 
-function getCapabilityEntries(capabilities?: Record<string, boolean>) {
-  if (!capabilities) return [];
+function getCapabilityEntries(
+  capabilities?: Record<string, boolean>
+) {
+  if (!capabilities) {
+    return [];
+  }
 
-  return Object.entries(capabilities).map(([name, enabled]) => ({
-    name,
-    enabled,
-  }));
+  return Object.entries(capabilities).map(
+    ([name, enabled]) => ({
+      name,
+      enabled,
+    })
+  );
 }
 
-function getCapabilityScore(capabilities?: Record<string, boolean>) {
+/**
+ * Compatibility fallback only.
+ *
+ * The backend now owns the canonical capability score. We calculate a score
+ * here only when an older response does not contain scores.capabilityScore.
+ */
+function getFallbackCapabilityScore(
+  capabilities?: Record<string, boolean>
+) {
   const entries = getCapabilityEntries(capabilities);
 
-  if (entries.length === 0) return null;
+  if (entries.length === 0) {
+    return null;
+  }
 
-  const enabledCount = entries.filter((item) => item.enabled).length;
+  const enabledCount = entries.filter(
+    (item) => item.enabled
+  ).length;
 
-  return Math.round((enabledCount / entries.length) * 100);
+  return Math.round(
+    (enabledCount / entries.length) * 100
+  );
 }
 
 export default function RepositoryCapabilitiesPage() {
@@ -186,65 +179,141 @@ export default function RepositoryCapabilitiesPage() {
     isLoading: isIntelligenceLoading,
   } = useRepositoryIntelligenceReport(repoId);
 
-  const capabilityReport = capabilityData as CapabilityReport | undefined;
-  const intelligenceReport = intelligenceData as
-    | CanonicalIntelligenceReport
-    | undefined;
+  const capabilityReport =
+    capabilityData as
+      | RepositoryCapabilitiesResponse
+      | undefined;
+
+  const intelligenceReport =
+    intelligenceData as
+      | CanonicalIntelligenceReport
+      | undefined;
 
   const repository =
-    intelligenceReport?.repository || capabilityReport?.repository;
+    intelligenceReport?.repository ??
+    capabilityReport?.repository;
 
-  const intelligence = intelligenceReport?.repositoryIntelligence;
+  const intelligence =
+    intelligenceReport?.repositoryIntelligence;
+
   const identity = intelligence?.identity;
   const dna = identity?.repositoryDNA;
   const signals = intelligence?.signals;
   const assessment = intelligence?.assessment;
 
+  /**
+   * Prefer capability-specific data from the dedicated capability endpoint.
+   *
+   * The intelligence report remains a useful fallback because older reports
+   * may still contain capability flags there.
+   */
   const capabilities =
-    signals?.capabilities || capabilityReport?.capabilities || {};
+    capabilityReport?.capabilities ??
+    signals?.capabilities ??
+    {};
 
   const capabilityEntries = useMemo(
     () => getCapabilityEntries(capabilities),
     [capabilities]
   );
 
-  const enabledCapabilities = capabilityEntries
-    .filter((item) => item.enabled)
-    .map((item) => item.name);
+  const enabledCapabilities = useMemo(
+    () =>
+      capabilityEntries
+        .filter((item) => item.enabled)
+        .map((item) => item.name),
+    [capabilityEntries]
+  );
 
-  const missingCapabilities = capabilityEntries
-    .filter((item) => !item.enabled)
-    .map((item) => item.name);
+  const missingCapabilities = useMemo(
+    () =>
+      capabilityEntries
+        .filter((item) => !item.enabled)
+        .map((item) => item.name),
+    [capabilityEntries]
+  );
 
   /**
-   * Prefer the canonical backend score.
+   * This is the canonical capability score from the backend.
    *
-   * The local calculation remains only as a compatibility fallback for
-   * responses produced before capabilityScore was added to the API.
+   * Do not use engineeringComplexityScore here. That field is now only a
+   * compatibility alias and its name no longer describes the metric.
    */
   const capabilityScore =
     capabilityReport?.scores?.capabilityScore ??
-    getCapabilityScore(capabilities);
+    getFallbackCapabilityScore(capabilities);
+
+  const repositoryMaturityScore =
+    capabilityReport?.scores?.repositoryMaturityScore ??
+    intelligenceReport?.summary?.maturityScore;
+
+  const repositoryMaturityLevel =
+    assessment?.repositoryMaturity?.level ??
+    intelligenceReport?.summary?.maturityLevel;
+
+  const infrastructureDepthScore =
+    capabilityReport?.scores?.infrastructureDepthScore;
+
+  const infrastructureDepthLevel =
+    capabilityReport?.scores?.infrastructureDepth;
 
   const technologies =
-    signals?.technologies || capabilityReport?.detectedTechnologies || [];
+    capabilityReport?.detectedTechnologies?.length
+      ? capabilityReport.detectedTechnologies
+      : signals?.technologies ?? [];
 
   const architectureDomains =
-    signals?.architectureDomains || capabilityReport?.detectedDomains || [];
+    capabilityReport?.detectedDomains?.length
+      ? capabilityReport.detectedDomains
+      : signals?.architectureDomains ?? [];
 
   const repositoryTypes =
-    identity?.repositoryTypes ||
-    capabilityReport?.detectedRepositoryTypes ||
-    capabilityReport?.repositoryTypes ||
-    [];
+    capabilityReport?.detectedRepositoryTypes?.length
+      ? capabilityReport.detectedRepositoryTypes
+      : capabilityReport?.repositoryTypes?.length
+        ? capabilityReport.repositoryTypes
+        : identity?.repositoryTypes ?? [];
 
   const reasoningSignals =
-    signals?.reasoningSignals || capabilityReport?.reasoningSignals || [];
+    capabilityReport?.reasoningSignals?.length
+      ? capabilityReport.reasoningSignals
+      : signals?.reasoningSignals ?? [];
+
+  const capabilityResults =
+    capabilityReport?.capabilityResults ?? [];
+
+  const capabilityEvidence = capabilityResults.map(
+    (result) => {
+      const confidence = Number.isFinite(
+        result.confidence
+      )
+        ? ` (${Math.round(result.confidence)}% confidence)`
+        : "";
+
+      return `${formatFilterLabel(result.key)}: ${result.reason}${confidence}`;
+    }
+  );
+
+  const strongestCapabilities =
+    dna?.strongestCapabilities?.length
+      ? dna.strongestCapabilities
+      : enabledCapabilities;
+
+  const infrastructureEvidence =
+    capabilityReport?.scores
+      ?.infrastructureDepthEvidence;
+
+  const isLoading =
+    isCapabilityLoading || isIntelligenceLoading;
 
   return (
     <AppShell>
       <PageContent>
-        <Button asChild variant="ghost" className="px-0">
+        <Button
+          asChild
+          variant="ghost"
+          className="px-0"
+        >
           <Link href={`/repositories/${repoId}`}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to repository overview
@@ -260,30 +329,38 @@ export default function RepositoryCapabilitiesPage() {
                 </h1>
 
                 {repository?.fullName && (
-                  <Badge variant="secondary">{repository.fullName}</Badge>
+                  <Badge variant="secondary">
+                    {repository.fullName}
+                  </Badge>
                 )}
 
-                {intelligenceReport?.summary?.primaryRepositoryType && (
+                {intelligenceReport?.summary
+                  ?.primaryRepositoryType && (
                   <Badge>
                     {formatFilterLabel(
-                      intelligenceReport.summary.primaryRepositoryType
+                      intelligenceReport.summary
+                        .primaryRepositoryType
                     )}
                   </Badge>
                 )}
               </div>
 
               <p className="mt-2 max-w-3xl text-muted-foreground">
-                Engineering capability scorecard showing enabled capabilities,
-                missing signals, architecture domains, technologies, and
-                repository maturity context.
+                Engineering capability scorecard showing
+                detected capabilities, missing signals,
+                infrastructure depth, architecture domains,
+                technologies, and repository maturity
+                context.
               </p>
             </div>
           </div>
         </div>
 
-        <RepositoryIntelligenceNav repositoryId={repoId} />
+        <RepositoryIntelligenceNav
+          repositoryId={repoId}
+        />
 
-        {(isCapabilityLoading || isIntelligenceLoading) && (
+        {isLoading && (
           <div className="space-y-6">
             <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
               <Skeleton className="h-40 rounded-xl" />
@@ -310,37 +387,44 @@ export default function RepositoryCapabilitiesPage() {
           </div>
         )}
 
-        {!isCapabilityLoading && !isCapabilityError && (
+        {!isLoading && !isCapabilityError && (
           <>
             <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
               <ScoreCard
                 label="Capability Coverage"
                 score={capabilityScore}
-                description="Share of known engineering capabilities detected in this repository."
+                description="Canonical capability breadth and strength detected across this repository."
               />
 
               <ScoreCard
-                label="Architecture Maturity"
-                score={
-                  capabilityReport?.scores?.repositoryMaturityScore ??
-                  intelligenceReport?.summary?.maturityScore ??
-                  capabilityReport?.scores?.architectureMaturityScore
-                }
-                level={intelligenceReport?.summary?.maturityLevel}
-                description="Architecture maturity based on detected repository intelligence."
+                label="Repository Maturity"
+                score={repositoryMaturityScore}
+                level={repositoryMaturityLevel}
+                description="Overall repository engineering maturity from canonical intelligence."
               />
 
               <ScoreCard
                 label="Engineering Quality"
-                score={intelligenceReport?.summary?.engineeringQualityScore}
-                level={assessment?.engineeringQuality?.level}
+                score={
+                  intelligenceReport?.summary
+                    ?.engineeringQualityScore
+                }
+                level={
+                  assessment?.engineeringQuality?.level
+                }
                 description="Quality score from the canonical repository intelligence assessment."
               />
 
               <ScoreCard
                 label="Production Readiness"
-                score={intelligenceReport?.summary?.productionReadinessScore}
-                level={intelligenceReport?.summary?.productionReadinessLevel}
+                score={
+                  intelligenceReport?.summary
+                    ?.productionReadinessScore
+                }
+                level={
+                  intelligenceReport?.summary
+                    ?.productionReadinessLevel
+                }
                 description="How production-ready this repository appears from engineering signals."
               />
             </div>
@@ -362,15 +446,19 @@ export default function RepositoryCapabilitiesPage() {
                       </p>
 
                       <h2 className="mt-2 text-2xl font-bold">
-                        {identity?.repositoryPersona ||
-                          intelligenceReport?.summary?.persona ||
-                          capabilityReport?.repositoryPurpose?.label ||
+                        {identity?.repositoryPersona ??
+                          intelligenceReport?.summary
+                            ?.persona ??
+                          capabilityReport
+                            ?.repositoryPurpose?.label ??
                           "Repository capability profile pending"}
                       </h2>
 
                       <p className="mt-3 text-sm leading-6 text-muted-foreground">
-                        {dna?.engineeringProfile ||
-                          capabilityReport?.repositoryPurpose?.description ||
+                        {dna?.engineeringProfile ??
+                          capabilityReport
+                            ?.repositoryPurpose
+                            ?.description ??
                           "ArcHive has not generated a detailed capability identity for this repository yet."}
                       </p>
                     </div>
@@ -380,32 +468,31 @@ export default function RepositoryCapabilitiesPage() {
                     <p className="mb-3 text-sm font-medium">
                       Repository Types
                     </p>
-                    <BadgeGroup items={repositoryTypes} />
+
+                    <BadgeGroup
+                      items={repositoryTypes}
+                    />
                   </div>
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-1">
                   <ScoreCard
-                    label="DNA Maturity"
+                    label="DNA Structural Maturity"
                     score={dna?.maturityScore}
-                    description="Maturity detected from repository DNA."
+                    description="Structural maturity inferred from repository DNA. This is separate from the broader repository maturity assessment."
                   />
 
                   <ScoreCard
                     label="Infrastructure Depth"
-                    score={
-                      capabilityReport?.scores?.infrastructureDepthScore
-                    }
-                    level={
-                      capabilityReport?.scores?.infrastructureDepth
-                    }
-                    description="Breadth of detected API, database, caching, queue, realtime, and DevOps infrastructure."
+                    score={infrastructureDepthScore}
+                    level={infrastructureDepthLevel}
+                    description="Coverage of API, database, caching, queue, realtime, and DevOps infrastructure capabilities."
                   />
 
                   <ScoreCard
                     label="Confidence"
                     score={dna?.confidenceScore}
-                    description="Confidence in the detected capability identity."
+                    description="Confidence in the detected repository capability identity."
                   />
                 </div>
               </div>
@@ -413,27 +500,37 @@ export default function RepositoryCapabilitiesPage() {
 
             <IntelligenceSection
               title="Capability Matrix"
-              description="Enabled and missing capability signals. Missing does not always mean bad; it means ArcHive has not detected that capability yet."
+              description="Enabled and missing capability signals. Missing does not automatically mean bad. It means ArcHive has not detected that capability in the repository."
             >
               <div className="grid gap-6 lg:grid-cols-2">
                 <div className="rounded-xl border border-border bg-background p-5">
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="h-5 w-5 text-primary" />
-                    <h3 className="font-semibold">Enabled Capabilities</h3>
+
+                    <h3 className="font-semibold">
+                      Enabled Capabilities
+                    </h3>
+
                     <Badge variant="secondary">
                       {enabledCapabilities.length}
                     </Badge>
                   </div>
 
                   <div className="mt-4">
-                    <BadgeGroup items={enabledCapabilities} />
+                    <BadgeGroup
+                      items={enabledCapabilities}
+                    />
                   </div>
                 </div>
 
                 <div className="rounded-xl border border-border bg-background p-5">
                   <div className="flex items-center gap-2">
                     <XCircle className="h-5 w-5 text-muted-foreground" />
-                    <h3 className="font-semibold">Missing / Not Detected</h3>
+
+                    <h3 className="font-semibold">
+                      Missing / Not Detected
+                    </h3>
+
                     <Badge variant="outline">
                       {missingCapabilities.length}
                     </Badge>
@@ -451,11 +548,14 @@ export default function RepositoryCapabilitiesPage() {
 
             <IntelligenceSection
               title="Technology and Architecture Signals"
-              description="Detected technologies and architecture domains that support the capability score."
+              description="Detected technologies and architecture domains that support ArcHive's capability assessment."
             >
               <div className="grid gap-6 lg:grid-cols-2">
                 <div className="rounded-xl border border-border bg-background p-5">
-                  <p className="mb-3 text-sm font-medium">Technologies</p>
+                  <p className="mb-3 text-sm font-medium">
+                    Technologies
+                  </p>
+
                   <BadgeGroup
                     items={technologies}
                     variant="outline"
@@ -467,15 +567,19 @@ export default function RepositoryCapabilitiesPage() {
                   <p className="mb-3 text-sm font-medium">
                     Architecture Domains
                   </p>
-                  <BadgeGroup items={architectureDomains} />
+
+                  <BadgeGroup
+                    items={architectureDomains}
+                  />
                 </div>
 
                 <div className="rounded-xl border border-border bg-background p-5 lg:col-span-2">
                   <p className="mb-3 text-sm font-medium">
                     Strongest Capabilities
                   </p>
+
                   <BadgeGroup
-                    items={dna?.strongestCapabilities || enabledCapabilities}
+                    items={strongestCapabilities}
                   />
                 </div>
               </div>
@@ -483,13 +587,14 @@ export default function RepositoryCapabilitiesPage() {
 
             <IntelligenceSection
               title="Capability Reasoning"
-              description="Signals and evidence ArcHive used to decide which capabilities are present."
+              description="Signals and structured evidence ArcHive used to decide which engineering capabilities are present."
             >
               <div className="grid gap-6 lg:grid-cols-2">
                 <div className="rounded-xl border border-border bg-background p-5">
                   <p className="mb-3 text-sm font-medium">
                     Reasoning Signals
                   </p>
+
                   <InsightList
                     items={reasoningSignals}
                     empty="No reasoning signals detected yet."
@@ -499,15 +604,56 @@ export default function RepositoryCapabilitiesPage() {
 
                 <div className="rounded-xl border border-border bg-background p-5">
                   <p className="mb-3 text-sm font-medium">
-                    Evidence Results
+                    Capability Evidence
                   </p>
+
                   <InsightList
-                    items={signals?.evidenceResults}
-                    empty="No evidence results detected yet."
+                    items={
+                      capabilityEvidence.length
+                        ? capabilityEvidence
+                        : signals?.evidenceResults
+                    }
+                    empty="No structured capability evidence detected yet."
                     limit={6}
                   />
                 </div>
               </div>
+
+              {infrastructureEvidence && (
+                <div className="mt-6 rounded-xl border border-border bg-background p-5">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <p className="font-medium">
+                        Infrastructure Depth Evidence
+                      </p>
+
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        Infrastructure capabilities detected
+                        by ArcHive.
+                      </p>
+                    </div>
+
+                    <Badge variant="secondary">
+                      {
+                        infrastructureEvidence.detectedCount
+                      }
+                      /
+                      {
+                        infrastructureEvidence.totalPossible
+                      }{" "}
+                      detected
+                    </Badge>
+                  </div>
+
+                  <div className="mt-4">
+                    <BadgeGroup
+                      items={
+                        infrastructureEvidence.detected
+                      }
+                    />
+                  </div>
+                </div>
+              )}
             </IntelligenceSection>
 
             <IntelligenceSection
@@ -518,11 +664,15 @@ export default function RepositoryCapabilitiesPage() {
                 <div className="rounded-xl border border-border bg-background p-5">
                   <div className="flex items-center gap-2">
                     <ShieldCheck className="h-5 w-5 text-primary" />
-                    <p className="font-medium">Repository Health</p>
+
+                    <p className="font-medium">
+                      Repository Health
+                    </p>
                   </div>
 
                   <p className="mt-3 text-sm leading-6 text-muted-foreground">
-                    {assessment?.repositoryHealth?.summary ||
+                    {assessment?.repositoryHealth
+                      ?.summary ??
                       "No repository health summary available yet."}
                   </p>
                 </div>
@@ -530,23 +680,31 @@ export default function RepositoryCapabilitiesPage() {
                 <div className="rounded-xl border border-border bg-background p-5">
                   <div className="flex items-center gap-2">
                     <Layers3 className="h-5 w-5 text-primary" />
-                    <p className="font-medium">Repository Maturity</p>
+
+                    <p className="font-medium">
+                      Repository Maturity
+                    </p>
                   </div>
 
                   <p className="mt-3 text-sm leading-6 text-muted-foreground">
-                    {assessment?.repositoryMaturity?.summary ||
-                      "No maturity summary available yet."}
+                    {assessment?.repositoryMaturity
+                      ?.summary ??
+                      "No repository maturity summary available yet."}
                   </p>
                 </div>
 
                 <div className="rounded-xl border border-border bg-background p-5">
                   <div className="flex items-center gap-2">
                     <Brain className="h-5 w-5 text-primary" />
-                    <p className="font-medium">Engineering Quality</p>
+
+                    <p className="font-medium">
+                      Engineering Quality
+                    </p>
                   </div>
 
                   <p className="mt-3 text-sm leading-6 text-muted-foreground">
-                    {assessment?.engineeringQuality?.summary ||
+                    {assessment?.engineeringQuality
+                      ?.summary ??
                       "No engineering quality summary available yet."}
                   </p>
                 </div>
