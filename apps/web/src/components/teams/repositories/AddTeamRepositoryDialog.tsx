@@ -3,6 +3,7 @@
 import {
   FormEvent,
   useEffect,
+  useMemo,
   useState,
 } from "react";
 
@@ -24,10 +25,18 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
 import { useAddTeamRepository } from "@/hooks/useTeams";
+import { useTrackedRepositories } from "@/hooks/useRepositories";
 
 interface AddTeamRepositoryDialogProps {
   teamId: string;
@@ -50,23 +59,85 @@ export function AddTeamRepositoryDialog({
       actorUserId,
     );
 
+  const {
+    data: repositoryData,
+    isLoading: isRepositoriesLoading,
+    isError: isRepositoriesError,
+  } = useTrackedRepositories();
+
   const [
     repositoryId,
     setRepositoryId,
   ] = useState("");
 
   const [
-    repositoryIdError,
-    setRepositoryIdError,
+    repositoryError,
+    setRepositoryError,
   ] = useState("");
 
   const isSubmitting =
     addRepositoryMutation.isPending;
 
+  /*
+   * The tracked repository query may return either the raw repository array
+   * or an API envelope depending on how the repository service normalises
+   * responses.
+   *
+   * We keep this defensive so the dialog remains compatible with both shapes.
+   */
+  const repositories = useMemo(() => {
+    if (Array.isArray(repositoryData)) {
+      return repositoryData;
+    }
+
+    if (
+      repositoryData &&
+      typeof repositoryData === "object" &&
+      "data" in repositoryData &&
+      Array.isArray(
+        (
+          repositoryData as {
+            data?: unknown;
+          }
+        ).data,
+      )
+    ) {
+      return (
+        repositoryData as {
+          data: Array<{
+            id: string;
+            name: string;
+            fullName: string;
+            language?: string | null;
+            isTracked?: boolean;
+          }>;
+        }
+      ).data;
+    }
+
+    return [];
+  }, [repositoryData]);
+
+  /*
+   * This dialog is specifically attaching one of the repositories
+   * already available in ArcHive.
+   *
+   * Prefer tracked repositories where that field is available.
+   */
+  const selectableRepositories =
+    useMemo(
+      () =>
+        repositories.filter(
+          (repository) =>
+            repository.isTracked !== false,
+        ),
+      [repositories],
+    );
+
   useEffect(() => {
     if (!open) {
       setRepositoryId("");
-      setRepositoryIdError("");
+      setRepositoryError("");
     }
   }, [open]);
 
@@ -76,22 +147,21 @@ export function AddTeamRepositoryDialog({
     }
 
     setRepositoryId("");
-    setRepositoryIdError("");
+    setRepositoryError("");
+
     addRepositoryMutation.reset();
+
     onOpenChange(false);
   }
 
   async function handleSubmit(
-    event: FormEvent<HTMLFormElement>,
+    event: FormEvent,
   ) {
     event.preventDefault();
 
-    const cleanedRepositoryId =
-      repositoryId.trim();
-
-    if (!cleanedRepositoryId) {
-      setRepositoryIdError(
-        "A repository ID is required.",
+    if (!repositoryId) {
+      setRepositoryError(
+        "Select a repository to attach.",
       );
 
       return;
@@ -102,8 +172,13 @@ export function AddTeamRepositoryDialog({
         await addRepositoryMutation.mutateAsync(
           {
             actorUserId,
-            repositoryId:
-              cleanedRepositoryId,
+
+            /*
+             * The user selects by repository name.
+             * The internal ArcHive repository ID is submitted behind
+             * the scenes because that remains the backend contract.
+             */
+            repositoryId,
           },
         );
 
@@ -113,10 +188,40 @@ export function AddTeamRepositoryDialog({
         response.message ||
           "Repository attached successfully.",
       );
-    } catch {
-      toast.error(
-        "The repository could not be attached. Confirm the repository ID and try again.",
-      );
+    } catch (error) {
+      let message =
+        "The repository could not be attached.";
+
+      if (
+        error &&
+        typeof error === "object" &&
+        "response" in error
+      ) {
+        const responseError =
+          error as {
+            response?: {
+              data?: {
+                message?: string;
+              };
+            };
+          };
+
+        if (
+          responseError.response?.data
+            ?.message
+        ) {
+          message =
+            responseError.response.data
+              .message;
+        }
+      } else if (
+        error instanceof Error &&
+        error.message
+      ) {
+        message = error.message;
+      }
+
+      toast.error(message);
     }
   }
 
@@ -136,7 +241,9 @@ export function AddTeamRepositoryDialog({
             event.preventDefault();
           }
         }}
-        onPointerDownOutside={(event) => {
+        onPointerDownOutside={(
+          event,
+        ) => {
           if (isSubmitting) {
             event.preventDefault();
           }
@@ -144,8 +251,8 @@ export function AddTeamRepositoryDialog({
       >
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl border bg-muted/50">
-              <FolderPlus className="h-5 w-5 text-muted-foreground" />
+            <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl border border-border bg-muted/40">
+              <FolderPlus className="h-5 w-5" />
             </div>
 
             <DialogTitle>
@@ -153,43 +260,81 @@ export function AddTeamRepositoryDialog({
             </DialogTitle>
 
             <DialogDescription>
-              Attach one of your existing ArcHive repositories to this
-              shared workspace.
+              Select one of your existing
+              ArcHive repositories to attach
+              to this shared workspace.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-3 py-6">
-            <Label htmlFor="team-repository-id">
-              Repository ID
+            <Label>
+              Repository
             </Label>
 
-            <Input
-              id="team-repository-id"
-              value={repositoryId}
-              disabled={isSubmitting}
-              placeholder="ArcHive repository UUID"
-              aria-invalid={
-                Boolean(repositoryIdError)
-              }
-              onChange={(event) => {
-                setRepositoryId(
-                  event.target.value,
-                );
+            {isRepositoriesLoading ? (
+              <div className="flex h-10 items-center gap-2 rounded-md border border-input px-3 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Loading repositories...
+              </div>
+            ) : isRepositoriesError ? (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3">
+                <p className="text-sm text-destructive">
+                  ArcHive could not load your repositories.
+                </p>
+              </div>
+            ) : selectableRepositories.length === 0 ? (
+              <div className="rounded-md border border-border bg-muted/20 p-4">
+                <p className="text-sm font-medium">
+                  No repositories available
+                </p>
 
-                if (repositoryIdError) {
-                  setRepositoryIdError("");
-                }
-              }}
-            />
+                <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                  Import and track a repository
+                  in ArcHive before attaching it
+                  to a Team Workspace.
+                </p>
+              </div>
+            ) : (
+              <Select
+                value={repositoryId}
+                disabled={isSubmitting}
+                onValueChange={(value) => {
+                  setRepositoryId(value);
 
-            {repositoryIdError ? (
+                  if (repositoryError) {
+                    setRepositoryError("");
+                  }
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a repository" />
+                </SelectTrigger>
+
+                <SelectContent>
+                  {selectableRepositories.map(
+                    (repository) => (
+                      <SelectItem
+                        key={repository.id}
+                        value={repository.id}
+                      >
+                        {repository.fullName ||
+                          repository.name}
+                      </SelectItem>
+                    ),
+                  )}
+                </SelectContent>
+              </Select>
+            )}
+
+            {repositoryError ? (
               <p className="text-sm text-destructive">
-                {repositoryIdError}
+                {repositoryError}
               </p>
             ) : (
               <p className="text-xs leading-5 text-muted-foreground">
-                Use the internal ArcHive repository ID, not the GitHub
-                repository ID.
+                Choose one of the repositories
+                already connected to your
+                ArcHive account.
               </p>
             )}
           </div>
@@ -208,7 +353,8 @@ export function AddTeamRepositoryDialog({
               type="submit"
               disabled={
                 isSubmitting ||
-                !repositoryId.trim()
+                isRepositoriesLoading ||
+                !repositoryId
               }
             >
               {isSubmitting ? (
