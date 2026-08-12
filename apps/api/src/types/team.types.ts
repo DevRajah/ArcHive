@@ -12,11 +12,35 @@ export interface UpdateTeamInput {
   description?: string | null;
 }
 
-export interface AddTeamMemberInput {
-  actorUserId: string;
-  userId: string;
-  role?: Exclude<TeamMemberRole, "OWNER">;
-}
+/**
+ * A team member can be resolved through either their GitHub username or,
+ * temporarily, their internal ArcHive user ID.
+ *
+ * Future me:
+ * Username is the preferred user-facing contract.
+ *
+ * userId remains only as a compatibility path for older/internal consumers.
+ * The two identifiers must never be supplied together.
+ */
+type AddTeamMemberTarget =
+  | {
+      username: string;
+      userId?: never;
+    }
+  | {
+      userId: string;
+      username?: never;
+    };
+
+export type AddTeamMemberInput =
+  AddTeamMemberTarget & {
+    actorUserId: string;
+
+    role?: Exclude<
+      TeamMemberRole,
+      "OWNER"
+    >;
+  };
 
 export interface UpdateTeamMemberInput {
   actorUserId: string;

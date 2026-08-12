@@ -30,6 +30,11 @@ import {
   removeTeamRepository,
 } from "../services/teams/team-repository.service";
 
+
+import type {
+  AddTeamMemberInput,
+} from "../types/team.types";
+
 const sendTeamError = (
   error: unknown,
   request: FastifyRequest,
@@ -256,10 +261,19 @@ export const addTeamMemberController = async (
       teamId: string;
     };
 
-    const member = await addTeamMember({
-      teamId,
-      input: request.body as any,
-    });
+    /**
+    * Runtime validation still happens inside addTeamMember().
+    *
+    * This cast only gives the controller/service boundary a useful TypeScript
+    * contract. It must never replace validation of HTTP input.
+    */
+    const member =
+      await addTeamMember({
+        teamId,
+
+        input:
+          request.body as AddTeamMemberInput,
+      });
 
     return reply.status(201).send({
       success: true,
