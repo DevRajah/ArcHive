@@ -41,9 +41,29 @@ type CapabilityReport = {
   capabilities?: Record<string, boolean>;
 
   scores?: {
+    /**
+     * Canonical scores returned by the capabilities endpoint.
+     */
+    repositoryMaturityScore?: number;
+    capabilityScore?: number;
+    infrastructureDepthScore?: number;
+    infrastructureDepth?: string;
+
+    infrastructureDepthEvidence?: {
+      detected?: string[];
+      detectedCount?: number;
+      totalPossible?: number;
+    };
+
+    /**
+     * Legacy compatibility aliases.
+     *
+     * Future me:
+     * Keep these only while older API responses may still exist.
+     * New UI logic should prefer the canonical fields above.
+     */
     architectureMaturityScore?: number;
     engineeringComplexityScore?: number;
-    infrastructureDepth?: string;
   };
 
   detectedDomains?: string[];
@@ -196,7 +216,15 @@ export default function RepositoryCapabilitiesPage() {
     .filter((item) => !item.enabled)
     .map((item) => item.name);
 
-  const capabilityScore = getCapabilityScore(capabilities);
+  /**
+   * Prefer the canonical backend score.
+   *
+   * The local calculation remains only as a compatibility fallback for
+   * responses produced before capabilityScore was added to the API.
+   */
+  const capabilityScore =
+    capabilityReport?.scores?.capabilityScore ??
+    getCapabilityScore(capabilities);
 
   const technologies =
     signals?.technologies || capabilityReport?.detectedTechnologies || [];
@@ -294,8 +322,9 @@ export default function RepositoryCapabilitiesPage() {
               <ScoreCard
                 label="Architecture Maturity"
                 score={
-                  capabilityReport?.scores?.architectureMaturityScore ||
-                  intelligenceReport?.summary?.maturityScore
+                  capabilityReport?.scores?.repositoryMaturityScore ??
+                  intelligenceReport?.summary?.maturityScore ??
+                  capabilityReport?.scores?.architectureMaturityScore
                 }
                 level={intelligenceReport?.summary?.maturityLevel}
                 description="Architecture maturity based on detected repository intelligence."
@@ -363,13 +392,14 @@ export default function RepositoryCapabilitiesPage() {
                   />
 
                   <ScoreCard
-                    label="Complexity"
+                    label="Infrastructure Depth"
                     score={
-                      dna?.complexityScore ||
-                      capabilityReport?.scores?.engineeringComplexityScore
+                      capabilityReport?.scores?.infrastructureDepthScore
                     }
-                    level={capabilityReport?.scores?.infrastructureDepth}
-                    description="Engineering complexity and infrastructure depth."
+                    level={
+                      capabilityReport?.scores?.infrastructureDepth
+                    }
+                    description="Breadth of detected API, database, caching, queue, realtime, and DevOps infrastructure."
                   />
 
                   <ScoreCard

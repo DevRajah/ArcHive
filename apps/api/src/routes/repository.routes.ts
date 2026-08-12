@@ -1159,6 +1159,15 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
               infrastructureDepthAssessment.score,
 
             infrastructureDepth,
+            /**
+ * Legacy compatibility aliases.
+ *
+ * @deprecated architectureMaturityScore
+ * Use repositoryMaturityScore instead.
+ *
+ * @deprecated engineeringComplexityScore
+ * Use capabilityScore instead.
+ */
             architectureMaturityScore,
             engineeringComplexityScore,
 

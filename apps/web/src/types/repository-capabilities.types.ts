@@ -21,9 +21,29 @@ export interface RepositoryCapabilitiesResponse {
     };
 
     scores: {
-        architectureMaturityScore: number;
-        engineeringComplexityScore: number;
+        repositoryMaturityScore: number;
+        capabilityScore: number;
+
+        infrastructureDepthScore: number;
         infrastructureDepth: string;
+
+        infrastructureDepthEvidence?: {
+            detected: string[];
+            detectedCount: number;
+            totalPossible: number;
+        };
+
+        /**
+         * @deprecated
+         * Use repositoryMaturityScore instead.
+         */
+        architectureMaturityScore: number;
+
+        /**
+         * @deprecated
+         * Use capabilityScore instead.
+         */
+        engineeringComplexityScore: number;
     };
 
     repositoryPurpose?: {
