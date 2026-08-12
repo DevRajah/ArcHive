@@ -375,21 +375,72 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
     async (request, reply) => {
       const { repositoryId } = request.params;
 
-      const repository = await prisma.repository.findUnique({
-        where: { id: repositoryId },
-        select: {
-          id: true,
-          name: true,
-          owner: true,
-          fullName: true,
-          description: true,
-          defaultBranch: true,
-          language: true,
-          stars: true,
-          forks: true,
-          userId: true,
-        },
-      });
+      /**
+       * Architecture Evolution intentionally combines two different kinds
+       * of intelligence:
+       *
+       * 1. Historical architecture activity
+       *    -> ArchitectureChange
+       *
+       * 2. Current repository intelligence
+       *    -> latest RepositoryIntelligenceSnapshot
+       *
+       * Future me:
+       * Do not rebuild current capabilities, maturity, or architecture styles
+       * from ArchitectureChange rows. Those rows describe events over time,
+       * not the complete current state of the repository.
+       */
+      const repository =
+        await prisma.repository.findUnique({
+          where: {
+            id: repositoryId,
+          },
+
+          select: {
+            id: true,
+            name: true,
+            owner: true,
+            fullName: true,
+            description: true,
+            defaultBranch: true,
+            language: true,
+            stars: true,
+            forks: true,
+            userId: true,
+
+            /**
+             * The latest snapshot is the authoritative current-state
+             * repository intelligence.
+             */
+            intelligenceSnapshots: {
+              orderBy: [
+                {
+                  createdAt: "desc",
+                },
+                {
+                  id: "desc",
+                },
+              ],
+
+              take: 1,
+
+              select: {
+                id: true,
+
+                repositoryTypes: true,
+                technologies: true,
+                architectureDomains: true,
+                capabilities: true,
+
+                maturityScore: true,
+                capabilityScore: true,
+
+                intelligence: true,
+                createdAt: true,
+              },
+            },
+          },
+        });
 
       if (!repository) {
         return reply.status(404).send({
@@ -398,122 +449,446 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
         });
       }
 
-      const architectureChanges = await prisma.architectureChange.findMany({
-        where: { repositoryId },
-        orderBy: { createdAt: "desc" },
-        select: {
-          id: true,
-          changeType: true,
-          detectedTechnology: true,
-          fileAffected: true,
-          summary: true,
-          architectureDomain: true,
-          evolutionSummary: true,
-          createdAt: true,
-          repositoryTypes: true,
-        },
-      });
+      const latestSnapshot =
+        repository.intelligenceSnapshots[0];
 
-      const groupedByDomain = architectureChanges.reduce<
-        Record<string, typeof architectureChanges>
-      >((groups, change) => {
-        const domain = change.architectureDomain || "GENERAL_ARCHITECTURE";
+      /**
+       * Do not silently reconstruct current intelligence from old
+       * ArchitectureChange rows.
+       */
+      if (!latestSnapshot) {
+        return reply.status(404).send({
+          success: false,
+          message:
+            "Repository intelligence has not been generated yet. Reprocess the repository first.",
+        });
+      }
 
-        if (!groups[domain]) {
-          groups[domain] = [];
-        }
+      /**
+       * ============================================================
+       * HISTORICAL ARCHITECTURE EVOLUTION
+       * ============================================================
+       *
+       * ArchitectureChange remains correct here because this section is
+       * explicitly describing how the repository changed over time.
+       */
+      const architectureChanges =
+        await prisma.architectureChange.findMany({
+          where: {
+            repositoryId,
+          },
 
-        groups[domain].push(change);
+          orderBy: {
+            createdAt: "desc",
+          },
 
-        return groups;
-      }, {});
+          select: {
+            id: true,
+            changeType: true,
+            detectedTechnology: true,
+            fileAffected: true,
+            summary: true,
+            architectureDomain: true,
+            evolutionSummary: true,
+            createdAt: true,
+            repositoryTypes: true,
+          },
+        });
 
-      const domains = Object.entries(groupedByDomain).map(([domain, changes]) => {
-        const latestChange = changes[0];
+      const groupedByDomain =
+        architectureChanges.reduce<
+          Record<
+            string,
+            typeof architectureChanges
+          >
+        >((groups, change) => {
+          const domain =
+            change.architectureDomain ||
+            "GENERAL_ARCHITECTURE";
 
-        return {
-          domain,
-          label: domain
-            .toLowerCase()
-            .split("_")
-            .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-            .join(" "),
-          totalChanges: changes.length,
-          latestChangeAt: latestChange?.createdAt || null,
-          technologies: Array.from(
-            new Set(
-              changes
-                .map((change) => change.detectedTechnology)
-                .filter((technology): technology is string => Boolean(technology))
-            )
-          ),
-          changes,
-          repositoryTypes: true,
-        };
-      });
+          if (!groups[domain]) {
+            groups[domain] = [];
+          }
 
-      const architectureStyles = detectArchitectureStyle({
-        domains: domains.map((domain) => domain.domain),
-        technologies: domains.flatMap(
-          (domain) => domain.technologies
-        ),
-        signals: [],
-      });
+          groups[domain].push(change);
 
-      const detectedCapabilities = domains.map((domain) => domain.label);
+          return groups;
+        }, {});
 
-      const capabilitySet = new Set(domains.map((domain) => domain.domain));
+      /**
+       * Historical domains describe domains that have appeared in recorded
+       * architecture-change history.
+       */
+      const domains =
+        Object.entries(
+          groupedByDomain
+        ).map(([domain, changes]) => {
+          const latestChange =
+            changes[0];
 
+          return {
+            domain,
+
+            label: domain
+              .toLowerCase()
+              .split("_")
+              .map(
+                (word) =>
+                  word.charAt(0).toUpperCase() +
+                  word.slice(1)
+              )
+              .join(" "),
+
+            totalChanges:
+              changes.length,
+
+            latestChangeAt:
+              latestChange?.createdAt ||
+              null,
+
+            technologies:
+              Array.from(
+                new Set(
+                  changes
+                    .map(
+                      (change) =>
+                        change.detectedTechnology
+                    )
+                    .filter(
+                      (
+                        technology
+                      ): technology is string =>
+                        Boolean(
+                          technology
+                        )
+                    )
+                )
+              ),
+
+            changes,
+
+            /**
+             * Kept for response compatibility with the existing endpoint.
+             */
+            repositoryTypes: true,
+          };
+        });
+
+      /**
+       * Do not mutate `domains` when ranking it.
+       *
+       * The response should retain the natural domain ordering produced above.
+       */
+      const mostActiveDomain =
+        [...domains].sort(
+          (a, b) =>
+            b.totalChanges -
+            a.totalChanges
+        )[0];
+
+      /**
+       * ============================================================
+       * CURRENT CANONICAL REPOSITORY INTELLIGENCE
+       * ============================================================
+       */
+
+      const canonicalRepositoryTypes =
+        readAuditStringArray(
+          latestSnapshot.repositoryTypes
+        );
+
+      const canonicalDomains =
+        readAuditStringArray(
+          latestSnapshot.architectureDomains
+        );
+
+      const canonicalTechnologies =
+        readAuditStringArray(
+          latestSnapshot.technologies
+        );
+
+      /**
+       * RepositoryIntelligenceSnapshot.capabilities stores structured
+       * CapabilityResult objects:
+       *
+       * {
+       *   key: string,
+       *   confidence: number,
+       *   reason: string
+       * }
+       */
+      const capabilityResults =
+        Array.isArray(
+          latestSnapshot.capabilities
+        )
+          ? latestSnapshot.capabilities.filter(
+            (
+              capability
+            ): capability is {
+              key: string;
+              confidence: number;
+              reason: string;
+            } => {
+              if (
+                !capability ||
+                typeof capability !==
+                "object" ||
+                Array.isArray(
+                  capability
+                )
+              ) {
+                return false;
+              }
+
+              const record =
+                capability as Record<
+                  string,
+                  unknown
+                >;
+
+              return (
+                typeof record.key ===
+                "string" &&
+                typeof record.confidence ===
+                "number" &&
+                typeof record.reason ===
+                "string"
+              );
+            }
+          )
+          : [];
+
+      const capabilityKeys =
+        new Set(
+          capabilityResults.map(
+            (capability) =>
+              capability.key
+          )
+        );
+
+      /**
+       * Architecture styles describe the CURRENT repository architecture.
+       *
+       * Therefore use canonical snapshot signals rather than historical
+       * ArchitectureChange domains.
+       */
+      const architectureStyles =
+        detectArchitectureStyle({
+          domains:
+            canonicalDomains,
+
+          technologies:
+            canonicalTechnologies,
+
+          signals: [],
+
+          repositoryTypes:
+            canonicalRepositoryTypes,
+        });
+
+      /**
+       * Keep detectedCapabilities as human-readable strings because that is
+       * what the existing API contract exposed.
+       *
+       * The values now come from actual canonical CapabilityResult records.
+       */
+      const detectedCapabilities =
+        capabilityResults.map(
+          (capability) =>
+            capability.key
+              .toLowerCase()
+              .split("_")
+              .map(
+                (word) =>
+                  word
+                    .charAt(0)
+                    .toUpperCase() +
+                  word.slice(1)
+              )
+              .join(" ")
+        );
+
+      /**
+       * These represent ArcHive's canonical infrastructure breadth model.
+       *
+       * Missing here means "not detected in the current repository".
+       * It does NOT automatically mean the repository has an engineering flaw.
+       */
       const expectedCapabilities = [
-        { domain: "FRONTEND_ARCHITECTURE", label: "Frontend Architecture" },
-        { domain: "API_LAYER", label: "API Layer" },
-        { domain: "AUTHENTICATION", label: "Authentication" },
-        { domain: "REALTIME_SYSTEMS", label: "Realtime Systems" },
-        { domain: "QUEUE_INFRASTRUCTURE", label: "Queue Infrastructure" },
-        { domain: "DATABASE_LAYER", label: "Database Layer" },
-        { domain: "CACHING_LAYER", label: "Caching Layer" },
-        { domain: "DEVOPS_INFRASTRUCTURE", label: "DevOps Infrastructure" },
-        { domain: "DEPENDENCY_MANAGEMENT", label: "Dependency Management" },
+        {
+          key: "API_LAYER",
+          label: "API Layer",
+        },
+        {
+          key: "DATABASE_LAYER",
+          label: "Database Layer",
+        },
+        {
+          key: "CACHE_INFRASTRUCTURE",
+          label:
+            "Cache Infrastructure",
+        },
+        {
+          key: "QUEUE_INFRASTRUCTURE",
+          label:
+            "Queue Infrastructure",
+        },
+        {
+          key: "REALTIME_SYSTEMS",
+          label: "Realtime Systems",
+        },
+        {
+          key: "DEVOPS_INFRASTRUCTURE",
+          label:
+            "DevOps Infrastructure",
+        },
       ];
 
-      const missingCapabilities = expectedCapabilities
-        .filter((capability) => !capabilitySet.has(capability.domain))
-        .map((capability) => capability.label);
+      const missingCapabilities =
+        expectedCapabilities
+          .filter(
+            (capability) =>
+              !capabilityKeys.has(
+                capability.key
+              )
+          )
+          .map(
+            (capability) =>
+              capability.label
+          );
 
-      const mostActiveDomain = domains.sort(
-        (a, b) => b.totalChanges - a.totalChanges
-      )[0];
+      /**
+       * Canonical scores persisted by the full repository intelligence engine.
+       */
+      const repositoryMaturityScore =
+        latestSnapshot.maturityScore ??
+        0;
 
-      const architectureMaturityScore = Math.min(
-        100,
-        detectedCapabilities.length * 10 + architectureChanges.length * 2
-      );
+      const capabilityScore =
+        latestSnapshot.capabilityScore ??
+        0;
+
+      /**
+       * Infrastructure depth is based on actual infrastructure capability
+       * breadth, using the same model as /capabilities.
+       *
+       * It must NOT be derived from overall repository maturity.
+       */
+      const infrastructureDepthAssessment =
+        calculateInfrastructureDepth(
+          capabilityKeys
+        );
 
       const infrastructureDepth =
-        architectureMaturityScore >= 75
-          ? "HIGH"
-          : architectureMaturityScore >= 45
-            ? "MEDIUM"
-            : "EARLY";
+        infrastructureDepthAssessment.level;
+
+      /**
+       * Legacy compatibility alias.
+       *
+       * @deprecated
+       * Prefer repositoryMaturityScore.
+       *
+       * The old endpoint exposed architectureMaturityScore, so keep it
+       * temporarily to avoid breaking existing frontend consumers.
+       */
+      const architectureMaturityScore =
+        repositoryMaturityScore;
 
       return {
         success: true,
-        message: "Repository architecture evolution fetched successfully",
+
+        message:
+          "Repository architecture evolution fetched successfully",
+
         data: {
-          repository,
+          /**
+           * Return the public repository shape only.
+           *
+           * Do not leak intelligenceSnapshots into the endpoint response just
+           * because we queried them internally.
+           */
+          repository: {
+            id: repository.id,
+            name: repository.name,
+            owner: repository.owner,
+            fullName:
+              repository.fullName,
+            description:
+              repository.description,
+            defaultBranch:
+              repository.defaultBranch,
+            language:
+              repository.language,
+            stars: repository.stars,
+            forks: repository.forks,
+            userId: repository.userId,
+          },
+
+          /**
+           * Historical evolution summary.
+           */
           summary: {
-            totalArchitectureChanges: architectureChanges.length,
-            totalDomains: domains.length,
-            mostActiveDomain: mostActiveDomain?.domain || null,
+            totalArchitectureChanges:
+              architectureChanges.length,
+
+            totalDomains:
+              domains.length,
+
+            mostActiveDomain:
+              mostActiveDomain?.domain ||
+              null,
           },
+
+          /**
+           * Current repository intelligence.
+           */
           insights: {
-            architectureMaturityScore,
+            repositoryMaturityScore,
+
+            capabilityScore,
+
+            infrastructureDepthScore:
+              infrastructureDepthAssessment.score,
+
             infrastructureDepth,
-            dominantDomain: mostActiveDomain?.domain || null,
+
+            /**
+             * @deprecated
+             * Use repositoryMaturityScore.
+             */
+            architectureMaturityScore,
+
+            /**
+             * Historical metric:
+             * domain with the largest number of recorded ArchitectureChange rows.
+             */
+            dominantDomain:
+              mostActiveDomain?.domain ||
+              null,
+
             detectedCapabilities,
+
             missingCapabilities,
+
             architectureStyles,
+
+            infrastructureDepthEvidence: {
+              detected:
+                infrastructureDepthAssessment.detected,
+
+              detectedCount:
+                infrastructureDepthAssessment
+                  .detected.length,
+
+              totalPossible:
+                infrastructureDepthAssessment
+                  .totalPossible,
+            },
           },
+
+          /**
+           * Historical per-domain architecture-change data.
+           */
           domains,
         },
       };
