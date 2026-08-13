@@ -33,29 +33,57 @@ const readStringArray = (
   );
 };
 
-const readCapabilities = (
-  value: unknown,
-): {
-  key?: string;
+type CanonicalCapability = {
+  key: string;
   confidence?: number;
   reason?: string;
-}[] => {
+};
+
+/**
+ * Read structured capability records from persisted JSON safely.
+ *
+ * Future me:
+ * Any capability returned from this helper must have a real string key.
+ * Downstream semantic engines rely on capability keys as canonical
+ * identifiers and should not need to handle undefined keys.
+ */
+const readCapabilities = (
+  value: unknown,
+): CanonicalCapability[] => {
   if (!Array.isArray(value)) {
     return [];
   }
 
-  return value.filter(
-    (item): item is {
-      key?: string;
-      confidence?: number;
-      reason?: string;
-    } =>
-      Boolean(
-        item &&
-        typeof item === "object" &&
-        !Array.isArray(item),
-      ),
-  );
+  return value
+    .filter(
+      (
+        item,
+      ): item is Record<string, unknown> =>
+        Boolean(
+          item &&
+          typeof item === "object" &&
+          !Array.isArray(item),
+        ),
+    )
+    .filter(
+      (item) =>
+        typeof item.key === "string" &&
+        item.key.trim().length > 0,
+    )
+    .map((item) => ({
+      key:
+        (item.key as string).trim(),
+
+      confidence:
+        typeof item.confidence === "number"
+          ? item.confidence
+          : undefined,
+
+      reason:
+        typeof item.reason === "string"
+          ? item.reason
+          : undefined,
+    }));
 };
 
 /**

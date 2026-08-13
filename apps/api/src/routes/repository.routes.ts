@@ -2503,6 +2503,16 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
           domains,
           technologies,
           reasoningSignals,
+
+          /**
+ * Pass the canonical structured capability intelligence through to the
+ * semantic engine.
+ *
+ * Do not pass the route-level boolean capability object here because the
+ * semantic engine works with canonical capability keys.
+ */
+          capabilities:
+            intelligenceCapabilities,
         });
 
       const evolutionDirection =
