@@ -39,7 +39,12 @@ import {
 import {
   extractCanonicalRepositorySignals,
 } from "../services/repository-similarity-signals.service";
+
 import { calculateInfrastructureDepth } from "../services/capability-infrastructure-depth.service";
+
+import {
+  extractCanonicalRepositoryIntelligenceSignals,
+} from "../services/canonical-repository-intelligence-signals.service";
 type CreateRepositoryBody = {
   name: string;
   owner: string;
@@ -2262,17 +2267,55 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
     async (request, reply) => {
       const { repositoryId } = request.params;
 
-      const repository = await prisma.repository.findUnique({
-        where: { id: repositoryId },
-        select: {
-          id: true,
-          name: true,
-          fullName: true,
-          description: true,
-          language: true,
-          userId: true,
-        },
-      });
+      /**
+       * Load the repository together with its latest intelligence snapshot.
+       *
+       * Future me:
+       * RepositoryIntelligenceSnapshot is the authoritative source for the
+       * repository's CURRENT engineering identity.
+       *
+       * ArchitectureChange records describe historical evolution. They must
+       * not be used to reconstruct current technologies, domains, or purpose.
+       */
+      const repository =
+        await prisma.repository.findUnique({
+          where: {
+            id: repositoryId,
+          },
+
+          select: {
+            id: true,
+            name: true,
+            fullName: true,
+            description: true,
+            language: true,
+            userId: true,
+
+            intelligenceSnapshots: {
+              orderBy: [
+                {
+                  createdAt: "desc",
+                },
+                {
+                  id: "desc",
+                },
+              ],
+
+              take: 1,
+
+              select: {
+                id: true,
+                primaryRepositoryType: true,
+                repositoryTypes: true,
+                technologies: true,
+                architectureDomains: true,
+                capabilities: true,
+                intelligence: true,
+                createdAt: true,
+              },
+            },
+          },
+        });
 
       if (!repository) {
         return reply.status(404).send({
@@ -2281,102 +2324,221 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
         });
       }
 
-      const architectureChanges = await prisma.architectureChange.findMany({
-        where: { repositoryId },
-        orderBy: { createdAt: "desc" },
-        select: {
-          architectureDomain: true,
-          detectedTechnology: true,
-          repositoryTypes: true,
-          reasoningSignals: true,
-          summary: true,
-          evolutionSummary: true,
-          createdAt: true,
-        },
-      });
+      /**
+       * The semantic profile represents current repository intelligence.
+       *
+       * Without a snapshot we cannot safely manufacture that state from
+       * historical ArchitectureChange records.
+       */
+      const latestSnapshot =
+        repository.intelligenceSnapshots[0];
 
-      const domains = Array.from(
-        new Set(
-          architectureChanges
-            .map((change) => change.architectureDomain)
-            .filter((domain): domain is string => Boolean(domain))
-        )
-      );
+      if (!latestSnapshot) {
+        return reply.status(404).send({
+          success: false,
+          message:
+            "Repository intelligence snapshot not found",
+        });
+      }
 
-      const technologies = Array.from(
-        new Set(
-          architectureChanges
-            .map((change) => change.detectedTechnology)
-            .filter((technology): technology is string => Boolean(technology))
-        )
-      );
+      /**
+       * ArchitectureChange remains useful historical evidence.
+       *
+       * We still need it for:
+       *
+       * - architectureChangeCount
+       * - historical evidence returned by this endpoint
+       * - reasoning fallback for older snapshots
+       *
+       * It no longer defines the current repository state.
+       */
+      const architectureChanges =
+        await prisma.architectureChange.findMany({
+          where: {
+            repositoryId,
+          },
 
-      const repositoryTypes = Array.from(
-        new Set(
-          architectureChanges
-            .flatMap((change) => change.repositoryTypes?.split(",") || [])
-            .map((type) => type.trim())
-            .filter(Boolean)
-        )
-      );
+          orderBy: {
+            createdAt: "desc",
+          },
 
-      const reasoningSignals = Array.from(
-        new Set(
-          architectureChanges
-            .flatMap((change) => change.reasoningSignals?.split(" | ") || [])
-            .map((signal) => signal.trim())
-            .filter(Boolean)
-        )
-      );
+          select: {
+            architectureDomain: true,
+            detectedTechnology: true,
+            repositoryTypes: true,
+            reasoningSignals: true,
+            summary: true,
+            evolutionSummary: true,
+            createdAt: true,
+          },
+        });
 
-      const semanticProfile = generateRepositorySemanticProfile({
-        repositoryName: repository.name,
-        fullName: repository.fullName,
-        description: repository.description,
-        language: repository.language,
+      /**
+       * Resolve current repository truth from the latest canonical snapshot.
+       *
+       * The helper prefers the complete persisted intelligence report and
+       * falls back to dedicated snapshot columns where required.
+       */
+      const canonicalSignals =
+        extractCanonicalRepositoryIntelligenceSignals({
+          latestSnapshot,
+          architectureChanges,
+        });
+
+      const {
         repositoryTypes,
-        domains,
         technologies,
+        domains,
+        engineeringSignals,
         reasoningSignals,
-      });
+        capabilities:
+        intelligenceCapabilities,
+      } = canonicalSignals;
 
-      const evolutionDirection = inferEvolutionDirection({
-        domains,
-        repositoryTypes,
-      });
+      /**
+       * Capability intelligence is richer than architecture domains.
+       *
+       * For example:
+       *
+       * REALTIME_SYSTEMS may be a strongly detected capability even when a
+       * matching architecture-domain label is not present.
+       *
+       * This keeps narrative and semantic reasoning aligned with the canonical
+       * capability engine rather than treating domains as the only evidence.
+       */
+      const hasCapability = (
+        key: string,
+      ) =>
+        intelligenceCapabilities.some(
+          (capability) =>
+            capability.key === key,
+        );
 
-      const architectureStyles = detectArchitectureStyle({
-        domains,
-        technologies,
-        signals: [],
-        repositoryTypes,
-      });
-
-
-
-
+      /**
+       * Keep this object because the existing downstream narrative and
+       * engineering-reasoning functions expect these boolean capability flags.
+       */
       const capabilities = {
-        frontendArchitecture: domains.includes("FRONTEND_ARCHITECTURE"),
-        apiLayer: domains.includes("API_LAYER"),
-        authentication: domains.includes("AUTHENTICATION"),
-        realtimeSystems: domains.includes("REALTIME_SYSTEMS"),
-        queueInfrastructure: domains.includes("QUEUE_INFRASTRUCTURE"),
-        databaseLayer: domains.includes("DATABASE_LAYER"),
-        architectureIntelligence: domains.includes(
-          "ARCHITECTURE_INTELLIGENCE"
-        ),
+        frontendArchitecture:
+          domains.includes(
+            "FRONTEND_ARCHITECTURE",
+          ),
+
+        apiLayer:
+          domains.includes(
+            "API_LAYER",
+          ) ||
+          domains.includes(
+            "BACKEND_SYSTEMS",
+          ) ||
+          hasCapability(
+            "API_LAYER",
+          ),
+
+        authentication:
+          domains.includes(
+            "AUTHENTICATION",
+          ) ||
+          hasCapability(
+            "AUTHENTICATION",
+          ),
+
+        realtimeSystems:
+          domains.includes(
+            "REALTIME_SYSTEMS",
+          ) ||
+          hasCapability(
+            "REALTIME_SYSTEMS",
+          ),
+
+        queueInfrastructure:
+          domains.includes(
+            "QUEUE_INFRASTRUCTURE",
+          ) ||
+          hasCapability(
+            "QUEUE_INFRASTRUCTURE",
+          ),
+
+        databaseLayer:
+          domains.includes(
+            "DATABASE_LAYER",
+          ) ||
+          hasCapability(
+            "DATABASE_LAYER",
+          ),
+
+        architectureIntelligence:
+          repositoryTypes.includes(
+            "ENGINEERING_INTELLIGENCE_PLATFORM",
+          ) ||
+          domains.includes(
+            "ENGINEERING_INTELLIGENCE",
+          ) ||
+          domains.includes(
+            "ARCHITECTURE_INTELLIGENCE",
+          ),
       };
 
-      const engineeringReasoning = generateEngineeringReasoning({
-        capabilities,
-        domains,
-        technologies,
-        repositoryTypes,
-        architectureStyles,
-      });
+      /**
+       * Everything below here now consumes the SAME canonical current state.
+       *
+       * This prevents different parts of the endpoint from independently
+       * describing different versions of the repository.
+       */
+      const semanticProfile =
+        generateRepositorySemanticProfile({
+          repositoryName:
+            repository.name,
+
+          fullName:
+            repository.fullName,
+
+          description:
+            repository.description,
+
+          language:
+            repository.language,
+
+          repositoryTypes,
+          domains,
+          technologies,
+          reasoningSignals,
+        });
+
+      const evolutionDirection =
+        inferEvolutionDirection({
+          domains,
+          repositoryTypes,
+        });
+
+      /**
+       * Engineering signals are now included instead of passing [].
+       *
+       * This allows architecture-style inference to reason from current
+       * canonical engineering evidence too.
+       */
+      const architectureStyles =
+        detectArchitectureStyle({
+          domains,
+          technologies,
+          signals:
+            engineeringSignals,
+          repositoryTypes,
+        });
+
+      const engineeringReasoning =
+        generateEngineeringReasoning({
+          capabilities,
+          domains,
+          technologies,
+          repositoryTypes,
+          architectureStyles,
+        });
 
       const ecosystemCluster =
-        inferEcosystemCluster(repositoryTypes);
+        inferEcosystemCluster(
+          repositoryTypes,
+        );
 
       const engineeringTrajectory =
         inferEngineeringTrajectory({
@@ -2384,15 +2546,27 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
           repositoryTypes,
         });
 
-      const narrative = generateRepositoryNarrative({
-        repositoryName: repository.name,
-        repositoryTypes,
-        technologies,
-        domains,
-        capabilities,
-        architectureStyles,
-        architectureChangeCount: architectureChanges.length,
-      });
+      /**
+       * Current narrative semantics come from the canonical snapshot.
+       *
+       * architectureChangeCount remains historical because the number of
+       * observed changes legitimately describes how much evolution ArcHive
+       * has recorded for the repository.
+       */
+      const narrative =
+        generateRepositoryNarrative({
+          repositoryName:
+            repository.name,
+
+          repositoryTypes,
+          technologies,
+          domains,
+          capabilities,
+          architectureStyles,
+
+          architectureChangeCount:
+            architectureChanges.length,
+        });
 
       const knowledgeGraph =
         buildTechnologyRelationships({
@@ -2402,14 +2576,44 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
         });
 
       const domainRelationships =
-        buildDomainRelationships(domains);
+        buildDomainRelationships(
+          domains,
+        );
 
+      /**
+       * Do not expose intelligenceSnapshots as part of the repository object.
+       *
+       * Preserve the existing API response shape for repository metadata.
+       */
+      const repositoryResponse = {
+        id:
+          repository.id,
+
+        name:
+          repository.name,
+
+        fullName:
+          repository.fullName,
+
+        description:
+          repository.description,
+
+        language:
+          repository.language,
+
+        userId:
+          repository.userId,
+      };
 
       return {
         success: true,
-        message: "Repository semantic profile fetched successfully",
+
+        message:
+          "Repository semantic profile fetched successfully",
+
         data: {
-          repository,
+          repository:
+            repositoryResponse,
 
           semanticProfile,
 
@@ -2420,13 +2624,21 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
           architectureStyles,
 
           knowledgeGraph,
+
           domainRelationships,
 
           capabilities,
+
           ecosystemCluster,
+
           engineeringTrajectory,
+
           engineeringReasoning,
 
+          /**
+           * This block now represents CURRENT canonical intelligence rather
+           * than a union of every ArchitectureChange ever recorded.
+           */
           intelligence: {
             repositoryTypes,
             domains,
@@ -2434,16 +2646,35 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
             reasoningSignals,
           },
 
-          evidence: architectureChanges.slice(0, 8).map((change) => ({
-            summary: change.summary,
-            evolutionSummary: change.evolutionSummary,
-            architectureDomain: change.architectureDomain,
-            detectedTechnology: change.detectedTechnology,
-            createdAt: change.createdAt,
-          })),
+          /**
+           * Evidence remains historical by design.
+           *
+           * This is separate from current canonical intelligence.
+           */
+          evidence:
+            architectureChanges
+              .slice(0, 8)
+              .map(
+                (change) => ({
+                  summary:
+                    change.summary,
+
+                  evolutionSummary:
+                    change.evolutionSummary,
+
+                  architectureDomain:
+                    change.architectureDomain,
+
+                  detectedTechnology:
+                    change.detectedTechnology,
+
+                  createdAt:
+                    change.createdAt,
+                }),
+              ),
         },
       };
-    }
+    },
   );
 
 
@@ -3805,7 +4036,6 @@ ${architectureChanges
 
 
   // intelligence audit analysis
-  // intelligence audit analysis
   app.get<{ Params: { repositoryId: string } }>(
     "/:repositoryId/intelligence-audit",
     async (request, reply) => {
@@ -4569,59 +4799,86 @@ ${architectureChanges
     async (request, reply) => {
       const { repositoryId } = request.params;
 
-      const repository = await prisma.repository.findUnique({
-        where: {
-          id: repositoryId,
-        },
-        select: {
-          id: true,
-          name: true,
-          fullName: true,
-          description: true,
-          language: true,
-          userId: true,
-
-          architectureChanges: {
-            orderBy: {
-              createdAt: "desc",
-            },
-            select: {
-              changeType: true,
-              detectedTechnology: true,
-              fileAffected: true,
-              summary: true,
-              repositoryTypes: true,
-              reasoningSignals: true,
-              architectureDomain: true,
-              evolutionSummary: true,
-            },
+      /**
+       * Narrative is a CURRENT-STATE intelligence endpoint with historical
+       * evolution context.
+       *
+       * Future me:
+       * Current repository identity, domains, technologies, capabilities,
+       * engineering signals, and reasoning must come from the latest canonical
+       * RepositoryIntelligenceSnapshot.
+       *
+       * ArchitectureChange remains historical evidence only.
+       */
+      const repository =
+        await prisma.repository.findUnique({
+          where: {
+            id: repositoryId,
           },
 
-          /**
-           * Canonical repository intelligence is generated during reprocessing.
-           *
-           * Future me:
-           * Narrative generation is a read operation. Do not rerun the repository
-           * classifier here from partial ArchitectureChange history.
-           */
-          intelligenceSnapshots: {
-            orderBy: {
-              createdAt: "desc",
+          select: {
+            id: true,
+            name: true,
+            fullName: true,
+            description: true,
+            language: true,
+            userId: true,
+
+            /**
+             * Historical evolution records.
+             *
+             * These are still useful for:
+             * - architectureChangeCount
+             * - old reasoning fallback
+             * - future narrative history/evolution features
+             *
+             * They must not redefine current repository truth.
+             */
+            architectureChanges: {
+              orderBy: {
+                createdAt: "desc",
+              },
+
+              select: {
+                changeType: true,
+                detectedTechnology: true,
+                fileAffected: true,
+                summary: true,
+                repositoryTypes: true,
+                reasoningSignals: true,
+                architectureDomain: true,
+                evolutionSummary: true,
+              },
             },
-            take: 1,
-            select: {
-              id: true,
-              primaryRepositoryType: true,
-              repositoryTypes: true,
-              technologies: true,
-              architectureDomains: true,
-              capabilities: true,
-              intelligence: true,
-              createdAt: true,
+
+            /**
+             * Canonical repository intelligence generated during reprocessing.
+             */
+            intelligenceSnapshots: {
+              orderBy: [
+                {
+                  createdAt: "desc",
+                },
+                {
+                  id: "desc",
+                },
+              ],
+
+              take: 1,
+
+              select: {
+                id: true,
+                primaryRepositoryType: true,
+                repositoryTypes: true,
+                technologies: true,
+                architectureDomains: true,
+                capabilities: true,
+                intelligence: true,
+                createdAt: true,
+              },
             },
           },
-        },
-      });
+        });
 
       if (!repository) {
         return reply.status(404).send({
@@ -4633,6 +4890,10 @@ ${architectureChanges
       const latestSnapshot =
         repository.intelligenceSnapshots[0];
 
+      /**
+       * Narrative should never silently reconstruct current repository
+       * intelligence from historical ArchitectureChange rows.
+       */
       if (!latestSnapshot) {
         return reply.status(404).send({
           success: false,
@@ -4642,49 +4903,36 @@ ${architectureChanges
       }
 
       /**
-       * Prisma JSON fields are returned as JsonValue, so normalise the values
-       * we expect to use as arrays before passing them to intelligence helpers.
+       * Resolve all current intelligence signals through one canonical helper.
+       *
+       * This keeps Narrative aligned with Semantic Profile, Related
+       * Repositories, Compare, Capability Intelligence, and other current-state
+       * endpoints.
        */
-      const repositoryTypes: string[] =
-        Array.isArray(
-          latestSnapshot.repositoryTypes,
-        )
-          ? latestSnapshot.repositoryTypes.filter(
-            (value): value is string =>
-              typeof value === "string",
-          )
-          : [];
+      const canonicalSignals =
+        extractCanonicalRepositoryIntelligenceSignals({
+          latestSnapshot,
+          architectureChanges:
+            repository.architectureChanges,
+        });
 
-      const snapshotTechnologies: string[] =
-        Array.isArray(
-          latestSnapshot.technologies,
-        )
-          ? latestSnapshot.technologies.filter(
-            (value): value is string =>
-              typeof value === "string",
-          )
-          : [];
-
-      const snapshotArchitectureDomains: string[] =
-        Array.isArray(
-          latestSnapshot.architectureDomains,
-        )
-          ? latestSnapshot.architectureDomains.filter(
-            (value): value is string =>
-              typeof value === "string",
-          )
-          : [];
+      const {
+        repositoryTypes,
+        technologies,
+        domains,
+        engineeringSignals,
+        reasoningSignals,
+        capabilities:
+        intelligenceCapabilities,
+        repositoryIntelligence,
+      } = canonicalSignals;
 
       /**
-       * The complete intelligence report was persisted during the authoritative
-       * repository-generation pipeline.
-       */
-      const repositoryIntelligence =
-        latestSnapshot.intelligence as any;
-
-      /**
-       * Keep nested identity aligned with the dedicated canonical snapshot
-       * columns.
+       * Keep persisted nested identity aligned with the dedicated canonical
+       * snapshot columns.
+       *
+       * This is response normalisation only. We are not rewriting the database
+       * during this GET request.
        */
       if (
         repositoryIntelligence?.identity
@@ -4706,59 +4954,24 @@ ${architectureChanges
         }
       }
 
-      /**
-       * Prefer persisted intelligence signals.
-       *
-       * Dedicated snapshot columns provide a safe fallback for older snapshots
-       * where the nested intelligence JSON may not contain every signal.
-       */
-      const domains =
-        repositoryIntelligence?.signals
-          ?.architectureDomains?.length > 0
-          ? repositoryIntelligence.signals
-            .architectureDomains
-          : snapshotArchitectureDomains;
-
-      const technologies =
-        repositoryIntelligence?.signals
-          ?.technologies?.length > 0
-          ? repositoryIntelligence.signals
-            .technologies
-          : snapshotTechnologies;
-
-      const reasoningSignals: string[] =
-        repositoryIntelligence?.signals
-          ?.reasoningSignals?.length > 0
-          ? repositoryIntelligence.signals
-            .reasoningSignals
-          : Array.from(
-            new Set(
-              repository.architectureChanges
-                .flatMap(
-                  (change) =>
-                    change.reasoningSignals
-                      ?.split(" | ") || [],
-                )
-                .map((signal) =>
-                  signal.trim(),
-                )
-                .filter(Boolean),
-            ),
-          );
-
       const repositoryPurpose =
         inferRepositoryPurpose(
           repositoryTypes,
         );
 
-      const intelligenceCapabilities =
-        Array.isArray(
-          repositoryIntelligence?.signals
-            ?.capabilities,
-        )
-          ? repositoryIntelligence.signals
-            .capabilities
-          : [];
+      /**
+       * Canonical capability lookup.
+       *
+       * A capability may be supported either by a current architecture domain
+       * or by structured capability evidence from the intelligence snapshot.
+       */
+      const hasCapability = (
+        key: string,
+      ) =>
+        intelligenceCapabilities.some(
+          (capability) =>
+            capability.key === key,
+        );
 
       const capabilities = {
         frontendArchitecture:
@@ -4772,54 +4985,52 @@ ${architectureChanges
           ) ||
           domains.includes(
             "BACKEND_SYSTEMS",
+          ) ||
+          hasCapability(
+            "API_LAYER",
           ),
 
         authentication:
           domains.includes(
             "AUTHENTICATION",
           ) ||
-          intelligenceCapabilities.some(
-            (capability: {
-              key?: string;
-            }) =>
-              capability.key ===
-              "AUTHENTICATION",
+          hasCapability(
+            "AUTHENTICATION",
           ),
 
         realtimeSystems:
           domains.includes(
             "REALTIME_SYSTEMS",
           ) ||
-          intelligenceCapabilities.some(
-            (capability: {
-              key?: string;
-            }) =>
-              capability.key ===
-              "REALTIME_SYSTEMS",
+          hasCapability(
+            "REALTIME_SYSTEMS",
           ),
 
         queueInfrastructure:
           domains.includes(
             "QUEUE_INFRASTRUCTURE",
           ) ||
-          intelligenceCapabilities.some(
-            (capability: {
-              key?: string;
-            }) =>
-              capability.key ===
-              "QUEUE_INFRASTRUCTURE",
+          hasCapability(
+            "QUEUE_INFRASTRUCTURE",
           ),
 
         databaseLayer:
           domains.includes(
             "DATABASE_LAYER",
           ) ||
-          intelligenceCapabilities.some(
-            (capability: {
-              key?: string;
-            }) =>
-              capability.key ===
-              "DATABASE_LAYER",
+          hasCapability(
+            "DATABASE_LAYER",
+          ),
+
+        cachingLayer:
+          domains.includes(
+            "CACHING_LAYER",
+          ) ||
+          domains.includes(
+            "CACHE_INFRASTRUCTURE",
+          ) ||
+          hasCapability(
+            "CACHE_INFRASTRUCTURE",
           ),
 
         architectureIntelligence:
@@ -4828,18 +5039,19 @@ ${architectureChanges
           ) ||
           domains.includes(
             "ENGINEERING_INTELLIGENCE",
+          ) ||
+          domains.includes(
+            "ARCHITECTURE_INTELLIGENCE",
           ),
       };
 
-      const engineeringSignals: string[] =
-        Array.isArray(
-          repositoryIntelligence?.signals
-            ?.engineeringSignals,
-        )
-          ? repositoryIntelligence.signals
-            .engineeringSignals
-          : [];
-
+      /**
+       * Architecture styles now use the same canonical current-state inputs.
+       *
+       * Previously, some routes passed an empty signal collection or historical
+       * fragments. That could cause narrative and canonical intelligence to
+       * describe different repository architectures.
+       */
       const architectureStyles =
         detectArchitectureStyle({
           domains,
@@ -4849,6 +5061,13 @@ ${architectureChanges
           repositoryTypes,
         });
 
+      /**
+       * Current narrative content comes from canonical intelligence.
+       *
+       * architectureChangeCount remains historical by design. It tells the
+       * narrative how much recorded evolution exists without redefining the
+       * repository's current engineering state.
+       */
       const narrative =
         generateRepositoryNarrative({
           repositoryName:
@@ -4865,12 +5084,9 @@ ${architectureChanges
           architectureStyles,
 
           architectureChangeCount:
-            Math.max(
-              repository
-                .architectureChanges
-                .length,
-              domains.length,
-            ),
+            repository
+              .architectureChanges
+              .length,
         });
 
       const confidence =
@@ -4883,16 +5099,24 @@ ${architectureChanges
 
       return {
         success: true,
+
         message:
           "Repository narrative generated successfully",
+
         data: {
           repository: {
-            id: repository.id,
-            name: repository.name,
+            id:
+              repository.id,
+
+            name:
+              repository.name,
+
             fullName:
               repository.fullName,
+
             language:
               repository.language,
+
             userId:
               repository.userId,
           },
