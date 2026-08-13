@@ -3480,6 +3480,11 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
         name: true,
         fullName: true,
         language: true,
+
+        /**
+         * ArchitectureChange remains historical evidence only.
+         * It is retained for reasoning fallback on older snapshots.
+         */
         architectureChanges: {
           select: {
             architectureDomain: true,
@@ -3488,68 +3493,130 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
             reasoningSignals: true,
           },
         },
+
+        /**
+         * Current repository intelligence must come from the newest canonical
+         * RepositoryIntelligenceSnapshot.
+         */
+        intelligenceSnapshots: {
+          orderBy: [
+            {
+              createdAt: "desc",
+            },
+            {
+              id: "desc",
+            },
+          ],
+
+          take: 1,
+
+          select: {
+            primaryRepositoryType: true,
+            repositoryTypes: true,
+            technologies: true,
+            architectureDomains: true,
+            capabilities: true,
+            intelligence: true,
+            createdAt: true,
+          },
+        },
       },
     });
 
-    const data = repositories.map((repo) => {
-      const domains = Array.from(
-        new Set(
-          repo.architectureChanges
-            .map((change) => change.architectureDomain)
-            .filter((domain): domain is string => Boolean(domain))
-        )
+    const data = repositories
+      .map((repo) => {
+        const latestSnapshot =
+          repo.intelligenceSnapshots[0];
+
+        /**
+         * Intelligence Overview describes current repository state.
+         *
+         * Repositories without canonical intelligence should not be rebuilt from
+         * ArchitectureChange history because that would make this endpoint mix
+         * current and historical semantics.
+         */
+        if (!latestSnapshot) {
+          return null;
+        }
+
+        const canonicalSignals =
+          extractCanonicalRepositoryIntelligenceSignals({
+            latestSnapshot,
+            architectureChanges:
+              repo.architectureChanges,
+          });
+
+        const {
+          repositoryTypes,
+          domains,
+          technologies,
+          reasoningSignals,
+          capabilities:
+          intelligenceCapabilities,
+        } = canonicalSignals;
+
+        const semanticProfile =
+          generateRepositorySemanticProfile({
+            repositoryName:
+              repo.name,
+
+            fullName:
+              repo.fullName,
+
+            description:
+              null,
+
+            language:
+              repo.language,
+
+            repositoryTypes,
+
+            domains,
+
+            technologies,
+
+            reasoningSignals,
+
+            /**
+             * Semantic capability flags should use the same structured canonical
+             * capability evidence as the rest of ArcHive intelligence.
+             */
+            capabilities:
+              intelligenceCapabilities,
+          });
+
+        return {
+          repository: {
+            id:
+              repo.id,
+
+            name:
+              repo.name,
+
+            fullName:
+              repo.fullName,
+
+            language:
+              repo.language,
+          },
+
+          semanticProfile,
+
+          repositoryTypes,
+
+          domains,
+
+          technologies,
+        };
+      })
+      .filter(
+        (
+          item,
+        ): item is NonNullable<
+          typeof item
+        > =>
+          Boolean(item),
       );
-
-      const technologies = Array.from(
-        new Set(
-          repo.architectureChanges
-            .map((change) => change.detectedTechnology)
-            .filter((technology): technology is string => Boolean(technology))
-        )
-      );
-
-      const repositoryTypes = Array.from(
-        new Set(
-          repo.architectureChanges
-            .flatMap((change) => change.repositoryTypes?.split(",") || [])
-            .map((type) => type.trim())
-            .filter(Boolean)
-        )
-      );
-
-      const reasoningSignals = Array.from(
-        new Set(
-          repo.architectureChanges
-            .flatMap((change) => change.reasoningSignals?.split(" | ") || [])
-            .map((signal) => signal.trim())
-            .filter(Boolean)
-        )
-      );
-
-      const semanticProfile = generateRepositorySemanticProfile({
-        repositoryName: repo.name,
-        fullName: repo.fullName,
-        description: null,
-        language: repo.language,
-        repositoryTypes,
-        domains,
-        technologies,
-        reasoningSignals,
-      });
-
-      return {
-        repository: {
-          id: repo.id,
-          name: repo.name,
-          fullName: repo.fullName,
-          language: repo.language,
-        },
-        semanticProfile,
-        repositoryTypes,
-        domains,
-        technologies,
-      };
-    });
 
     return {
       success: true,
@@ -3677,6 +3744,10 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
         fullName: true,
         description: true,
         language: true,
+
+        /**
+         * Historical repository evolution remains searchable context.
+         */
         architectureChanges: {
           select: {
             architectureDomain: true,
@@ -3687,56 +3758,92 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
             evolutionSummary: true,
           },
         },
+
+        /**
+         * Current repository intelligence must come from the latest canonical
+         * RepositoryIntelligenceSnapshot.
+         */
+        intelligenceSnapshots: {
+          orderBy: [
+            {
+              createdAt: "desc",
+            },
+            {
+              id: "desc",
+            },
+          ],
+
+          take: 1,
+
+          select: {
+            primaryRepositoryType: true,
+            repositoryTypes: true,
+            technologies: true,
+            architectureDomains: true,
+            capabilities: true,
+            intelligence: true,
+            createdAt: true,
+          },
+        },
       },
     });
 
     const results = repositories
       .map((repo) => {
-        const domains = Array.from(
-          new Set(
-            repo.architectureChanges
-              .map((change) => change.architectureDomain)
-              .filter((item): item is string => Boolean(item))
-          )
-        );
+        const latestSnapshot =
+          repo.intelligenceSnapshots[0];
 
-        const technologies = Array.from(
-          new Set(
-            repo.architectureChanges
-              .map((change) => change.detectedTechnology)
-              .filter((item): item is string => Boolean(item))
-          )
-        );
+        /**
+         * Intelligence Search is a current-state search endpoint.
+         *
+         * Future me:
+         * Do not rebuild current domains, technologies, repository identity, or
+         * capability intelligence from ArchitectureChange history.
+         */
+        if (!latestSnapshot) {
+          return null;
+        }
 
-        const repositoryTypes = Array.from(
-          new Set(
-            repo.architectureChanges
-              .flatMap((change) => change.repositoryTypes?.split(",") || [])
-              .map((item) => item.trim())
-              .filter(Boolean)
-          )
-        );
+        const canonicalSignals =
+          extractCanonicalRepositoryIntelligenceSignals({
+            latestSnapshot,
+            architectureChanges:
+              repo.architectureChanges,
+          });
 
-        const reasoningSignals = Array.from(
-          new Set(
-            repo.architectureChanges
-              .flatMap((change) => change.reasoningSignals?.split(" | ") || [])
-              .map((item) => item.trim())
-              .filter(Boolean)
-          )
-        );
+        const {
+          repositoryTypes,
+          domains,
+          technologies,
+          reasoningSignals,
+          capabilities:
+          intelligenceCapabilities,
+        } = canonicalSignals;
 
         const searchableText = [
           repo.name,
           repo.fullName,
           repo.description,
           repo.language,
+
+          ...repositoryTypes,
           ...domains,
           ...technologies,
-          ...repositoryTypes,
           ...reasoningSignals,
-          ...repo.architectureChanges.map((change) => change.summary),
-          ...repo.architectureChanges.map((change) => change.evolutionSummary),
+
+          /**
+           * Historical summaries remain useful for free-text search, but they do
+           * not redefine current structured filters.
+           */
+          ...repo.architectureChanges.map(
+            (change) =>
+              change.summary,
+          ),
+
+          ...repo.architectureChanges.map(
+            (change) =>
+              change.evolutionSummary,
+          ),
         ]
           .filter(Boolean)
           .join(" ")
@@ -3777,16 +3884,28 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
           return null;
         }
 
-        const semanticProfile = generateRepositorySemanticProfile({
-          repositoryName: repo.name,
-          fullName: repo.fullName,
-          description: repo.description,
-          language: repo.language,
-          repositoryTypes,
-          domains,
-          technologies,
-          reasoningSignals,
-        });
+        const semanticProfile =
+          generateRepositorySemanticProfile({
+            repositoryName:
+              repo.name,
+
+            fullName:
+              repo.fullName,
+
+            description:
+              repo.description,
+
+            language:
+              repo.language,
+
+            repositoryTypes,
+            domains,
+            technologies,
+            reasoningSignals,
+
+            capabilities:
+              intelligenceCapabilities,
+          });
 
         return {
           id: repo.id,
@@ -4560,7 +4679,7 @@ ${architectureChanges
           capabilities:
             intelligenceCapabilities,
         });
-        
+
       const narrative =
         generateRepositoryNarrative({
           repositoryName:
