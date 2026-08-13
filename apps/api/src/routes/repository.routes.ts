@@ -4257,6 +4257,9 @@ ${architectureChanges
               id: true,
               primaryRepositoryType: true,
               repositoryTypes: true,
+              technologies: true,
+              architectureDomains: true,
+              capabilities: true,
 
               /**
                * This is the JSON intelligence payload stored by
@@ -4393,84 +4396,70 @@ ${architectureChanges
           repositoryIntelligence?.assessment
             ?.engineeringQuality?.overallScore ?? null,
       };
-
       /**
-       * Everything below this point is legacy/report enrichment.
+       * ArchitectureChange remains historical context only.
        *
-       * ArchitectureChange records may still be used for timelines,
-       * relationships, narratives, recommendations, and historical reasoning.
+       * Current repository identity, domains, technologies, capabilities,
+       * engineering signals, and reasoning must come from the latest canonical
+       * RepositoryIntelligenceSnapshot.
        *
-       * They must NOT redefine canonical repository purpose.
+       * Future me:
+       * Do not rebuild current-state report intelligence from ArchitectureChange
+       * rows. Those rows describe evolution, not the repository's current truth.
        */
       const architectureChanges =
         repository.architectureChanges;
 
-      const domains = Array.from(
-        new Set(
-          architectureChanges
-            .map(
-              (change) =>
-                change.architectureDomain,
-            )
-            .filter(
-              (
-                domain,
-              ): domain is string =>
-                Boolean(domain),
-            ),
-        ),
-      );
+      const canonicalSignals =
+        extractCanonicalRepositoryIntelligenceSignals({
+          latestSnapshot,
+          architectureChanges,
+        });
 
-      const technologies = Array.from(
-        new Set(
-          architectureChanges
-            .map(
-              (change) =>
-                change.detectedTechnology,
-            )
-            .filter(
-              (
-                technology,
-              ): technology is string =>
-                Boolean(technology),
-            ),
-        ),
-      );
-
-      const reasoningSignals =
-        Array.from(
-          new Set(
-            architectureChanges
-              .flatMap(
-                (change) =>
-                  change.reasoningSignals?.split(
-                    " | ",
-                  ) || [],
-              )
-              .map((signal) =>
-                signal.trim(),
-              )
-              .filter(Boolean),
-          ),
-        );
+      const {
+        technologies,
+        domains,
+        engineeringSignals,
+        reasoningSignals,
+        capabilities:
+        intelligenceCapabilities,
+      } = canonicalSignals;
 
       /**
-       * Critical:
-       *
-       * Legacy report generators now receive the canonical repository purpose
-       * instead of rebuilding purpose from ArchitectureChange history.
+       * Repository purpose is already authoritative in this route through the
+       * dedicated snapshot repositoryTypes column.
        */
       const repositoryTypes =
         canonicalRepositoryTypes;
 
+      /**
+       * Current architecture-style inference must use canonical engineering
+       * signals rather than an empty signal collection.
+       */
       const architectureStyles =
         detectArchitectureStyle({
           domains,
           technologies,
-          signals: [],
+          signals:
+            engineeringSignals,
           repositoryTypes,
         });
 
+      /**
+       * Structured canonical capability lookup.
+       */
+      const hasCapability = (
+        key: string,
+      ) =>
+        intelligenceCapabilities.some(
+          (capability) =>
+            capability.key === key,
+        );
+
+      /**
+       * Keep the existing boolean capability contract used by narrative and
+       * reasoning helpers, but derive it from canonical current-state evidence.
+       */
       const capabilities = {
         frontendArchitecture:
           domains.includes(
@@ -4480,35 +4469,68 @@ ${architectureChanges
         apiLayer:
           domains.includes(
             "API_LAYER",
+          ) ||
+          domains.includes(
+            "BACKEND_SYSTEMS",
+          ) ||
+          hasCapability(
+            "API_LAYER",
           ),
 
         authentication:
           domains.includes(
+            "AUTHENTICATION",
+          ) ||
+          hasCapability(
             "AUTHENTICATION",
           ),
 
         realtimeSystems:
           domains.includes(
             "REALTIME_SYSTEMS",
+          ) ||
+          hasCapability(
+            "REALTIME_SYSTEMS",
           ),
 
         queueInfrastructure:
           domains.includes(
+            "QUEUE_INFRASTRUCTURE",
+          ) ||
+          hasCapability(
             "QUEUE_INFRASTRUCTURE",
           ),
 
         databaseLayer:
           domains.includes(
             "DATABASE_LAYER",
+          ) ||
+          hasCapability(
+            "DATABASE_LAYER",
           ),
 
         cachingLayer:
           domains.includes(
             "CACHING_LAYER",
+          ) ||
+          domains.includes(
+            "CACHE_INFRASTRUCTURE",
+          ) ||
+          hasCapability(
+            "CACHE_INFRASTRUCTURE",
           ),
 
         architectureIntelligence:
+          repositoryTypes.includes(
+            "ENGINEERING_INTELLIGENCE_PLATFORM",
+          ) ||
           domains.includes(
+            "ENGINEERING_INTELLIGENCE",
+          ) ||
+          domains.includes(
+            "ARCHITECTURE_INTELLIGENCE",
+          ) ||
+          hasCapability(
             "ARCHITECTURE_INTELLIGENCE",
           ),
       };
@@ -4534,8 +4556,11 @@ ${architectureChanges
           technologies,
 
           reasoningSignals,
-        });
 
+          capabilities:
+            intelligenceCapabilities,
+        });
+        
       const narrative =
         generateRepositoryNarrative({
           repositoryName:
