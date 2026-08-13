@@ -1,19 +1,23 @@
-import { includesAny } from "../evidence/evidence-utils";
-import { CapabilityContext } from "./types";
+import type {
+  CapabilityContext,
+} from "./types";
 
-export const detectRealtimeCapability = (context: CapabilityContext) => {
-  const { combinedText, addCapability } = context;
+import {
+  hasRealtimeEvidence,
+} from "../realtime-evidence";
+
+export const detectRealtimeCapability = (
+  context: CapabilityContext,
+) => {
+  const {
+    combinedText,
+    addCapability,
+  } = context;
 
   if (
-    includesAny(combinedText, [
-      "socket.io",
-      "websocket",
-      "server-sent events",
-      "sse",
-      "event stream",
-      "live updates",
-      "pubsub",
-    ])
+    hasRealtimeEvidence(
+      combinedText,
+    )
   ) {
     addCapability(
       "REALTIME_SYSTEMS",

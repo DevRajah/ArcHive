@@ -23,6 +23,7 @@ import {
 import {
     detectRateLimitingTechnology,
 } from "../../technologies/security/rate-limit-detector";
+import { hasRealtimeEvidence } from "../../realtime-evidence";
 
 // Command to run this test file in watch mode:
 // npx tsx --test packages/detectors/src/fingerprint/__tests__/technology-semantic-separation.test.ts --watch
@@ -596,6 +597,94 @@ describe(
                         "Express",
                     ),
                     [],
+                );
+            },
+        );
+
+        it(
+            "recognizes canonical realtime evidence consistently",
+            () => {
+                assert.equal(
+                    hasRealtimeEvidence(
+                        "Repository uses socket.io for live updates",
+                    ),
+                    true,
+                );
+
+                assert.equal(
+                    hasRealtimeEvidence(
+                        "Repository exposes server-sent events",
+                    ),
+                    true,
+                );
+
+                assert.equal(
+                    hasRealtimeEvidence(
+                        "Repository publishes an event stream",
+                    ),
+                    true,
+                );
+
+                assert.equal(
+                    hasRealtimeEvidence(
+                        "Repository uses pubsub messaging",
+                    ),
+                    true,
+                );
+            },
+        );
+
+        it(
+            "does not classify unrelated text as realtime evidence",
+            () => {
+                assert.equal(
+                    hasRealtimeEvidence(
+                        "Repository contains ordinary REST endpoints and database migrations",
+                    ),
+                    false,
+                );
+            },
+        );
+
+        it(
+            "adds REALTIME_SYSTEMS architecture domain from canonical realtime evidence",
+            () => {
+                const state =
+                    createState();
+
+                applyLegacyClassificationStage({
+                    filesChanged: [
+                        "src/events/stream.ts",
+                    ],
+
+                    combinedText: `
+        server-sent events
+        live updates
+        event stream
+      `,
+
+                    state,
+                });
+
+                assert.equal(
+                    state.architectureDomains.has(
+                        "REALTIME_SYSTEMS",
+                    ),
+                    true,
+                );
+
+                assert.equal(
+                    state.engineeringSignals.has(
+                        "REALTIME_INFRASTRUCTURE",
+                    ),
+                    true,
+                );
+
+                assert.equal(
+                    state.technologies.has(
+                        "Socket.IO / Realtime Events",
+                    ),
+                    false,
                 );
             },
         );

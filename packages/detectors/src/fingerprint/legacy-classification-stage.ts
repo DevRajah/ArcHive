@@ -7,6 +7,10 @@ import {
   includesAny,
 } from "./shared";
 
+import {
+  hasRealtimeEvidence,
+} from "../realtime-evidence";
+
 /**
  * Repository purposes that represent meaningful product/domain identity.
  *
@@ -461,31 +465,32 @@ export const applyLegacyClassificationStage = ({
 
   /**
    * Realtime infrastructure.
+   *
+   * Capability and architecture-domain detection intentionally share the
+   * canonical realtime evidence rule so these two intelligence layers cannot
+   * disagree simply because they use different keyword vocabularies.
    */
   if (
-    includesAny(combinedText, [
-      "socket.io",
-      "websocket",
-      "realtime",
-      "socket-emitter",
-      "socket.on",
-      "socket.emit",
-    ])
+    hasRealtimeEvidence(
+      combinedText,
+    )
   ) {
-    add(technologies, [
-      "Socket.IO / Realtime Events",
-    ]);
+    add(
+      architectureDomains,
+      [
+        "REALTIME_SYSTEMS",
+      ],
+    );
 
-    add(architectureDomains, [
-      "REALTIME_SYSTEMS",
-    ]);
-
-    add(engineeringSignals, [
-      "REALTIME_INFRASTRUCTURE",
-    ]);
+    add(
+      engineeringSignals,
+      [
+        "REALTIME_INFRASTRUCTURE",
+      ],
+    );
 
     addReasoningSignal(
-      "Detected realtime websocket infrastructure",
+      "Detected realtime communication or live event-delivery infrastructure",
     );
   }
 
@@ -504,7 +509,7 @@ export const applyLegacyClassificationStage = ({
       "resque",
     ])
   ) {
-   
+
     add(architectureDomains, [
       "QUEUE_INFRASTRUCTURE",
     ]);
@@ -583,7 +588,7 @@ export const applyLegacyClassificationStage = ({
       "mongoose",
     ])
   ) {
- 
+
     add(architectureDomains, [
       "DATABASE_LAYER",
     ]);
@@ -636,7 +641,7 @@ export const applyLegacyClassificationStage = ({
       "readme",
     ])
   ) {
-   
+
     add(architectureDomains, [
       "DOCUMENTATION_SYSTEM",
     ]);
@@ -664,7 +669,7 @@ export const applyLegacyClassificationStage = ({
       "collaborative",
     ])
   ) {
-  
+
     add(architectureDomains, [
       "COLLABORATION_SYSTEMS",
     ]);

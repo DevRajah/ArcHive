@@ -2,6 +2,8 @@ import {
   EngineeringSignals,
 } from "../constants";
 
+
+
 export const getEngineeringSignalsForTechnology = (
   technologyName: string,
 ): string[] => {
