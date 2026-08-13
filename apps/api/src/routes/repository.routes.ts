@@ -3976,6 +3976,10 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
             select: {
               primaryRepositoryType: true,
               repositoryTypes: true,
+              technologies: true,
+              architectureDomains: true,
+              capabilities: true,
+              intelligence: true,
               createdAt: true,
             },
           },
@@ -4019,77 +4023,53 @@ export const repositoryRoutes = async (app: FastifyInstance) => {
           },
         });
 
-      const domains = Array.from(
-        new Set(
-          architectureChanges
-            .map(
-              (change) =>
-                change.architectureDomain
-            )
-            .filter(
-              (domain): domain is string =>
-                Boolean(domain)
-            )
-        )
-      );
-
-      const technologies = Array.from(
-        new Set(
-          architectureChanges
-            .map(
-              (change) =>
-                change.detectedTechnology
-            )
-            .filter(
-              (technology): technology is string =>
-                Boolean(technology)
-            )
-        )
-      );
-
       /**
-    * Prisma exposes Json columns as JsonValue.
-    *
-    * Future me:
-    * RepositoryIntelligenceSnapshot.repositoryTypes is persisted as a JSON array
-    * of strings, but TypeScript only knows that it could be any valid JSON value.
-    *
-    * Convert it back into a clean string[] before giving it to intelligence
-    * helpers or rendering it in Markdown.
-    */
-      const repositoryTypes: string[] =
-        Array.isArray(
-          latestSnapshot.repositoryTypes,
-        )
-          ? latestSnapshot.repositoryTypes.filter(
-            (value): value is string =>
-              typeof value === "string",
-          )
-          : [];
+       * Markdown Intelligence Report is a CURRENT-STATE intelligence view.
+       *
+       * Future me:
+       * ArchitectureChange remains historical evidence. It must not define the
+       * repository's current domains, technologies, capabilities, or reasoning.
+       */
+      const canonicalSignals =
+        extractCanonicalRepositoryIntelligenceSignals({
+          latestSnapshot,
+          architectureChanges,
+        });
 
-      const reasoningSignals = Array.from(
-        new Set(
-          architectureChanges
-            .flatMap(
-              (change) =>
-                change.reasoningSignals?.split(" | ") ||
-                []
-            )
-            .map((signal) => signal.trim())
-            .filter(Boolean)
-        )
-      );
+      const {
+        repositoryTypes,
+        domains,
+        technologies,
+        reasoningSignals,
+        capabilities:
+        intelligenceCapabilities,
+      } = canonicalSignals;
 
       const semanticProfile =
         generateRepositorySemanticProfile({
-          repositoryName: repository.name,
-          fullName: repository.fullName,
-          description: repository.description,
-          language: repository.language,
+          repositoryName:
+            repository.name,
+
+          fullName:
+            repository.fullName,
+
+          description:
+            repository.description,
+
+          language:
+            repository.language,
+
           repositoryTypes,
           domains,
           technologies,
           reasoningSignals,
+
+          /**
+           * Semantic flags must use the same canonical capability intelligence as
+           * the rest of ArcHive's current-state repository analysis.
+           */
+          capabilities:
+            intelligenceCapabilities,
         });
 
       const markdown = `# ${repository.name} Intelligence Report
