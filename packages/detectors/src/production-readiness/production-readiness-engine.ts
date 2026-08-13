@@ -338,9 +338,19 @@ export const buildProductionReadiness = ({
         );
     }
 
+    /**
+   * Security controls should be evaluated from their semantic evidence rather
+   * than requiring a generic "Rate Limiting" entry in technologies.
+   *
+   * We keep the operational-text fallback because configuration or middleware
+   * evidence can still demonstrate request protection even when a dedicated
+   * package is not present.
+   */
     const hasSecurityHardening =
+        engineeringSignals.includes(
+            "RATE_LIMITING"
+        ) ||
         includesAny(technologies, [
-            "Rate Limiting",
             "Encryption",
         ]) ||
         textIncludesAny(operationalText, [

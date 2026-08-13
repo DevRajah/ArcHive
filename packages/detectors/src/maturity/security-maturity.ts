@@ -22,9 +22,19 @@ export const assessSecurityMaturity = (input: MaturityInput) => {
     recommendations.push("Add explicit authentication and authorization boundaries.");
   }
 
-  if (includesAny(input.technologies, ["Encryption", "Rate Limiting"])) {
-    score += 25;
-    strengths.push("Security hardening signals such as encryption or rate limiting exist.");
+  const hasSecurityHardening =
+    input.engineeringSignals.includes(
+      "RATE_LIMITING"
+    ) ||
+    includesAny(
+      input.technologies,
+      ["Encryption"]
+    );
+
+  if (hasSecurityHardening) {
+    strengths.push(
+      "Security hardening signals such as encryption or rate limiting exist."
+    );
   } else {
     recommendations.push("Consider rate limiting, hashing, encryption, and request protection.");
   }

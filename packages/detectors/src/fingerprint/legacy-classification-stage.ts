@@ -504,10 +504,7 @@ export const applyLegacyClassificationStage = ({
       "resque",
     ])
   ) {
-    add(technologies, [
-      "Background Jobs / Queue",
-    ]);
-
+   
     add(architectureDomains, [
       "QUEUE_INFRASTRUCTURE",
     ]);
@@ -586,10 +583,7 @@ export const applyLegacyClassificationStage = ({
       "mongoose",
     ])
   ) {
-    add(technologies, [
-      "Database",
-    ]);
-
+ 
     add(architectureDomains, [
       "DATABASE_LAYER",
     ]);
@@ -642,10 +636,7 @@ export const applyLegacyClassificationStage = ({
       "readme",
     ])
   ) {
-    add(technologies, [
-      "Documentation",
-    ]);
-
+   
     add(architectureDomains, [
       "DOCUMENTATION_SYSTEM",
     ]);
@@ -673,10 +664,7 @@ export const applyLegacyClassificationStage = ({
       "collaborative",
     ])
   ) {
-    add(technologies, [
-      "Realtime Collaboration",
-    ]);
-
+  
     add(architectureDomains, [
       "COLLABORATION_SYSTEMS",
     ]);
@@ -709,9 +697,6 @@ export const applyLegacyClassificationStage = ({
       "smart grid",
     ])
   ) {
-    add(technologies, [
-      "Energy Monitoring",
-    ]);
 
     add(architectureDomains, [
       "ENERGY_SYSTEMS",
@@ -761,9 +746,7 @@ export const applyLegacyClassificationStage = ({
     hasEngineeringIntelligenceCoreSignal &&
     hasGithubRepositoryAnalysisSignal
   ) {
-    add(technologies, [
-      "Engineering Intelligence",
-    ]);
+
 
     add(architectureDomains, [
       "ENGINEERING_INTELLIGENCE",

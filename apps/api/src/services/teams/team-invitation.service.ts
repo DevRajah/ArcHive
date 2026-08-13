@@ -23,12 +23,93 @@ import {
     TeamInvitationValidationError,
 } from "./team-invitation.errors";
 
+import {
+    resolveInvitationTargetInput,
+} from "./team-invitation-target.service";
+
 const invitationManagementRoles = [
     TeamMemberRole.OWNER,
     TeamMemberRole.ADMIN,
 ];
 
 const INVITATION_EXPIRY_DAYS = 7;
+
+
+
+/**
+ * Resolve the user being invited.
+ *
+ * GitHub username is the public/user-facing identifier.
+ * inviteeUserId remains temporarily supported for older internal callers.
+ *
+ * Exactly one identifier must be supplied.
+ */
+const resolveExistingInvitee = async (
+    input: CreateTeamInvitationInput,
+) => {
+    /**
+     * Validate and normalize the user-facing identifier separately from
+     * persistence concerns.
+     */
+    const target =
+        resolveInvitationTargetInput(
+            input,
+        );
+
+    if (target.type === "USERNAME") {
+        const invitee =
+            await prisma.user.findFirst({
+                where: {
+                    username: {
+                        equals:
+                            target.username,
+                        mode: "insensitive",
+                    },
+                },
+
+                select: {
+                    id: true,
+                    username: true,
+                    email: true,
+                    avatarUrl: true,
+                },
+            });
+
+        if (!invitee) {
+            throw new TeamInvitationValidationError(
+                "No existing ArcHive account matches that GitHub username.",
+            );
+        }
+
+        return invitee;
+    }
+
+    /**
+     * Legacy UUID compatibility.
+     */
+    const invitee =
+        await prisma.user.findUnique({
+            where: {
+                id:
+                    target.inviteeUserId,
+            },
+
+            select: {
+                id: true,
+                username: true,
+                email: true,
+                avatarUrl: true,
+            },
+        });
+
+    if (!invitee) {
+        throw new TeamInvitationValidationError(
+            "The selected ArcHive user does not exist.",
+        );
+    }
+
+    return invitee;
+};
 
 const mapInvitation = (
     invitation: {
@@ -130,27 +211,18 @@ export const createTeamInvitation = async ({
     teamId: string;
     input: CreateTeamInvitationInput;
 }): Promise<TeamInvitationResponse> => {
+    /**
+     * Only OWNER and ADMIN members can manage invitations.
+     *
+     * Keep this before doing any invitation work so an unauthorized actor
+     * cannot use this endpoint to probe ArcHive usernames.
+     */
     await requireTeamRole({
         teamId,
         userId: input.actorUserId,
         allowedRoles:
             invitationManagementRoles,
     });
-
-    if (!input.inviteeUserId?.trim()) {
-        throw new TeamInvitationValidationError(
-            "An inviteeUserId is required.",
-        );
-    }
-
-    //   if (
-    //     input.role ===
-    //     TeamMemberRole.OWNER
-    //   ) {
-    //     throw new TeamInvitationValidationError(
-    //       "OWNER cannot be assigned through a team invitation.",
-    //     );
-    //   }
 
     const team =
         await prisma.team.findUnique({
@@ -167,20 +239,28 @@ export const createTeamInvitation = async ({
         throw new TeamNotFoundError();
     }
 
+    /**
+     * Resolve the external/user-facing identifier once.
+     *
+     * Everything after this point should use invitee.id.
+     * The rest of the invitation system does not need to care whether
+     * the request originally contained a username or legacy UUID.
+     */
     const invitee =
-        await prisma.user.findUnique({
-            where: {
-                id: input.inviteeUserId,
-            },
+        await resolveExistingInvitee(input);
 
-            select: {
-                id: true,
-            },
-        });
-
-    if (!invitee) {
+    /**
+     * The TypeScript input contract already excludes OWNER.
+     *
+     * Runtime HTTP requests, however, are not protected by TypeScript,
+     * so we still guard this explicitly.
+     */
+    if (
+        (input.role as TeamMemberRole) ===
+        TeamMemberRole.OWNER
+    ) {
         throw new TeamInvitationValidationError(
-            "The selected ArcHive user does not exist.",
+            "OWNER cannot be assigned through a team invitation.",
         );
     }
 
@@ -189,8 +269,7 @@ export const createTeamInvitation = async ({
             where: {
                 teamId_userId: {
                     teamId,
-                    userId:
-                        input.inviteeUserId,
+                    userId: invitee.id,
                 },
             },
         });
@@ -201,6 +280,10 @@ export const createTeamInvitation = async ({
         );
     }
 
+    /**
+     * Expire stale pending invitations before checking whether the
+     * resolved user already has an active invitation.
+     */
     await expireOldInvitations(teamId);
 
     const existingInvitation =
@@ -209,7 +292,7 @@ export const createTeamInvitation = async ({
                 teamId,
 
                 inviteeUserId:
-                    input.inviteeUserId,
+                    invitee.id,
 
                 status:
                     TeamInvitationStatus.PENDING,
@@ -222,8 +305,7 @@ export const createTeamInvitation = async ({
         );
     }
 
-    const expiresAt =
-        new Date();
+    const expiresAt = new Date();
 
     expiresAt.setDate(
         expiresAt.getDate() +
@@ -238,8 +320,12 @@ export const createTeamInvitation = async ({
                 invitedById:
                     input.actorUserId,
 
+                /**
+                 * Invitations continue storing the stable internal relationship.
+                 * Username is only the lookup mechanism at the API boundary.
+                 */
                 inviteeUserId:
-                    input.inviteeUserId,
+                    invitee.id,
 
                 role:
                     input.role,

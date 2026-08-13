@@ -34,7 +34,25 @@ export const detectSecurityQuality: QualityDetector = (context) => {
     );
   }
 
-  if (hasTechnology(context, ["Encryption", "Rate Limiting"])) {
+  /**
+   * Use concrete implementation evidence here.
+   *
+   * EngineeringQualityContext does not currently expose engineeringSignals,
+   * so this detector should use the confirmed technology rather than depending
+   * on the old generic "Rate Limiting" technology label.
+   *
+   * Other stages that already receive engineeringSignals can reason from
+   * RATE_LIMITING directly.
+   */
+  if (
+    hasTechnology(
+      context,
+      [
+        "Encryption",
+        "express-rate-limit",
+      ],
+    )
+  ) {
     addQuality(
       "SECURITY",
       25,

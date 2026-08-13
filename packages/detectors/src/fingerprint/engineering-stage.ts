@@ -29,6 +29,10 @@ import {
   type FingerprintState,
 } from "./shared";
 
+import {
+  getEngineeringSignalsForTechnology,
+} from "./technology-engineering-signal";
+
 export const buildEngineeringStage = ({
   filesChanged,
   commitMessages,
@@ -45,6 +49,7 @@ export const buildEngineeringStage = ({
   const {
     technologies,
     architectureDomains,
+    engineeringSignals,
     repositoryTypes,
     addReasoningSignal,
   } = state;
@@ -149,9 +154,38 @@ export const buildEngineeringStage = ({
       continue;
     }
 
+    /**
+     * Keep the concrete implementation in the technology inventory.
+     *
+     * Example:
+     * express-rate-limit belongs here as the actual detected package.
+     */
     add(
       technologies,
-      [technology.name],
+      [
+        technology.name,
+      ],
+    );
+
+    /**
+     * A concrete technology may also imply a higher-level engineering
+     * behaviour.
+     *
+     * Future me:
+     * Do not put generic concepts such as "Rate Limiting" back into the
+     * technology inventory. The concrete implementation remains a
+     * technology, while the behaviour is represented as an engineering
+     * signal.
+     *
+     * Example:
+     * express-rate-limit -> technologies
+     * RATE_LIMITING      -> engineeringSignals
+     */
+    add(
+      engineeringSignals,
+      getEngineeringSignalsForTechnology(
+        technology.name,
+      ),
     );
 
     addReasoningSignal(

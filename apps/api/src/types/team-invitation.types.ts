@@ -1,27 +1,44 @@
 import type {
-    TeamInvitationStatus,
-    TeamMemberRole,
+  TeamInvitationStatus,
+  TeamMemberRole,
 } from "@prisma/client";
 
-export interface CreateTeamInvitationInput {
-    actorUserId: string;
+/**
+ * User-facing invitation target.
+ *
+ * GitHub username is now the preferred identifier because users should
+ * never need to know another ArcHive user's internal database UUID.
+ */
+type TeamInvitationUsernameTarget = {
+  username: string;
+  inviteeUserId?: never;
+};
 
-    /**
-     * Invitations currently target an existing ArcHive user.
-     *
-     * Email-only invitations for people without an ArcHive account
-     * will be introduced later.
-     */
-    inviteeUserId: string;
+/**
+ * Temporary compatibility path for existing internal consumers.
+ *
+ * Future me:
+ * Remove this once every caller has migrated to GitHub username.
+ */
+type TeamInvitationLegacyUserTarget = {
+  username?: never;
+  inviteeUserId: string;
+};
 
-    role: Exclude<
-        TeamMemberRole,
-        "OWNER"
-    >;
-}
+export type CreateTeamInvitationInput = {
+  actorUserId: string;
+
+  role: Exclude<
+    TeamMemberRole,
+    "OWNER"
+  >;
+} & (
+  | TeamInvitationUsernameTarget
+  | TeamInvitationLegacyUserTarget
+);
 
 export interface RespondToTeamInvitationInput {
-    actorUserId: string;
+  actorUserId: string;
 }
 
 export interface TeamInvitationResponse {

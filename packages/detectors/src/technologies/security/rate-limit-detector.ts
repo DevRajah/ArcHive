@@ -34,7 +34,7 @@ export const detectRateLimitingTechnology:
 
     addConfirmedFileTechnology({
       context,
-      name: "Rate Limiting",
+      name: "express-rate-limit", 
       reason:
         "Detected rate-limiting or throttling middleware, plugin, guard, service, or configuration files.",
       file,

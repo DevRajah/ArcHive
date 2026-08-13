@@ -6,7 +6,6 @@ import {
   ArchitectureDomains,
   EngineeringSignals,
   RepositoryTypes,
-  Technologies,
 } from "../constants";
 
 import {
@@ -30,7 +29,6 @@ export const applyRepositoryPurposeStage = ({
   state: FingerprintState;
 }): void => {
   const {
-    technologies,
     architectureDomains,
     engineeringSignals,
     repositoryTypes,
@@ -40,9 +38,7 @@ export const applyRepositoryPurposeStage = ({
   for (const result of evidenceResults) {
     switch (result.repositoryType) {
       case RepositoryTypes.FINTECH_PLATFORM:
-        add(technologies, [
-          Technologies.FINANCIAL_INFRASTRUCTURE,
-        ]);
+
 
         add(architectureDomains, [
           ArchitectureDomains.FINANCIAL_SYSTEMS,
@@ -54,9 +50,7 @@ export const applyRepositoryPurposeStage = ({
         break;
 
       case RepositoryTypes.DEVTOOL_PLATFORM:
-        add(technologies, [
-          Technologies.DEVELOPER_TOOLING,
-        ]);
+
 
         add(architectureDomains, [
           ArchitectureDomains.DEVELOPER_INFRASTRUCTURE,
@@ -68,9 +62,7 @@ export const applyRepositoryPurposeStage = ({
         break;
 
       case RepositoryTypes.DEVELOPER_PLATFORM:
-        add(technologies, [
-          Technologies.DEVELOPER_INFRASTRUCTURE,
-        ]);
+
 
         add(architectureDomains, [
           ArchitectureDomains.DEVELOPER_INFRASTRUCTURE,
@@ -82,9 +74,7 @@ export const applyRepositoryPurposeStage = ({
         break;
 
       case RepositoryTypes.OBSERVABILITY_PLATFORM:
-        add(technologies, [
-          Technologies.OBSERVABILITY,
-        ]);
+
 
         add(architectureDomains, [
           ArchitectureDomains.OBSERVABILITY_SYSTEMS,
@@ -96,9 +86,7 @@ export const applyRepositoryPurposeStage = ({
         break;
 
       case RepositoryTypes.SECURITY_PLATFORM:
-        add(technologies, [
-          Technologies.SECURITY_SYSTEMS,
-        ]);
+
 
         add(architectureDomains, [
           ArchitectureDomains.SECURITY_SYSTEMS,
@@ -110,9 +98,7 @@ export const applyRepositoryPurposeStage = ({
         break;
 
       case RepositoryTypes.AI_ML_PROJECT:
-        add(technologies, [
-          Technologies.AI_ML,
-        ]);
+
 
         add(architectureDomains, [
           ArchitectureDomains.AI_INFRASTRUCTURE,
@@ -124,9 +110,7 @@ export const applyRepositoryPurposeStage = ({
         break;
 
       case RepositoryTypes.MOBILE_APPLICATION:
-        add(technologies, [
-          Technologies.MOBILE_APPLICATION,
-        ]);
+
 
         add(architectureDomains, [
           ArchitectureDomains.MOBILE_ARCHITECTURE,
@@ -138,9 +122,7 @@ export const applyRepositoryPurposeStage = ({
         break;
 
       case RepositoryTypes.DATA_ENGINEERING_PROJECT:
-        add(technologies, [
-          Technologies.DATA_ENGINEERING,
-        ]);
+
 
         add(architectureDomains, [
           ArchitectureDomains.DATA_PIPELINES,
@@ -152,9 +134,7 @@ export const applyRepositoryPurposeStage = ({
         break;
 
       case RepositoryTypes.SMART_TRANSPORT_PLATFORM:
-        add(technologies, [
-          Technologies.TRANSPORT_SYSTEMS,
-        ]);
+
 
         add(architectureDomains, [
           ArchitectureDomains.MOBILITY_SYSTEMS,
@@ -166,9 +146,7 @@ export const applyRepositoryPurposeStage = ({
         break;
 
       case RepositoryTypes.BACKEND_SERVICE:
-        add(technologies, [
-          Technologies.BACKEND_SERVICES,
-        ]);
+
 
         add(architectureDomains, [
           ArchitectureDomains.SERVICE_ARCHITECTURE,
@@ -180,9 +158,7 @@ export const applyRepositoryPurposeStage = ({
         break;
 
       case RepositoryTypes.FRONTEND_APPLICATION:
-        add(technologies, [
-          Technologies.FRONTEND_ENGINEERING,
-        ]);
+
 
         add(architectureDomains, [
           ArchitectureDomains.FRONTEND_ARCHITECTURE,
@@ -194,9 +170,7 @@ export const applyRepositoryPurposeStage = ({
         break;
 
       case RepositoryTypes.DOCUMENTATION_HEAVY_REPOSITORY:
-        add(technologies, [
-          Technologies.TECHNICAL_DOCUMENTATION,
-        ]);
+
 
         add(architectureDomains, [
           ArchitectureDomains.KNOWLEDGE_MANAGEMENT,
@@ -208,9 +182,7 @@ export const applyRepositoryPurposeStage = ({
         break;
 
       case RepositoryTypes.DESIGN_SYSTEM:
-        add(technologies, [
-          Technologies.DESIGN_SYSTEMS,
-        ]);
+
 
         add(architectureDomains, [
           ArchitectureDomains.DESIGN_SYSTEM_ARCHITECTURE,
@@ -222,9 +194,6 @@ export const applyRepositoryPurposeStage = ({
         break;
 
       case RepositoryTypes.PACKAGE_LIBRARY:
-        add(technologies, [
-          Technologies.PACKAGE_LIBRARIES,
-        ]);
 
         add(architectureDomains, [
           ArchitectureDomains.LIBRARY_ARCHITECTURE,
@@ -236,9 +205,7 @@ export const applyRepositoryPurposeStage = ({
         break;
 
       case RepositoryTypes.INFRASTRUCTURE_PLATFORM:
-        add(technologies, [
-          Technologies.INFRASTRUCTURE_AUTOMATION,
-        ]);
+
 
         add(architectureDomains, [
           ArchitectureDomains.PLATFORM_INFRASTRUCTURE,
@@ -250,9 +217,7 @@ export const applyRepositoryPurposeStage = ({
         break;
 
       case RepositoryTypes.MESSAGING_PLATFORM:
-        add(technologies, [
-          Technologies.MESSAGING_SYSTEMS,
-        ]);
+
 
         add(architectureDomains, [
           ArchitectureDomains.EVENT_DRIVEN_ARCHITECTURE,
@@ -264,9 +229,7 @@ export const applyRepositoryPurposeStage = ({
         break;
 
       case RepositoryTypes.ECOMMERCE_PLATFORM:
-        add(technologies, [
-          Technologies.COMMERCE_SYSTEMS,
-        ]);
+
 
         add(architectureDomains, [
           ArchitectureDomains.DIGITAL_COMMERCE,
@@ -278,9 +241,7 @@ export const applyRepositoryPurposeStage = ({
         break;
 
       case RepositoryTypes.EDUCATION_PLATFORM:
-        add(technologies, [
-          Technologies.EDUCATIONAL_TECHNOLOGY,
-        ]);
+
 
         add(architectureDomains, [
           ArchitectureDomains.LEARNING_SYSTEMS,
@@ -292,9 +253,7 @@ export const applyRepositoryPurposeStage = ({
         break;
 
       case RepositoryTypes.HEALTHCARE_PLATFORM:
-        add(technologies, [
-          Technologies.HEALTHCARE_TECHNOLOGY,
-        ]);
+
 
         add(architectureDomains, [
           ArchitectureDomains.HEALTH_INFORMATION_SYSTEMS,
@@ -306,9 +265,7 @@ export const applyRepositoryPurposeStage = ({
         break;
 
       case RepositoryTypes.ENERGY_PLATFORM:
-        add(technologies, [
-          Technologies.ENERGY_SYSTEMS,
-        ]);
+
 
         add(architectureDomains, [
           ArchitectureDomains.SMART_ENERGY_SYSTEMS,
@@ -320,9 +277,7 @@ export const applyRepositoryPurposeStage = ({
         break;
 
       case RepositoryTypes.COLLABORATION_PLATFORM:
-        add(technologies, [
-          Technologies.COLLABORATION_SYSTEMS,
-        ]);
+
 
         add(architectureDomains, [
           ArchitectureDomains.COLLABORATIVE_COMPUTING,

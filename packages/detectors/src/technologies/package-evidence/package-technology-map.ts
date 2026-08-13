@@ -394,7 +394,7 @@ export const PACKAGE_TECHNOLOGY_MAP:
     },
 
     {
-      technology: "Rate Limiting",
+      technology: "express-rate-limit",
       packages: [
         "express-rate-limit",
         "@fastify/rate-limit",
