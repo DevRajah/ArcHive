@@ -65,15 +65,6 @@ export default function PortfolioTrendsPage() {
         refetch,
     } = usePortfolioTrends(userId, period);
 
- console.log(
-  "TREND REPOSITORY DETAILS",
-  JSON.stringify(data?.repositoryActivity, null, 2),
-);
-
-console.log(
-  "TREND HIGHLIGHT DETAILS",
-  JSON.stringify(data?.highlights, null, 2),
-);
 
     const repositoryRanking = useMemo(() => {
         return [...(data?.repositoryActivity ?? [])].sort(
@@ -616,7 +607,7 @@ function DistributionChart({
                             <Tooltip
                                 formatter={(value) => [
                                     Number(value).toLocaleString(),
-                                    "Count",
+                                    "Repositories",
                                 ]}
                             />
 
