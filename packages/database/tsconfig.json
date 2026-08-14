@@ -12,7 +12,11 @@
     "verbatimModuleSyntax": false,
     "exactOptionalPropertyTypes": false,
 
-    "esModuleInterop": true
+    "esModuleInterop": true,
+
+    "types": [
+      "node"
+    ]
   },
   "include": [
     "src/**/*.ts"
