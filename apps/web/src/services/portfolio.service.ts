@@ -176,13 +176,38 @@ function normalizeHighlight(
     return null;
   }
 
-  const record = value as Record<string, unknown>;
+  const record =
+    value as Record<string, unknown>;
 
   const repositoryValue =
     record.repository &&
       typeof record.repository === "object"
-      ? (record.repository as Record<string, unknown>)
+      ? (
+        record.repository as Record<
+          string,
+          unknown
+        >
+      )
       : record;
+
+  /*
+   * Portfolio highlight metrics are returned separately from the
+   * repository identity.
+   *
+   * In particular, the backend may group operational metrics under
+   * `counts`, so preserve those values when normalising the response
+   * instead of allowing the UI to fall back to zero.
+   */
+  const counts =
+    record.counts &&
+      typeof record.counts === "object"
+      ? (
+        record.counts as Record<
+          string,
+          unknown
+        >
+      )
+      : null;
 
   if (
     typeof repositoryValue.id !== "string" ||
@@ -192,7 +217,9 @@ function normalizeHighlight(
   }
 
   return {
-    ...(repositoryValue as unknown as PortfolioRepository),
+    ...(
+      repositoryValue as unknown as PortfolioRepository
+    ),
 
     metric:
       typeof record.metric === "number"
@@ -204,12 +231,19 @@ function normalizeHighlight(
     activityCount:
       typeof record.activityCount === "number"
         ? record.activityCount
-        : undefined,
+        : typeof counts?.engineeringEvents ===
+          "number"
+          ? counts.engineeringEvents
+          : undefined,
 
     recommendationCount:
-      typeof record.recommendationCount === "number"
+      typeof record.recommendationCount ===
+        "number"
         ? record.recommendationCount
-        : undefined,
+        : typeof counts?.activeRecommendations ===
+          "number"
+          ? counts.activeRecommendations
+          : undefined,
 
     lastUpdatedAt:
       typeof record.lastUpdatedAt === "string"
