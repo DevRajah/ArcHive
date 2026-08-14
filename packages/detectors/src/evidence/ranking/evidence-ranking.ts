@@ -8,7 +8,7 @@ import {
 } from "../evidence-types";
 
 import {
-    EvidenceThresholds,
+    evidenceThresholds,
 } from "../evidence-thresholds";
 
 export const rankRepositoryEvidence = (
@@ -37,7 +37,7 @@ export const rankRepositoryEvidence = (
         ...item,
         confidence: calculateConfidenceScore(
             item.totalScore,
-            EvidenceThresholds[item.repositoryType] ?? 50
+            evidenceThresholds[item.repositoryType] ?? 50
         ),
     }));
 

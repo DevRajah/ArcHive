@@ -1,10 +1,16 @@
 {
   "name": "@archive/queue",
   "version": "1.0.0",
-  "main": "src/index.ts",
-  "dependencies": {
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": { 
+    "@archive/types": "*",
     "bullmq": "latest",
     "ioredis": "latest"
+   
   },
   "devDependencies": {
     "@types/node": "latest",

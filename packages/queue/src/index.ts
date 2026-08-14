@@ -1,34 +1,61 @@
-import { Queue } from "bullmq";
-import IORedis from "ioredis";
+import {
+  Queue,
+} from "bullmq";
 
-export const redisConnection = new IORedis({
-  host: process.env.REDIS_HOST || "localhost",
-  port: Number(process.env.REDIS_PORT) || 6381,
-  maxRetriesPerRequest: null,
-});
+import {
+  createQueueRedisConnection,
+  redisConnection,
+} from "./redis";
+
+/**
+ * Re-export the worker-safe Redis connection.
+ *
+ * The worker package already imports this from @archive/queue.
+ */
+export {
+  redisConnection,
+} from "./redis";
 
 export type ProcessEngineeringEventJob = {
   eventId: string;
   repositoryId: string;
 };
 
-// I keep the queue name in one shared place so the API and worker never accidentally use different queues.
-export const engineeringEventQueue = new Queue<ProcessEngineeringEventJob>(
-  "engineering-event-processing",
-  {
-    connection: redisConnection as any,
-  }
-);
+/**
+ * Queue producers get their own producer-safe Redis connection.
+ *
+ * Future me:
+ * Do not use the worker connection here. Queue producers are often called
+ * from HTTP requests and should fail reasonably quickly if Redis is down.
+ */
+const engineeringEventQueueConnection =
+  createQueueRedisConnection();
 
-export const repositoryReprocessQueue = new Queue(
-  "repository-reprocess",
-  {
-    connection: {
-      host: process.env.REDIS_HOST || "localhost",
-      port: Number(process.env.REDIS_PORT || 6379),
+export const engineeringEventQueue =
+  new Queue<ProcessEngineeringEventJob>(
+    "engineering-event-processing",
+    {
+      connection:
+        engineeringEventQueueConnection as any,
     },
-  }
-);
+  );
+
+/**
+ * Reprocessing uses the same canonical Redis configuration.
+ *
+ * This removes the old 6379 vs 6381 inconsistency.
+ */
+const repositoryReprocessQueueConnection =
+  createQueueRedisConnection();
+
+export const repositoryReprocessQueue =
+  new Queue(
+    "repository-reprocess",
+    {
+      connection:
+        repositoryReprocessQueueConnection as any,
+    },
+  );
 
 export {
   EXECUTIVE_REPORT_QUEUE_NAME,

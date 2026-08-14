@@ -6,10 +6,11 @@ import {
   getTeamDashboard,
 } from "../teams/team-dashboard.service";
 
+
 import {
-  ReportSource,
   ReportSourceType,
-} from "../../types/report-source.types";
+  type ReportSource,
+} from "@archive/types";
 
 /**
  * Future me:

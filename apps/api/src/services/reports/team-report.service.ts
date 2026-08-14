@@ -18,7 +18,8 @@ import {
 
 import {
   ReportSourceType,
-} from "../../types/report-source.types";
+  type ReportSource,
+} from "@archive/types";
 
 export interface GenerateTeamReportInput {
   actorUserId: string;

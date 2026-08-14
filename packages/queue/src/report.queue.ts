@@ -1,30 +1,29 @@
-import { Queue } from "bullmq";
-import IORedis from "ioredis";
 import {
+  Queue,
+} from "bullmq";
+
+import type {
   ReportSource,
-} from "../../../apps/api/src/types/report-source.types";
+} from "@archive/types";
+
+import {
+  createQueueRedisConnection,
+} from "./redis";
 
 /**
- * Shared Redis connection for the Executive Report queue.
+ * Executive Report queue producer connection.
  *
- * We create it here because the queue package currently keeps
- * its Redis connection inside index.ts, and importing it from
- * there would create a circular dependency.
+ * Redis configuration is shared with the rest of the queue package so local
+ * development and production cannot silently use different Redis instances.
  */
-const redisConnection = new IORedis({
-  host: process.env.REDIS_HOST || "localhost",
-  port: Number(process.env.REDIS_PORT) || 6381,
-  maxRetriesPerRequest: null,
-});
+const reportQueueConnection =
+  createQueueRedisConnection();
 
 /**
  * Data carried by every Executive Report generation job.
  */
-
-
 export interface GenerateExecutiveReportJob {
   reportId: string;
-
   source: ReportSource;
 }
 
@@ -43,7 +42,8 @@ export const executiveReportQueue =
   new Queue<GenerateExecutiveReportJob>(
     EXECUTIVE_REPORT_QUEUE_NAME,
     {
-      connection: redisConnection as any,
+      connection:
+        reportQueueConnection as any,
 
       defaultJobOptions: {
         attempts: 3,
@@ -56,5 +56,5 @@ export const executiveReportQueue =
         removeOnComplete: 100,
         removeOnFail: 100,
       },
-    }
+    },
   );

@@ -10,7 +10,8 @@ import type {
 
 import {
   ReportSourceType,
-} from "../../types/report-source.types";
+  type ReportSource,
+} from "@archive/types";
 
 /**
  * Creates and queues a new personal Executive Report.
