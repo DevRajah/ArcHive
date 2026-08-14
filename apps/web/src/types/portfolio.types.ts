@@ -33,19 +33,56 @@ export interface PortfolioDistributions {
   technologies: PortfolioDistributionItem[];
 }
 
+export interface PortfolioRepositoryIntelligence {
+  primaryRepositoryType?: string | null;
+  repositoryTypes?: string[];
+
+  /*
+   * These plural arrays represent the repository's complete
+   * canonical current-state intelligence.
+   */
+  architectureDomains?: string[];
+  technologies?: string[];
+
+  /*
+   * Kept because the backend still exposes these singular fields
+   * for backward compatibility.
+   *
+   * They should not be used when the UI needs the complete
+   * repository intelligence.
+   */
+  architectureDomain?: string | null;
+  detectedTechnology?: string | null;
+
+  evolutionSummary?: string | null;
+  lastGeneratedAt?: string | null;
+}
+
 export interface PortfolioRepository {
   id: string;
   name: string;
   fullName?: string | null;
   owner?: string | null;
+  description?: string | null;
   language?: string | null;
   isTracked?: boolean;
   stars?: number;
   forks?: number;
+  createdAt?: string | null;
   updatedAt?: string | null;
 
+  /*
+   * Older flattened Portfolio fields remain optional for
+   * backward compatibility.
+   */
   repositoryType?: string | null;
   architectureDomain?: string | null;
+
+  /*
+   * Canonical repository intelligence returned by the
+   * Engineering Portfolio endpoint.
+   */
+  intelligence?: PortfolioRepositoryIntelligence;
 
   totalEngineeringEvents?: number;
   totalTimelineEntries?: number;
