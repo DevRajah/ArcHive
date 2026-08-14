@@ -58,12 +58,25 @@ type ReportSource =
   GenerateExecutiveReportJob["source"];
 
 /**
- * The worker calls the ArcHive API because the API owns the dashboard
- * services and repository intelligence queries.
+ * The report worker calls the ArcHive API because the API owns the
+ * dashboard services and repository intelligence queries.
+ *
+ * In the free closed-beta deployment, API and Worker run as separate
+ * processes inside the same Render container. In that mode, use localhost
+ * plus Render's injected PORT instead of routing through the public internet.
+ *
+ * In a future split deployment, API_BASE_URL can point to the standalone
+ * public/private API service.
  */
 const API_BASE_URL =
-  process.env.API_BASE_URL ||
-  "http://localhost:6800";
+  process.env.RUN_WORKERS_IN_API ===
+  "true"
+    ? `http://127.0.0.1:${
+        process.env.PORT ||
+        "6800"
+      }`
+    : process.env.API_BASE_URL ||
+      "http://localhost:6800";
 
 /**
  * Converts a normal JavaScript object into a value Prisma can safely
