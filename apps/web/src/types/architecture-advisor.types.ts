@@ -51,6 +51,19 @@ export interface AdvisorScores {
 }
 
 export interface AdvisorEvidenceSummary {
+    /*
+     * This is the canonical backend signal that tells the frontend
+     * whether ArcHive has enough repository intelligence to produce
+     * a meaningful Architecture Advisor assessment.
+     *
+     * Important:
+     * evidenceSufficient === false does NOT mean the repository is
+     * healthy or unhealthy. It means maturity, risk, and other
+     * assessment conclusions are not yet reliable enough to present
+     * as measured repository health.
+     */
+    evidenceSufficient: boolean;
+
     intelligenceSnapshotAvailable: boolean;
     architectureChanges: number;
     recommendations: number;

@@ -79,6 +79,22 @@ function percentage(value: number) {
 }
 
 /*
+ * The backend owns the maturity classification.
+ *
+ * INSUFFICIENT_EVIDENCE is a canonical backend state rather than a
+ * repository maturity level that should be exposed verbatim to users.
+ * We only translate that enum into clearer product language here.
+ */
+function displayMaturityLabel(
+    maturityLabel: string
+) {
+    return maturityLabel ===
+        "INSUFFICIENT_EVIDENCE"
+        ? "NOT YET ASSESSED"
+        : maturityLabel;
+}
+
+/*
  * The advisor backend may expose score names using slightly different
  * aliases as the contract evolves. This helper keeps the page resilient
  * without changing or inventing any API endpoint.
@@ -184,6 +200,23 @@ export default function ArchitectureAdvisorPage({
 
     const assessment = advisorQuery.data;
 
+    /*
+ * New Architecture Advisor assessments explicitly tell the frontend
+ * when repository evidence is insufficient.
+ *
+ * Older persisted assessments may predate that contract and therefore
+ * have no evidenceSufficient field at all. Those assessments already
+ * contain real maturity, risk, scores, findings and recommendations,
+ * so absence of the new field must not retroactively classify them as
+ * insufficient evidence.
+ *
+ * Only an explicit backend `false` enters the insufficient-evidence
+ * presentation.
+ */
+    const evidenceSufficient =
+        assessment?.evidenceSummary.evidenceSufficient !==
+        false;
+
     const resolvedRepositoryName =
         assessment?.repositoryName ||
         repositoryOverviewQuery.data?.repository
@@ -192,114 +225,114 @@ export default function ArchitectureAdvisorPage({
 
     const architectureScore = assessment
         ? getAdvisorScore(assessment.scores, [
-              "architectureScore",
-              "architecture",
-              "architectureMaturityScore",
-              "architectureQualityScore",
-          ])
+            "architectureScore",
+            "architecture",
+            "architectureMaturityScore",
+            "architectureQualityScore",
+        ])
         : 0;
 
     const engineeringQualityScore = assessment
         ? getAdvisorScore(assessment.scores, [
-              "engineeringQuality",
-              "engineeringQualityScore",
-              "qualityScore",
-          ])
+            "engineeringQuality",
+            "engineeringQualityScore",
+            "qualityScore",
+        ])
         : 0;
 
     const capabilityScore = assessment
         ? getAdvisorScore(assessment.scores, [
-              "capabilityScore",
-              "capability",
-              "capabilitiesScore",
-          ])
+            "capabilityScore",
+            "capability",
+            "capabilitiesScore",
+        ])
         : 0;
 
     const productionReadinessScore = assessment
         ? getAdvisorScore(assessment.scores, [
-              "productionReadiness",
-              "productionReadinessScore",
-              "readinessScore",
-          ])
+            "productionReadiness",
+            "productionReadinessScore",
+            "readinessScore",
+        ])
         : 0;
 
     const findingSections = useMemo(
         () =>
             assessment
                 ? [
-                      {
-                          id: "architecture",
-                          title: "Architecture Concerns",
-                          description:
-                              "Structural design concerns found in the repository architecture.",
-                          findings:
-                              assessment.architectureConcerns,
-                      },
-                      {
-                          id: "production",
-                          title: "Production Risks",
-                          description:
-                              "Conditions that may affect safe and predictable production operation.",
-                          findings:
-                              assessment.productionRisks,
-                      },
-                      {
-                          id: "security",
-                          title: "Security Observations",
-                          description:
-                              "Security-related signals requiring engineering review.",
-                          findings:
-                              assessment.securityObservations,
-                      },
-                      {
-                          id: "scalability",
-                          title: "Scalability Concerns",
-                          description:
-                              "Potential limitations as traffic, workloads, and data volumes grow.",
-                          findings:
-                              assessment.scalabilityConcerns,
-                      },
-                      {
-                          id: "reliability",
-                          title: "Reliability Concerns",
-                          description:
-                              "Signals affecting resilience, fault tolerance, and service continuity.",
-                          findings:
-                              assessment.reliabilityConcerns,
-                      },
-                      {
-                          id: "maintainability",
-                          title: "Maintainability",
-                          description:
-                              "Factors that may increase the long-term cost of changing the system.",
-                          findings:
-                              assessment.maintainabilityConcerns,
-                      },
-                      {
-                          id: "observability",
-                          title: "Observability",
-                          description:
-                              "Logging, metrics, tracing, diagnostics, and operational visibility.",
-                          findings:
-                              assessment.observabilityConcerns,
-                      },
-                      {
-                          id: "data",
-                          title: "Data Concerns",
-                          description:
-                              "Signals related to persistence, integrity, access, and data lifecycle.",
-                          findings:
-                              assessment.dataConcerns,
-                      },
-                      {
-                          id: "delivery",
-                          title: "Delivery Concerns",
-                          description:
-                              "Deployment, testing, release, and engineering workflow observations.",
-                          findings:
-                              assessment.deliveryConcerns,
-                      },
-                  ]
+                    {
+                        id: "architecture",
+                        title: "Architecture Concerns",
+                        description:
+                            "Structural design concerns found in the repository architecture.",
+                        findings:
+                            assessment.architectureConcerns,
+                    },
+                    {
+                        id: "production",
+                        title: "Production Risks",
+                        description:
+                            "Conditions that may affect safe and predictable production operation.",
+                        findings:
+                            assessment.productionRisks,
+                    },
+                    {
+                        id: "security",
+                        title: "Security Observations",
+                        description:
+                            "Security-related signals requiring engineering review.",
+                        findings:
+                            assessment.securityObservations,
+                    },
+                    {
+                        id: "scalability",
+                        title: "Scalability Concerns",
+                        description:
+                            "Potential limitations as traffic, workloads, and data volumes grow.",
+                        findings:
+                            assessment.scalabilityConcerns,
+                    },
+                    {
+                        id: "reliability",
+                        title: "Reliability Concerns",
+                        description:
+                            "Signals affecting resilience, fault tolerance, and service continuity.",
+                        findings:
+                            assessment.reliabilityConcerns,
+                    },
+                    {
+                        id: "maintainability",
+                        title: "Maintainability",
+                        description:
+                            "Factors that may increase the long-term cost of changing the system.",
+                        findings:
+                            assessment.maintainabilityConcerns,
+                    },
+                    {
+                        id: "observability",
+                        title: "Observability",
+                        description:
+                            "Logging, metrics, tracing, diagnostics, and operational visibility.",
+                        findings:
+                            assessment.observabilityConcerns,
+                    },
+                    {
+                        id: "data",
+                        title: "Data Concerns",
+                        description:
+                            "Signals related to persistence, integrity, access, and data lifecycle.",
+                        findings:
+                            assessment.dataConcerns,
+                    },
+                    {
+                        id: "delivery",
+                        title: "Delivery Concerns",
+                        description:
+                            "Deployment, testing, release, and engineering workflow observations.",
+                        findings:
+                            assessment.deliveryConcerns,
+                    },
+                ]
                 : [],
         [assessment]
     );
@@ -417,7 +450,7 @@ export default function ArchitectureAdvisorPage({
                             title="Failed to load Architecture Advisor"
                             description={
                                 advisorQuery.error instanceof
-                                Error
+                                    Error
                                     ? advisorQuery.error.message
                                     : "ArcHive could not load this engineering assessment."
                             }
@@ -458,6 +491,9 @@ export default function ArchitectureAdvisorPage({
                             confidenceScore={percentage(
                                 assessment.confidenceScore
                             )}
+                            evidenceSufficient={
+                                evidenceSufficient
+                            }
                             generatedAt={
                                 assessment.generatedAt
                             }
@@ -479,10 +515,10 @@ export default function ArchitectureAdvisorPage({
 
                                         <p className="mt-1 text-sm text-muted-foreground">
                                             {refreshMutation.error instanceof
-                                            Error
+                                                Error
                                                 ? refreshMutation
-                                                      .error
-                                                      .message
+                                                    .error
+                                                    .message
                                                 : "ArcHive could not regenerate the assessment."}
                                         </p>
                                     </div>
@@ -494,67 +530,94 @@ export default function ArchitectureAdvisorPage({
                             <SectionHeading
                                 eyebrow="Engineering scores"
                                 title="Repository Assessment"
-                                description="A structured view of the architecture, engineering quality, capabilities, and production readiness detected by ArcHive."
+                                description={
+                                    evidenceSufficient
+                                        ? "A structured view of the architecture, engineering quality, capabilities, and production readiness detected by ArcHive."
+                                        : "ArcHive has not yet collected enough repository intelligence to calculate reliable architecture and engineering assessment scores."
+                                }
                             />
 
-                            <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                                <AdvisorScoreCard
-                                    label="Architecture Score"
-                                    value={
-                                        architectureScore
-                                    }
-                                    icon={Layers3}
-                                    description="How coherently the repository structure and detected architecture patterns work together."
-                                />
+                            {evidenceSufficient ? (
+                                <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                                    <AdvisorScoreCard
+                                        label="Architecture Score"
+                                        value={architectureScore}
+                                        icon={Layers3}
+                                        description="How coherently the repository structure and detected architecture patterns work together."
+                                    />
 
-                                <AdvisorScoreCard
-                                    label="Engineering Quality"
-                                    value={
-                                        engineeringQualityScore
-                                    }
-                                    icon={Code2}
-                                    description="Evidence of maintainable engineering practices, separation of concerns, and implementation discipline."
-                                />
+                                    <AdvisorScoreCard
+                                        label="Engineering Quality"
+                                        value={engineeringQualityScore}
+                                        icon={Code2}
+                                        description="Evidence of maintainable engineering practices, separation of concerns, and implementation discipline."
+                                    />
 
-                                <AdvisorScoreCard
-                                    label="Capability Score"
-                                    value={
-                                        capabilityScore
-                                    }
-                                    icon={Blocks}
-                                    description="The breadth and strength of meaningful engineering capabilities detected in the repository."
-                                />
+                                    <AdvisorScoreCard
+                                        label="Capability Score"
+                                        value={capabilityScore}
+                                        icon={Blocks}
+                                        description="The breadth and strength of meaningful engineering capabilities detected in the repository."
+                                    />
 
-                                <AdvisorScoreCard
-                                    label="Production Readiness"
-                                    value={
-                                        productionReadinessScore
-                                    }
-                                    icon={Rocket}
-                                    description="How prepared the system appears for reliable, secure, and observable production operation."
-                                />
+                                    <AdvisorScoreCard
+                                        label="Production Readiness"
+                                        value={productionReadinessScore}
+                                        icon={Rocket}
+                                        description="How prepared the system appears for reliable, secure, and observable production operation."
+                                    />
 
-                                <AdvisorScoreCard
-                                    label="Confidence"
-                                    value={percentage(
-                                        assessment.confidenceScore
-                                    )}
-                                    icon={Gauge}
-                                    description="How strongly the available repository evidence supports this assessment."
-                                />
+                                    <AdvisorScoreCard
+                                        label="Confidence"
+                                        value={percentage(
+                                            assessment.confidenceScore
+                                        )}
+                                        icon={Gauge}
+                                        description="How strongly the available repository evidence supports this assessment."
+                                    />
 
-                                <AdvisorScoreCard
-                                    label="Maturity"
-                                    value={
-                                        assessment.maturityLabel
-                                    }
-                                    progress={percentage(
-                                        architectureScore
-                                    )}
-                                    icon={Award}
-                                    description="The advisor's overall maturity classification based on the available engineering evidence."
-                                />
-                            </div>
+                                    <AdvisorScoreCard
+                                        label="Maturity"
+                                        value={displayMaturityLabel(
+                                            assessment.maturityLabel
+                                        )}
+                                        progress={percentage(
+                                            architectureScore
+                                        )}
+                                        icon={Award}
+                                        description="The advisor's overall maturity classification based on the available engineering evidence."
+                                    />
+                                </div>
+                            ) : (
+                                <div className="mt-6 rounded-xl border border-dashed border-border bg-card p-8 text-center">
+                                    <Gauge className="mx-auto h-8 w-8 text-muted-foreground" />
+
+                                    <h3 className="mt-4 font-semibold">
+                                        Assessment scores are not available yet
+                                    </h3>
+
+                                    <p className="mx-auto mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
+                                        ArcHive needs more repository intelligence before it can reliably calculate architecture, engineering quality, capability, and production readiness scores.
+                                    </p>
+
+                                    <div className="mx-auto mt-5 max-w-sm rounded-lg border border-border bg-background p-4 text-left">
+                                        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                            Evidence confidence
+                                        </p>
+
+                                        <p className="mt-1 text-2xl font-bold">
+                                            {percentage(
+                                                assessment.confidenceScore
+                                            )}
+                                            %
+                                        </p>
+
+                                        <p className="mt-1 text-xs text-muted-foreground">
+                                            Confidence can remain low while repository intelligence is still developing.
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
                         </section>
 
                         <section>
@@ -603,40 +666,115 @@ export default function ArchitectureAdvisorPage({
                             </div>
                         </section>
 
-                        <section>
-                            <SectionHeading
-                                eyebrow="Positive signals"
-                                title="Engineering Strengths"
-                                description="Evidence-backed areas where the repository demonstrates strong engineering practice."
-                            />
+                        {evidenceSufficient ? (
+                            <>
+                                <section>
+                                    <SectionHeading
+                                        eyebrow="Positive signals"
+                                        title="Engineering Strengths"
+                                        description="Evidence-backed areas where the repository demonstrates strong engineering practice."
+                                    />
 
-                            {assessment.strengths.length ===
-                            0 ? (
-                                <InlineEmptyState
-                                    title="No strengths recorded"
-                                    description="The current assessment did not return a dedicated strength section."
-                                />
-                            ) : (
-                                <div className="mt-6 grid gap-5 xl:grid-cols-2">
-                                    {assessment.strengths.map(
-                                        (
-                                            strength,
-                                            index
-                                        ) => (
-                                            <StrengthCard
-                                                key={`${strength.title}-${index}`}
-                                                strength={
-                                                    strength
-                                                }
-                                                index={
+                                    {assessment.strengths.length ===
+                                        0 ? (
+                                        <InlineEmptyState
+                                            title="No strengths recorded"
+                                            description="The current assessment did not return a dedicated strength section."
+                                        />
+                                    ) : (
+                                        <div className="mt-6 grid gap-5 xl:grid-cols-2">
+                                            {assessment.strengths.map(
+                                                (
+                                                    strength,
                                                     index
-                                                }
-                                            />
-                                        )
+                                                ) => (
+                                                    <StrengthCard
+                                                        key={`${strength.title}-${index}`}
+                                                        strength={
+                                                            strength
+                                                        }
+                                                        index={
+                                                            index
+                                                        }
+                                                    />
+                                                )
+                                            )}
+                                        </div>
                                     )}
+                                </section>
+
+                                {findingSections.map(
+                                    (section) => (
+                                        <AdvisorFindingSection
+                                            key={section.id}
+                                            title={section.title}
+                                            description={
+                                                section.description
+                                            }
+                                            findings={
+                                                section.findings
+                                            }
+                                        />
+                                    )
+                                )}
+
+                                <section>
+                                    <SectionHeading
+                                        eyebrow="Engineering roadmap"
+                                        title="Priority Actions"
+                                        description="The highest-value actions ArcHive recommends addressing first."
+                                    />
+
+                                    <div className="mt-6">
+                                        <AdvisorPriorityRoadmap
+                                            actions={
+                                                assessment.priorityActions
+                                            }
+                                        />
+                                    </div>
+                                </section>
+
+                                <section>
+                                    <SectionHeading
+                                        eyebrow="Recommended sequence"
+                                        title="Recommended Next Steps"
+                                        description="A practical implementation sequence for improving the repository."
+                                    />
+
+                                    <div className="mt-6">
+                                        <RecommendedSteps
+                                            steps={
+                                                assessment.recommendedNextSteps
+                                            }
+                                        />
+                                    </div>
+                                </section>
+                            </>
+                        ) : (
+                            <section>
+                                <SectionHeading
+                                    eyebrow="Advisor findings"
+                                    title="Assessment recommendations not available yet"
+                                    description="ArcHive needs more repository intelligence before it can reliably identify strengths, concerns, risks, priority actions, or recommended next steps."
+                                />
+
+                                <div className="mt-6 rounded-xl border border-dashed border-border bg-card p-8 text-center">
+                                    <BrainCircuit className="mx-auto h-9 w-9 text-muted-foreground" />
+
+                                    <h3 className="mt-4 font-semibold">
+                                        More evidence is needed
+                                    </h3>
+
+                                    <p className="mx-auto mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
+                                        The repository has been imported successfully, but ArcHive does not yet have enough processed intelligence to produce a reliable Architecture Advisor assessment.
+                                    </p>
+
+                                    <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
+                                        As repository intelligence develops, strengths, architecture concerns, production risks, and engineering recommendations can be generated from canonical evidence.
+                                    </p>
                                 </div>
-                            )}
-                        </section>
+                            </section>
+                        )}
 
                         {findingSections.map(
                             (section) => (
@@ -762,6 +900,7 @@ function AdvisorHero({
     maturityLabel,
     riskScore,
     confidenceScore,
+    evidenceSufficient,
     generatedAt,
     isRefreshing,
     onRefresh,
@@ -772,10 +911,42 @@ function AdvisorHero({
     maturityLabel: string;
     riskScore: number;
     confidenceScore: number;
+    evidenceSufficient: boolean;
     generatedAt: string;
     isRefreshing: boolean;
     onRefresh: () => void;
 }) {
+    /*
+     * A backend risk score of 0 has two very different meanings:
+     *
+     * 1. When evidence is sufficient, it is a legitimate assessment.
+     * 2. When evidence is insufficient, it is a sentinel value because
+     *    ArcHive cannot yet calculate meaningful repository risk.
+     *
+     * Preserve that distinction in presentation rather than treating
+     * every numeric zero as verified repository health.
+     */
+    const riskDisplayValue = evidenceSufficient
+        ? `${riskScore}%`
+        : "Not yet assessed";
+
+    const riskDescription = evidenceSufficient
+        ? "Lower is healthier"
+        : "More repository intelligence is needed";
+
+    /*
+     * Prefer the backend-owned assessment narrative whenever it exists.
+     * The fallback below is only explanatory UI copy for the documented
+     * insufficient-evidence state. It does not invent an architecture
+     * conclusion about the repository.
+     */
+    const assessmentDisplay =
+        assessment.trim().length > 0
+            ? assessment
+            : !evidenceSufficient
+                ? "ArcHive needs more repository intelligence before it can produce a reliable architecture assessment."
+                : assessment;
+
     return (
         <motion.section
             initial={{
@@ -834,7 +1005,7 @@ function AdvisorHero({
                             </p>
 
                             <p className="mt-3 text-base leading-8 text-foreground/90 md:text-lg">
-                                {assessment}
+                                {assessmentDisplay}
                             </p>
                         </div>
                     </div>
@@ -847,11 +1018,10 @@ function AdvisorHero({
                         className="shrink-0"
                     >
                         <RefreshCcw
-                            className={`mr-2 h-4 w-4 ${
-                                isRefreshing
-                                    ? "animate-spin"
-                                    : ""
-                            }`}
+                            className={`mr-2 h-4 w-4 ${isRefreshing
+                                ? "animate-spin"
+                                : ""
+                                }`}
                         />
 
                         {isRefreshing
@@ -863,8 +1033,8 @@ function AdvisorHero({
                 <div className="mt-8 grid gap-4 border-t border-border pt-6 sm:grid-cols-3">
                     <HeroMetric
                         label="Overall Risk"
-                        value={`${riskScore}%`}
-                        description="Lower is healthier"
+                        value={riskDisplayValue}
+                        description={riskDescription}
                         icon={ShieldAlert}
                     />
 
@@ -1110,8 +1280,8 @@ function RecommendedSteps({
                 const normalizedStep =
                     typeof step === "string"
                         ? {
-                              title: step,
-                          }
+                            title: step,
+                        }
                         : step;
 
                 return (
@@ -1276,11 +1446,10 @@ function AdvisorEmptyState({
                     disabled={isRefreshing}
                 >
                     <Sparkles
-                        className={`mr-2 h-4 w-4 ${
-                            isRefreshing
-                                ? "animate-pulse"
-                                : ""
-                        }`}
+                        className={`mr-2 h-4 w-4 ${isRefreshing
+                            ? "animate-pulse"
+                            : ""
+                            }`}
                     />
 
                     {isRefreshing
