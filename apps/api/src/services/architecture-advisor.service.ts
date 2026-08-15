@@ -1249,8 +1249,8 @@ const convertActiveRecommendations = (
         evidence: recommendation.evidence
           ? [recommendation.evidence]
           : [
-              "Existing ArcHive engineering recommendation.",
-            ],
+            "Existing ArcHive engineering recommendation.",
+          ],
         recommendation:
           recommendation.description,
       })
@@ -1338,13 +1338,70 @@ const getAllConcerns = (
   ];
 };
 
+/**
+ * Determines whether ArcHive has enough current repository intelligence
+ * to make a meaningful Architecture Advisor judgement.
+ *
+ * Future me:
+ * Missing evidence must never be treated as negative evidence.
+ * A repository can be newly imported, partially analysed, or waiting for
+ * its first intelligence snapshot. In those cases we should lower our
+ * confidence instead of pretending the repository is risky.
+ */
+const hasSufficientAdvisorEvidence = ({
+  repository,
+  signals,
+}: {
+  repository: RepositoryAdvisorSource;
+  signals: AdvisorSignals;
+}) => {
+  const availableScores = [
+    signals.scores.maturityScore,
+    signals.scores.architectureScore,
+    signals.scores.capabilityScore,
+    signals.scores.engineeringQualityScore,
+    signals.scores.productionReadinessScore,
+  ].filter(
+    (score): score is number =>
+      score !== null
+  );
+
+  const hasStructuredSnapshot =
+    Boolean(signals.snapshotId);
+
+  const hasMeaningfulCurrentSignals =
+    signals.technologies.length >= 3 &&
+    (
+      signals.architectureDomains.length > 0 ||
+      signals.repositoryTypes.length > 0 ||
+      signals.capabilities.length > 0
+    );
+
+  const hasScoredEvidence =
+    availableScores.length >= 2;
+
+  /*
+   * A historical ArchitectureChange by itself is not enough.
+   * Advisor evaluates current repository state, so current structured
+   * intelligence must be available before we publish a numeric judgement.
+   */
+  return (
+    hasStructuredSnapshot &&
+    (
+      hasMeaningfulCurrentSignals ||
+      hasScoredEvidence
+    )
+  );
+};
+
 const calculateOverallRiskScore = (
   findings: ArchitectureAdvisorFinding[],
   scores: ArchitectureAdvisorScores
 ) => {
   const findingRisk = findings.reduce(
     (total, finding) =>
-      total + severityWeight[finding.severity],
+      total +
+      severityWeight[finding.severity],
     0
   );
 
@@ -1353,25 +1410,37 @@ const calculateOverallRiskScore = (
     findingRisk
   );
 
+  /**
+   * Future me:
+   * null means "ArcHive does not know yet".
+   *
+   * It must not mean:
+   * "therefore add risk".
+   *
+   * Missing evidence should reduce confidence, not increase risk.
+   */
   const readinessPenalty =
     scores.productionReadinessScore === null
-      ? 10
+      ? 0
       : (100 -
-          scores.productionReadinessScore) *
-        0.2;
+        scores.productionReadinessScore) *
+      0.2;
 
   const architecturePenalty =
     scores.architectureScore === null
-      ? 8
-      : (100 - scores.architectureScore) *
-        0.15;
+      ? 0
+      : (100 -
+        scores.architectureScore) *
+      0.15;
 
   return clampScore(
     normalizedFindingRisk +
-      readinessPenalty +
-      architecturePenalty
+    readinessPenalty +
+    architecturePenalty
   );
 };
+
+
 
 const calculateConfidenceScore = ({
   repository,
@@ -1407,8 +1476,12 @@ const calculateConfidenceScore = ({
 };
 
 const getMaturityLabel = (
-  scores: ArchitectureAdvisorScores
+  scores: ArchitectureAdvisorScores,
+  evidenceIsSufficient: boolean
 ) => {
+  if (!evidenceIsSufficient) {
+    return "INSUFFICIENT_EVIDENCE";
+  }
   const availableScores = [
     scores.maturityScore,
     scores.architectureScore,
@@ -1445,6 +1518,7 @@ const getMaturityLabel = (
   return "EMERGING";
 };
 
+
 const buildOverallAssessment = ({
   repository,
   riskScore,
@@ -1452,6 +1526,7 @@ const buildOverallAssessment = ({
   concernCount,
   criticalCount,
   highCount,
+  evidenceIsSufficient,
 }: {
   repository: RepositoryAdvisorSource;
   riskScore: number;
@@ -1459,23 +1534,25 @@ const buildOverallAssessment = ({
   concernCount: number;
   criticalCount: number;
   highCount: number;
+  evidenceIsSufficient: boolean;
 }) => {
+  if (!evidenceIsSufficient) {
+    return `${repository.name} does not yet have enough repository intelligence for a reliable architecture risk assessment. Process the repository or allow additional engineering evidence to accumulate before treating Advisor findings as authoritative.`;
+  }
+
   if (criticalCount > 0) {
-    return `${repository.name} has a ${maturityLabel.toLowerCase()} engineering profile, but ArcHive detected ${criticalCount} critical architecture or production concern${
-      criticalCount === 1 ? "" : "s"
-    }. These issues should be addressed before the repository is treated as operationally resilient.`;
+    return `${repository.name} has a ${maturityLabel.toLowerCase()} engineering profile, but ArcHive detected ${criticalCount} critical architecture or production concern${criticalCount === 1 ? "" : "s"
+      }. These issues should be addressed before the repository is treated as operationally resilient.`;
   }
 
   if (highCount > 0) {
-    return `${repository.name} has a ${maturityLabel.toLowerCase()} engineering profile with ${highCount} high-priority concern${
-      highCount === 1 ? "" : "s"
-    }. The repository has a workable foundation, but targeted improvements are required to reduce engineering and operational risk.`;
+    return `${repository.name} has a ${maturityLabel.toLowerCase()} engineering profile with ${highCount} high-priority concern${highCount === 1 ? "" : "s"
+      }. The repository has a workable foundation, but targeted improvements are required to reduce engineering and operational risk.`;
   }
 
   if (concernCount > 0) {
-    return `${repository.name} has a ${maturityLabel.toLowerCase()} engineering profile. ArcHive identified ${concernCount} improvement area${
-      concernCount === 1 ? "" : "s"
-    }, with an overall risk score of ${riskScore}/100.`;
+    return `${repository.name} has a ${maturityLabel.toLowerCase()} engineering profile. ArcHive identified ${concernCount} improvement area${concernCount === 1 ? "" : "s"
+      }, with an overall risk score of ${riskScore}/100.`;
   }
 
   return `${repository.name} has a ${maturityLabel.toLowerCase()} engineering profile with no major architecture risks detected from the currently available evidence.`;
@@ -1521,11 +1598,18 @@ const buildActions = (
 const buildEvidenceSummary = ({
   repository,
   signals,
+
 }: {
   repository: RepositoryAdvisorSource;
   signals: AdvisorSignals;
 }): ArchitectureAdvisorEvidenceSummary => {
   return {
+    evidenceSufficient:
+      hasSufficientAdvisorEvidence({
+        repository,
+        signals,
+      }),
+
     intelligenceSnapshotAvailable:
       Boolean(signals.snapshotId),
 
@@ -1586,8 +1670,8 @@ const buildAssessmentResponse = ({
     overallRiskScore: number;
     confidenceScore: number;
     sourceIntelligenceSnapshotId:
-      | string
-      | null;
+    | string
+    | null;
     generatedAt: Date;
   };
 
@@ -1690,23 +1774,81 @@ const buildAssessmentResponse = ({
   };
 };
 
+/**
+ * Builds Advisor findings only when the current repository intelligence is
+ * strong enough to make absence meaningful.
+ *
+ * Future me:
+ * "Not detected" is not the same thing as "confirmed absent".
+ */
+const buildEvidenceAwareFindingBuckets = ({
+  repository,
+  signals,
+}: {
+  repository: RepositoryAdvisorSource;
+  signals: AdvisorSignals;
+}) => {
+  const evidenceIsSufficient =
+    hasSufficientAdvisorEvidence({
+      repository,
+      signals,
+    });
+
+  if (!evidenceIsSufficient) {
+    return {
+      evidenceIsSufficient,
+
+      buckets: {
+        strengths: [],
+        architectureConcerns: [],
+        productionRisks: [],
+        securityObservations: [],
+        scalabilityConcerns: [],
+        reliabilityConcerns: [],
+        maintainabilityConcerns: [],
+        observabilityConcerns: [],
+        dataConcerns: [],
+        deliveryConcerns: [],
+      } satisfies FindingBuckets,
+    };
+  }
+
+  return {
+    evidenceIsSufficient,
+
+    buckets: buildFindingBuckets({
+      repository,
+      signals,
+    }),
+  };
+};
+
 const createAdvisorAssessment = async (
   repository: RepositoryAdvisorSource
 ) => {
-  const signals = extractSignals(repository);
+  const signals = extractSignals(
+    repository
+  );
 
-  const buckets = buildFindingBuckets({
+  const {
+    evidenceIsSufficient,
+    buckets,
+  } = buildEvidenceAwareFindingBuckets({
     repository,
     signals,
   });
 
-  const concerns = getAllConcerns(buckets);
+  const concerns = getAllConcerns(
+    buckets
+  );
 
   const overallRiskScore =
-    calculateOverallRiskScore(
-      concerns,
-      signals.scores
-    );
+    evidenceIsSufficient
+      ? calculateOverallRiskScore(
+        concerns,
+        signals.scores
+      )
+      : 0;
 
   const confidenceScore =
     calculateConfidenceScore({
@@ -1714,9 +1856,11 @@ const createAdvisorAssessment = async (
       signals,
     });
 
-  const maturityLabel = getMaturityLabel(
-    signals.scores
-  );
+  const maturityLabel =
+    getMaturityLabel(
+      signals.scores,
+      evidenceIsSufficient
+    );
 
   const criticalCount = concerns.filter(
     (finding) =>
@@ -1748,6 +1892,7 @@ const createAdvisorAssessment = async (
       concernCount: concerns.length,
       criticalCount,
       highCount,
+      evidenceIsSufficient,
     });
 
   const snapshot =
@@ -1932,4 +2077,20 @@ export const architectureAdvisorService = {
 
     return repository?.userId ?? null;
   },
+};
+
+/**
+ * Internal regression-test surface.
+ *
+ * Future me:
+ * These functions are exported only so the Advisor's scoring semantics can
+ * be regression-tested without involving Prisma or the HTTP layer.
+ *
+ * Do not use this object from application code.
+ */
+export const __architectureAdvisorTestUtils = {
+  hasSufficientAdvisorEvidence,
+  buildEvidenceAwareFindingBuckets,
+  calculateOverallRiskScore,
+  getMaturityLabel,
 };

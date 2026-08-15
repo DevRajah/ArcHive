@@ -58,10 +58,22 @@ export type ArchitectureAdvisorScores = {
 };
 
 export type ArchitectureAdvisorEvidenceSummary = {
+  /**
+   * Tells consumers whether ArcHive currently has enough canonical
+   * repository intelligence to make a meaningful Advisor judgement.
+   *
+   * Future me:
+   * false does not mean the repository is healthy or unhealthy.
+   * It means we do not yet have enough evidence to say either way.
+   */
+  evidenceSufficient: boolean;
+
   intelligenceSnapshotAvailable: boolean;
   intelligenceSnapshotCreatedAt: Date | null;
+
   architectureChangeCount: number;
   activeRecommendationCount: number;
+
   technologyCount: number;
   architectureDomainCount: number;
   repositoryTypeCount: number;
