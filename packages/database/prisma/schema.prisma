@@ -69,7 +69,7 @@ teamInvitationsSent     TeamInvitation[] @relation("TeamInvitationInvitedBy")
 
 model Repository {
   id            String  @id @default(uuid())
-  githubRepoId  String?
+  githubRepoId String? @unique
   name          String
   owner         String
   fullName      String  @unique

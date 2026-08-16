@@ -2,6 +2,48 @@ import { FastifyInstance } from "fastify";
 import { prisma } from "@archive/database";
 import axios from "axios";
 
+/**
+ * Describes what actually happened when ArcHive receives an import request.
+ *
+ * Future me:
+ * Importing a repository is not always a brand-new import.
+ *
+ * We deliberately distinguish these states so retries, double-clicks,
+ * stale clients, and direct API calls cannot make an existing tracked
+ * repository look newly imported.
+ */
+type RepositoryImportStatus =
+  | "IMPORTED"
+  | "RETRACKED"
+  | "ALREADY_TRACKED";
+
+type RepositoryImportResult = {
+  repository: {
+    id: string;
+    githubRepoId: string | null;
+    name: string;
+    owner: string;
+    fullName: string;
+    description: string | null;
+    defaultBranch: string;
+    language: string | null;
+    stars: number;
+    forks: number;
+    isTracked: boolean;
+    userId: string | null;
+  };
+
+  status: RepositoryImportStatus;
+
+  webhook?: {
+    installed: boolean;
+    alreadyInstalled?: boolean;
+    webhookId?: number;
+    webhookUrl?: string;
+    reason?: string;
+  };
+};
+
 type SyncRepositoryBody = {
   userId?: string;
   githubRepoId?: string;
@@ -361,87 +403,395 @@ export const githubSyncRoutes = async (app: FastifyInstance) => {
     };
   });
 
-  app.post("/users/:userId/repositories/import-selected", async (request, reply) => {
-    const { userId } = request.params as { userId: string };
+  app.post(
+    "/users/:userId/repositories/import-selected",
+    async (request, reply) => {
+      const { userId } =
+        request.params as {
+          userId: string;
+        };
 
-    const { repositories } = request.body as {
-      repositories?: SyncRepositoryBody[];
-    };
+      const { repositories } =
+        request.body as {
+          repositories?: SyncRepositoryBody[];
+        };
 
-    if (!repositories || repositories.length === 0) {
-      return reply.status(400).send({
-        success: false,
-        message: "At least one repository is required",
-      });
-    }
+      if (
+        !repositories ||
+        repositories.length === 0
+      ) {
+        return reply.status(400).send({
+          success: false,
+          message:
+            "At least one repository is required",
+        });
+      }
 
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-    });
+      const user =
+        await prisma.user.findUnique({
+          where: {
+            id: userId,
+          },
+        });
 
-    if (!user || !user.githubAccessToken) {
-      return reply.status(404).send({
-        success: false,
-        message: "GitHub-connected user not found",
-      });
-    }
+      if (
+        !user ||
+        !user.githubAccessToken
+      ) {
+        return reply.status(404).send({
+          success: false,
+          message:
+            "GitHub-connected user not found",
+        });
+      }
 
-    const syncedRepositories = [];
+      const results:
+        RepositoryImportResult[] = [];
 
-    for (const repo of repositories) {
-      const metadata = normalizeRepositoryMetadata(repo);
+      for (const repo of repositories) {
+        const metadata =
+          normalizeRepositoryMetadata(repo);
 
-      const repository = await prisma.repository.upsert({
-        where: { fullName: repo.fullName },
-        create: {
-          githubRepoId: repo.githubRepoId || repo.fullName,
-          name: repo.name,
-          owner: repo.owner,
-          fullName: repo.fullName,
-          description: repo.description || null,
-          defaultBranch: repo.defaultBranch || "main",
-          language: metadata.language,
-          stars: metadata.stars,
-          forks: metadata.forks,
-          userId: user.id,
-          isTracked: true,
+        const incomingGithubRepoId =
+          repo.githubRepoId ||
+          repo.fullName;
+
+        /**
+     * Resolve repository identity using GitHub's stable repository ID first.
+     *
+     * Future me:
+     * GitHub repositories may be renamed or transferred, which changes
+     * fullName but does not change the GitHub repository ID.
+     *
+     * githubRepoId is therefore ArcHive's canonical external identity.
+     *
+     * fullName remains only as a legacy fallback for repositories created
+     * before ArcHive reliably stored GitHub IDs.
+     */
+        let existingRepository =
+          await prisma.repository.findUnique({
+            where: {
+              githubRepoId:
+                incomingGithubRepoId,
+            },
+          });
+
+        if (!existingRepository) {
+          existingRepository =
+            await prisma.repository.findUnique({
+              where: {
+                fullName:
+                  repo.fullName,
+              },
+            });
+        };
+
+        /**
+         * The current V1 schema stores tracking ownership directly on
+         * Repository.
+         *
+         * Until tracking becomes a separate user/repository relation,
+         * never silently steal an actively tracked repository from another
+         * ArcHive user.
+         */
+        if (
+          existingRepository?.isTracked &&
+          existingRepository.userId &&
+          existingRepository.userId !==
+          user.id
+        ) {
+          return reply.status(409).send({
+            success: false,
+            message:
+              `Repository ${repo.fullName} is already tracked by another ArcHive user.`,
+          });
+        }
+
+        const alreadyTracked =
+          Boolean(
+            existingRepository &&
+            existingRepository.isTracked &&
+            existingRepository.userId ===
+            user.id,
+          );
+
+        /**
+         * ALREADY_TRACKED is intentionally a no-op for tracking side effects.
+         *
+         * We may refresh harmless metadata, but we must not treat this as a
+         * new tracking transition or reinstall/retrigger import work.
+         */
+        if (
+          existingRepository &&
+          alreadyTracked
+        ) {
+          const repository =
+            await prisma.repository.update({
+              where: {
+                id:
+                  existingRepository.id,
+              },
+
+              data: {
+                githubRepoId:
+                  incomingGithubRepoId,
+
+                name:
+                  repo.name,
+
+                owner:
+                  repo.owner,
+
+                fullName:
+                  repo.fullName,
+
+                description:
+                  repo.description || null,
+
+                defaultBranch:
+                  repo.defaultBranch ||
+                  "main",
+
+                language:
+                  metadata.language,
+
+                stars:
+                  metadata.stars,
+
+                forks:
+                  metadata.forks,
+              },
+            });
+
+          results.push({
+            repository,
+            status:
+              "ALREADY_TRACKED",
+          });
+
+          continue;
+        }
+
+        /**
+         * If the logical repository already exists but is not currently
+         * tracked, reuse the row and restore tracking.
+         */
+        if (existingRepository) {
+          const repository =
+            await prisma.repository.update({
+              where: {
+                id:
+                  existingRepository.id,
+              },
+
+              data: {
+                githubRepoId:
+                  incomingGithubRepoId,
+
+                name:
+                  repo.name,
+
+                owner:
+                  repo.owner,
+
+                fullName:
+                  repo.fullName,
+
+                description:
+                  repo.description || null,
+
+                defaultBranch:
+                  repo.defaultBranch ||
+                  "main",
+
+                language:
+                  metadata.language,
+
+                stars:
+                  metadata.stars,
+
+                forks:
+                  metadata.forks,
+
+                userId:
+                  user.id,
+
+                isTracked:
+                  true,
+              },
+            });
+
+          /**
+           * Retracking is a real tracking transition, so make sure the
+           * GitHub webhook exists.
+           *
+           * installRepositoryWebhook() already checks GitHub for ArcHive's
+           * webhook before creating another one.
+           */
+          const webhook =
+            await installRepositoryWebhook({
+              githubAccessToken:
+                user.githubAccessToken,
+
+              repositoryFullName:
+                repository.fullName,
+            });
+
+          results.push({
+            repository,
+            status:
+              "RETRACKED",
+            webhook,
+          });
+
+          continue;
+        }
+
+        /**
+         * No ArcHive row exists. This is the only branch that represents a
+         * genuinely new repository import.
+         *
+         * We keep upsert against fullName rather than create for now because
+         * fullName currently has the database uniqueness constraint. This
+         * protects concurrent identical imports from creating duplicate rows.
+         */
+        const repository =
+          await prisma.repository.upsert({
+            where: {
+              fullName:
+                repo.fullName,
+            },
+
+            create: {
+              githubRepoId:
+                incomingGithubRepoId,
+
+              name:
+                repo.name,
+
+              owner:
+                repo.owner,
+
+              fullName:
+                repo.fullName,
+
+              description:
+                repo.description || null,
+
+              defaultBranch:
+                repo.defaultBranch ||
+                "main",
+
+              language:
+                metadata.language,
+
+              stars:
+                metadata.stars,
+
+              forks:
+                metadata.forks,
+
+              userId:
+                user.id,
+
+              isTracked:
+                true,
+            },
+
+            /**
+             * A concurrent request may have created the same fullName after
+             * our findFirst() above but before this upsert.
+             *
+             * In that case, reuse the database row rather than creating a
+             * duplicate.
+             */
+            update: {
+              githubRepoId:
+                incomingGithubRepoId,
+
+              name:
+                repo.name,
+
+              owner:
+                repo.owner,
+
+              description:
+                repo.description || null,
+
+              defaultBranch:
+                repo.defaultBranch ||
+                "main",
+
+              language:
+                metadata.language,
+
+              stars:
+                metadata.stars,
+
+              forks:
+                metadata.forks,
+
+              userId:
+                user.id,
+
+              isTracked:
+                true,
+            },
+          });
+
+        const webhook =
+          await installRepositoryWebhook({
+            githubAccessToken:
+              user.githubAccessToken,
+
+            repositoryFullName:
+              repository.fullName,
+          });
+
+        results.push({
+          repository,
+          status:
+            "IMPORTED",
+          webhook,
+        });
+      }
+
+      const importedCount =
+        results.filter(
+          (result) =>
+            result.status === "IMPORTED",
+        ).length;
+
+      const retrackedCount =
+        results.filter(
+          (result) =>
+            result.status === "RETRACKED",
+        ).length;
+
+      const alreadyTrackedCount =
+        results.filter(
+          (result) =>
+            result.status ===
+            "ALREADY_TRACKED",
+        ).length;
+
+      return {
+        success: true,
+
+        message:
+          "Repository import request processed successfully",
+
+        data: {
+          importedCount,
+          retrackedCount,
+          alreadyTrackedCount,
+
+          repositories:
+            results,
         },
-        update: {
-          githubRepoId: repo.githubRepoId || repo.fullName,
-          name: repo.name,
-          owner: repo.owner,
-          description: repo.description || null,
-          defaultBranch: repo.defaultBranch || "main",
-          language: metadata.language,
-          stars: metadata.stars,
-          forks: metadata.forks,
-          userId: user.id,
-          isTracked: true,
-        },
-      });
-
-      // I automatically install the GitHub webhook when a repo is imported/tracked.
-      const webhookInstallation = await installRepositoryWebhook({
-        githubAccessToken: user.githubAccessToken,
-        repositoryFullName: repo.fullName,
-      });
-
-      syncedRepositories.push({
-        ...repository,
-        webhook: webhookInstallation,
-      });
-    }
-
-    return {
-      success: true,
-      message:
-        "Selected GitHub repositories imported and live tracking configured successfully",
-      data: {
-        importedCount: syncedRepositories.length,
-        repositories: syncedRepositories,
-      },
-    };
-  });
+      };
+    },
+  );
 
   app.get("/users/:userId/repositories/tracked", async (request, reply) => {
     const { userId } = request.params as { userId: string };
@@ -501,10 +851,17 @@ export const githubSyncRoutes = async (app: FastifyInstance) => {
         });
       }
 
-      const updatedRepository = await prisma.repository.update({
-        where: { id: repositoryId },
-        data: { userId: null },
-      });
+      const updatedRepository =
+        await prisma.repository.update({
+          where: {
+            id: repositoryId,
+          },
+
+          data: {
+            userId: null,
+            isTracked: false,
+          },
+        });
 
       return {
         success: true,
@@ -547,10 +904,17 @@ export const githubSyncRoutes = async (app: FastifyInstance) => {
       });
     }
 
-    const updatedRepository = await prisma.repository.update({
-      where: { id: repository.id },
-      data: { userId },
-    });
+    const updatedRepository =
+      await prisma.repository.update({
+        where: {
+          id: repository.id,
+        },
+
+        data: {
+          userId,
+          isTracked: true,
+        },
+      });
 
     return {
       success: true,
