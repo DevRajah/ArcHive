@@ -140,13 +140,27 @@ describe(
         });
 
 
-        const buildApp = async () => {
+        const buildApp = async ({
+            generateRepositoryIntelligence =
+            async () => {
+                return {} as any;
+            },
+        }: {
+            generateRepositoryIntelligence?: (
+                input: {
+                    repositoryId: string;
+                },
+            ) => Promise<any>;
+        } = {}) => {
             const app = Fastify();
 
             await app.register(
                 githubSyncRoutes,
                 {
                     prefix: "/api/github",
+
+                    generateRepositoryIntelligence:
+                        generateRepositoryIntelligence as any,
                 },
             );
 
@@ -160,6 +174,9 @@ describe(
                 let upsertCalls = 0;
                 let webhookListCalls = 0;
                 let webhookCreateCalls = 0;
+                let intelligenceGenerationCalls = 0;
+                let generatedRepositoryId:
+                    string | null = null;
 
                 repositoryDelegate.findUnique =
                     async () => null;
@@ -233,7 +250,16 @@ describe(
                     };
 
                 const app =
-                    await buildApp();
+                    await buildApp({
+                        generateRepositoryIntelligence:
+                            async ({ repositoryId }) => {
+                                intelligenceGenerationCalls += 1;
+                                generatedRepositoryId =
+                                    repositoryId;
+
+                                return {} as any;
+                            },
+                    });
 
                 const response =
                     await app.inject({
@@ -305,6 +331,20 @@ describe(
                     webhookCreateCalls,
                     1,
                 );
+
+                /**
+ * A genuinely new import must establish its initial canonical
+ * RepositoryIntelligenceSnapshot exactly once.
+ */
+                assert.equal(
+                    intelligenceGenerationCalls,
+                    1,
+                );
+
+                assert.equal(
+                    generatedRepositoryId,
+                    "new-repository-id",
+                );
             },
         );
 
@@ -347,6 +387,9 @@ describe(
                 let updateCalls = 0;
                 let webhookListCalls = 0;
                 let webhookCreateCalls = 0;
+                let intelligenceGenerationCalls = 0;
+                let generatedRepositoryId:
+                    string | null = null;
 
                 repositoryDelegate.findUnique =
                     async () =>
@@ -408,7 +451,16 @@ describe(
                     };
 
                 const app =
-                    await buildApp();
+                    await buildApp({
+                        generateRepositoryIntelligence:
+                            async ({ repositoryId }) => {
+                                intelligenceGenerationCalls += 1;
+                                generatedRepositoryId =
+                                    repositoryId;
+
+                                return {} as any;
+                            },
+                    });
 
                 const response =
                     await app.inject({
@@ -480,6 +532,15 @@ describe(
                     webhookCreateCalls,
                     1,
                 );
+                assert.equal(
+                    intelligenceGenerationCalls,
+                    1,
+                );
+
+                assert.equal(
+                    generatedRepositoryId,
+                    existingRepository.id,
+                );
             },
         );
 
@@ -526,6 +587,7 @@ describe(
 
                 let webhookListCalls = 0;
                 let webhookCreateCalls = 0;
+                let intelligenceGenerationCalls = 0;
 
                 repositoryDelegate.findUnique =
                     async () =>
@@ -580,7 +642,14 @@ describe(
                     };
 
                 const app =
-                    await buildApp();
+                    await buildApp({
+                        generateRepositoryIntelligence:
+                            async () => {
+                                intelligenceGenerationCalls += 1;
+
+                                return {} as any;
+                            },
+                    });
 
                 const response =
                     await app.inject({
@@ -651,6 +720,16 @@ describe(
 
                 assert.equal(
                     webhookCreateCalls,
+                    0,
+                );
+                /**
+ * Critical idempotency invariant:
+ *
+ * Repeating an import for an already-tracked repository must never turn
+ * into an expensive full-repository analysis.
+ */
+                assert.equal(
+                    intelligenceGenerationCalls,
                     0,
                 );
             },
