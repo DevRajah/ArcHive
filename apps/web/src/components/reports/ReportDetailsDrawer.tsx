@@ -46,6 +46,7 @@ import type {
   NormalizedExecutiveReport,
   ReportTrendDirection,
   RepositoryHighlight,
+  TechnologyInsight,
 } from "@/types/report.types";
 
 import type {
@@ -434,7 +435,15 @@ export function ReportDetailsDrawer({
   const repositoriesRequiringAttention =
     analytics?.repositoryHighlights.needsAttention ?? [];
 
-  const topTechnologies =
+  /*
+   * Keep the technology collection explicitly typed.
+   *
+   * Future me:
+   * Do not rely on workspace/build-environment inference here. Vercel
+   * performs a clean TypeScript build and must be able to determine the
+   * callback element type without depending on previously built artifacts.
+   */
+  const topTechnologies: TechnologyInsight[] =
     analytics?.technologyAnalysis.topTechnologies ?? [];
 
   const generatedDate =

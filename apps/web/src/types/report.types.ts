@@ -11,6 +11,7 @@ import type {
   RepositoryHighlights,
   RiskBreakdown,
   TechnologyAnalysis,
+  TechnologyInsight,
 } from "@archive/types";
 
 /*
@@ -34,6 +35,7 @@ export type {
   RepositoryHighlights,
   RiskBreakdown,
   TechnologyAnalysis,
+  TechnologyInsight,
 } from "@archive/types";
 
 export type ReportStatus =
