@@ -48,6 +48,10 @@ import type {
     TeamReportTrendDirection,
 } from "@/types/team.types";
 
+import type {
+    TechnologyInsight,
+} from "@/types/report.types";
+
 interface TeamReportDetailsDrawerProps {
     report: TeamExecutiveReport | null;
     open: boolean;
@@ -287,13 +291,17 @@ export function TeamReportDetailsDrawer({
 }: TeamReportDetailsDrawerProps) {
     const snapshot = report?.reportData;
 
-    const topTechnologies =
+    /*
+ * Keep the technology collection explicitly typed so clean production
+ * builds do not rely on contextual inference across workspace packages.
+ */
+    const topTechnologies: TechnologyInsight[] =
         snapshot?.technologyAnalysis.topTechnologies ?? [];
 
-    const strongestRepositories =
+    const strongestRepositories: TeamReportRepositoryHighlight[] =
         snapshot?.repositoryHighlights.strongest ?? [];
 
-    const repositoriesRequiringAttention =
+    const repositoriesRequiringAttention: TeamReportRepositoryHighlight[] =
         snapshot?.repositoryHighlights.needsAttention ?? [];
 
     const maximumTechnologyUsage = Math.max(
@@ -459,13 +467,13 @@ export function TeamReportDetailsDrawer({
 
                                                             <ul className="space-y-2">
                                                                 {snapshot.executiveSummary.strengths.map(
-                                                                    (item, index) => (
+                                                                    (strength: string, index: number) => (
                                                                         <li
                                                                             key={`strength-${index}`}
                                                                             className="flex gap-3 text-sm leading-6 text-muted-foreground"
                                                                         >
                                                                             <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />
-                                                                            {item}
+                                                                            {strength}
                                                                         </li>
                                                                     ),
                                                                 )}
@@ -482,13 +490,13 @@ export function TeamReportDetailsDrawer({
 
                                                             <ul className="space-y-2">
                                                                 {snapshot.executiveSummary.concerns.map(
-                                                                    (item, index) => (
+                                                                    (concern: string, index: number) => (
                                                                         <li
                                                                             key={`concern-${index}`}
                                                                             className="flex gap-3 text-sm leading-6 text-muted-foreground"
                                                                         >
                                                                             <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" />
-                                                                            {item}
+                                                                            {concern}
                                                                         </li>
                                                                     ),
                                                                 )}
@@ -505,13 +513,13 @@ export function TeamReportDetailsDrawer({
 
                                                             <ul className="space-y-2">
                                                                 {snapshot.executiveSummary.recommendations.map(
-                                                                    (item, index) => (
+                                                                    (recommendation: string, index: number) => (
                                                                         <li
                                                                             key={`recommendation-${index}`}
                                                                             className="flex gap-3 text-sm leading-6 text-muted-foreground"
                                                                         >
                                                                             <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
-                                                                            {item}
+                                                                            {recommendation}
                                                                         </li>
                                                                     ),
                                                                 )}
