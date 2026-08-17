@@ -354,9 +354,9 @@ function LegacyReportNotice({
 
         <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
           This report was generated using Schema Version 1, before
-          executive analytics and PDF or CSV exports were introduced.
-          Existing reports remain immutable, so generate a new report to
-          view the complete Schema Version 2 analytics experience.
+          ArcHive introduced the executive analytics available in later
+          Executive Report schemas. Historical reports remain immutable,
+          so generate a new report to use the current reporting experience.
         </p>
 
         <div className="mt-5 flex flex-wrap justify-center gap-2">
@@ -366,6 +366,50 @@ function LegacyReportNotice({
 
           <Badge variant="secondary">
             Historical snapshot
+          </Badge>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function UnsupportedReportNotice({
+  report,
+}: {
+  report: NormalizedExecutiveReport;
+}) {
+  return (
+    <Card className="border-amber-500/30 bg-amber-500/5">
+      <CardContent className="flex flex-col items-center px-6 py-12 text-center">
+        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-500/10">
+          <AlertTriangle className="h-7 w-7 text-amber-600 dark:text-amber-400" />
+        </div>
+
+        <h3 className="mt-4 text-lg font-semibold">
+          Unsupported Executive Report Version
+        </h3>
+
+        <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
+          This report was generated using Schema Version{" "}
+          {report.schemaVersion ?? "unknown"}, which this version of
+          ArcHive does not understand yet.
+        </p>
+
+        <p className="mt-3 max-w-xl text-sm leading-6 text-muted-foreground">
+          The report has not been treated as legacy or converted into an
+          older schema. Update ArcHive to a version that supports this
+          report contract before rendering its analytics.
+        </p>
+
+        <div className="mt-5 flex flex-wrap justify-center gap-2">
+          {report.schemaVersion !== null ? (
+            <Badge variant="outline">
+              Schema Version {report.schemaVersion}
+            </Badge>
+          ) : null}
+
+          <Badge variant="secondary">
+            Unsupported schema
           </Badge>
         </div>
       </CardContent>
@@ -450,8 +494,10 @@ export function ReportDetailsDrawer({
 
             <Separator className="my-7" />
 
-            {report.isLegacy ? (
+            {report.compatibility === "LEGACY" ? (
               <LegacyReportNotice report={report} />
+            ) : report.compatibility === "UNSUPPORTED" ? (
+              <UnsupportedReportNotice report={report} />
             ) : !analytics ? (
               <ReportNotReady report={report} />
             ) : (
@@ -534,7 +580,7 @@ export function ReportDetailsDrawer({
                       ) : null}
 
                       {analytics.executiveSummary.recommendations.length >
-                      0 ? (
+                        0 ? (
                         <div>
                           <div className="mb-3 flex items-center gap-2">
                             <Lightbulb className="h-4 w-4 text-primary" />
@@ -561,10 +607,10 @@ export function ReportDetailsDrawer({
                       ) : null}
 
                       {!analytics.executiveSummary.headline &&
-                      !analytics.executiveSummary.overallHealth &&
-                      analytics.executiveSummary.strengths.length === 0 &&
-                      analytics.executiveSummary.concerns.length === 0 &&
-                      analytics.executiveSummary.recommendations.length ===
+                        !analytics.executiveSummary.overallHealth &&
+                        analytics.executiveSummary.strengths.length === 0 &&
+                        analytics.executiveSummary.concerns.length === 0 &&
+                        analytics.executiveSummary.recommendations.length ===
                         0 ? (
                         <p className="text-sm text-muted-foreground">
                           No executive summary was stored for this report.
@@ -882,7 +928,7 @@ export function ReportDetailsDrawer({
 
                                 <p className="mt-1 text-2xl font-bold">
                                   {percentageChange !== null &&
-                                  percentageChange > 0
+                                    percentageChange > 0
                                     ? "+"
                                     : ""}
                                   {formatScore(percentageChange)}

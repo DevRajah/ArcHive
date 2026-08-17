@@ -1,3 +1,9 @@
+import type {
+  ExecutiveReportSnapshotV3,
+  ReportTrendDirection,
+  RepositoryHighlight,
+} from "@archive/types";
+
 export type TeamMemberRole =
   | "OWNER"
   | "ADMIN"
@@ -13,6 +19,7 @@ export type TeamRiskLevel =
   | "MEDIUM"
   | "HIGH"
   | "CRITICAL";
+
 export interface TeamSummary {
   id: string;
   name: string;
@@ -222,8 +229,12 @@ export type AddTeamMemberRole =
 export interface AddTeamMemberPayload {
   actorUserId: string;
 
-  // The person being added is identified by their GitHub username.
-  // The backend handles case-insensitive matching and an optional leading @.
+  /*
+   * The person being added is identified by their GitHub username.
+   *
+   * The backend handles case-insensitive matching and an optional
+   * leading @ character.
+   */
   username: string;
 
   role: AddTeamMemberRole;
@@ -293,17 +304,28 @@ export interface RemoveTeamRepositoryResponse {
   repositoryId: string;
 }
 
+/*
+ * --------------------------------------------------------------------------
+ * Team Executive Reports
+ * --------------------------------------------------------------------------
+ *
+ * Future me:
+ * Team Executive Reports use the same persisted Executive Report contract
+ * as personal USER reports.
+ *
+ * Do not recreate ExecutiveSummary, ExecutiveKpis, RiskBreakdown,
+ * TechnologyAnalysis, EngineeringTrendAnalysis or RepositoryHighlights
+ * inside this file.
+ *
+ * Those contracts are owned by @archive/types so USER reports, TEAM
+ * reports and the report worker all compile against one shared schema.
+ */
+
 export type TeamReportStatus =
   | "QUEUED"
   | "GENERATING"
   | "COMPLETED"
   | "FAILED";
-
-export type TeamReportTrendDirection =
-  | "IMPROVING"
-  | "DECLINING"
-  | "STABLE"
-  | "UNKNOWN";
 
 export interface TeamReportListItem {
   id: string;
@@ -344,98 +366,44 @@ export interface GenerateTeamReportResponse {
   message: string;
 }
 
-export interface TeamReportSource {
-  sourceType: "TEAM";
-  sourceId: string;
-  userId: null;
-  teamId: string;
-}
+/*
+ * Compatibility alias retained because TeamReportDetailsDrawer currently
+ * imports the old team-specific name.
+ *
+ * RepositoryHighlight itself is now owned by @archive/types.
+ */
+export type TeamReportRepositoryHighlight =
+  RepositoryHighlight;
 
-export interface TeamReportExecutiveSummary {
-  headline: string;
-  overallHealth: string;
-  strengths: string[];
-  concerns: string[];
-  recommendations: string[];
-}
 
-export interface TeamReportExecutiveKpis {
-  repositories: number;
-  averageArchitectureScore: number;
-  highRiskRepositories: number;
-  recommendations: number;
-  technologies: number;
-  engineeringEvents: number;
-}
+/*
+ * Compatibility alias retained for existing team-report UI code.
+ *
+ * The canonical trend-direction contract is owned by @archive/types.
+ */
+export type TeamReportTrendDirection =
+  ReportTrendDirection;
 
-export interface TeamReportRiskBreakdown {
-  critical: number;
-  high: number;
-  medium: number;
-  low: number;
-  unknown: number;
-  total: number;
-  highestSeverity: string | null;
-}
-
-export interface TeamReportTechnologyInsight {
-  name: string;
-  usageCount: number;
-  category: string | null;
-  percentage: number | null;
-}
-
-export interface TeamReportTechnologyAnalysis {
-  totalTechnologies: number;
-  topTechnologies: TeamReportTechnologyInsight[];
-  dominantTechnology: string | null;
-  categories: Record<string, number>;
-}
-
-export interface TeamReportTrendPoint {
-  label: string;
-  value: number;
-}
-
-export interface TeamReportTrendAnalysis {
-  direction: TeamReportTrendDirection;
-  percentageChange: number | null;
-  latestValue: number | null;
-  previousValue: number | null;
-  points: TeamReportTrendPoint[];
-}
-
-export interface TeamReportRepositoryHighlight {
-  repositoryId: string | null;
-  name: string;
-  score: number;
-  riskLevel: string | null;
-}
-
-export interface TeamReportRepositoryHighlights {
-  strongest: TeamReportRepositoryHighlight[];
-  needsAttention: TeamReportRepositoryHighlight[];
-}
-
-export interface TeamExecutiveReportSnapshot {
-  schemaVersion: 3;
-
-  reportId: string;
-  title: string;
-  description: string | null;
-  generatedAt: string;
-
-  source: TeamReportSource;
-
-  executiveSummary: TeamReportExecutiveSummary;
-  executiveKpis: TeamReportExecutiveKpis;
-  riskBreakdown: TeamReportRiskBreakdown;
-  technologyAnalysis: TeamReportTechnologyAnalysis;
-  trendAnalysis: TeamReportTrendAnalysis;
-  repositoryHighlights: TeamReportRepositoryHighlights;
-
-  organization: TeamDashboard;
-}
+/*
+ * Schema V3 is the same persisted Executive Report schema for USER and
+ * TEAM reports.
+ *
+ * The shared contract owns:
+ *
+ * - schemaVersion
+ * - persisted report-source metadata
+ * - executive summary
+ * - executive KPIs
+ * - risk breakdown
+ * - technology analysis
+ * - engineering trend analysis
+ * - repository highlights
+ *
+ * Team reports specialise only the immutable dashboard snapshot stored
+ * in the `organization` field.
+ */
+export type TeamExecutiveReportSnapshot =
+  ExecutiveReportSnapshotV3<TeamDashboard>;
 
 export interface TeamExecutiveReport {
   id: string;
@@ -446,7 +414,9 @@ export interface TeamExecutiveReport {
 
   status: TeamReportStatus;
 
-  reportData: TeamExecutiveReportSnapshot | null;
+  reportData:
+    | TeamExecutiveReportSnapshot
+    | null;
 
   pdfPath: string | null;
   csvPath: string | null;
@@ -470,6 +440,12 @@ export interface DeleteTeamReportResponse {
   message: string;
   reportId: string;
 }
+
+/*
+ * --------------------------------------------------------------------------
+ * Team Invitations
+ * --------------------------------------------------------------------------
+ */
 
 export type TeamInvitationStatus =
   | "PENDING"
@@ -532,9 +508,12 @@ export interface ListTeamInvitationsResponse {
 export interface CreateTeamInvitationPayload {
   actorUserId: string;
 
-  // The invitee is selected using their GitHub username.
-  // The backend handles whitespace, an optional leading @,
-  // and case-insensitive matching.
+  /*
+   * The invitee is selected using their GitHub username.
+   *
+   * The backend handles whitespace, an optional leading @ character,
+   * and case-insensitive matching.
+   */
   username: string;
 
   role: TeamInvitationRole;
