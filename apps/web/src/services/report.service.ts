@@ -422,75 +422,122 @@ function normalizeReport(
   const reportData =
     report.reportData;
 
+  /*
+   * No stored snapshot usually means the report is still queued,
+   * generating, or otherwise unavailable.
+   *
+   * This is not a schema compatibility decision.
+   */
   if (!reportData) {
     return {
       ...report,
       schemaVersion: null,
+      compatibility: null,
       isLegacy: false,
       analytics: null,
     };
   }
 
-  if (
-    reportData.schemaVersion !== 2
-  ) {
+  const rawSchemaVersion =
+    typeof reportData.schemaVersion === "number"
+      ? reportData.schemaVersion
+      : null;
+
+  /*
+   * Schema V1 is ArcHive's genuine legacy Executive Report format.
+   *
+   * It predates the executive analytics contract, so we preserve the
+   * report but do not manufacture analytics that were never stored.
+   */
+  if (rawSchemaVersion === 1) {
     return {
       ...report,
-      schemaVersion:
-        reportData.schemaVersion ===
-        1
-          ? 1
-          : null,
-
+      schemaVersion: 1,
+      compatibility: "LEGACY",
       isLegacy: true,
       analytics: null,
     };
   }
 
-  const rawSnapshot =
-    reportData as unknown as Record<
-      string,
-      unknown
-    >;
+  /*
+   * Schema V2 and V3 both contain the executive analytics consumed by
+   * the current report UI.
+   *
+   * V3 adds explicit report-source metadata, but the analytics payload
+   * itself remains compatible with the existing normalizers.
+   */
+  if (
+    rawSchemaVersion === 2 ||
+    rawSchemaVersion === 3
+  ) {
+    const rawSnapshot =
+      reportData as Record<
+        string,
+        unknown
+      >;
 
+    return {
+      ...report,
+
+      /*
+       * Preserve the real version rather than normalizing V3 back to V2.
+       */
+      schemaVersion: rawSchemaVersion,
+
+      compatibility: "SUPPORTED",
+
+      isLegacy: false,
+
+      analytics: {
+        executiveSummary:
+          normalizeExecutiveSummary(
+            rawSnapshot.executiveSummary,
+          ),
+
+        executiveKpis:
+          normalizeExecutiveKpis(
+            rawSnapshot.executiveKpis,
+          ),
+
+        riskBreakdown:
+          normalizeRiskBreakdown(
+            rawSnapshot.riskBreakdown,
+          ),
+
+        technologyAnalysis:
+          normalizeTechnologyAnalysis(
+            rawSnapshot.technologyAnalysis,
+          ),
+
+        trendAnalysis:
+          normalizeTrendAnalysis(
+            rawSnapshot.trendAnalysis,
+          ),
+
+        repositoryHighlights:
+          normalizeRepositoryHighlights(
+            rawSnapshot.repositoryHighlights,
+          ),
+      },
+    };
+  }
+
+  /*
+   * Any other schema number represents a report contract this version
+   * of the ArcHive frontend does not understand.
+   *
+   * Important:
+   * newer unsupported data is NOT legacy data.
+   *
+   * Preserve the actual version so the UI can tell the user exactly
+   * which unsupported schema was encountered.
+   */
   return {
     ...report,
-
-    schemaVersion: 2,
-
+    schemaVersion: rawSchemaVersion,
+    compatibility: "UNSUPPORTED",
     isLegacy: false,
-
-    analytics: {
-      executiveSummary:
-        normalizeExecutiveSummary(
-          rawSnapshot.executiveSummary,
-        ),
-
-      executiveKpis:
-        normalizeExecutiveKpis(
-          rawSnapshot.executiveKpis,
-        ),
-
-      riskBreakdown:
-        normalizeRiskBreakdown(
-          rawSnapshot.riskBreakdown,
-        ),
-
-      technologyAnalysis:
-        normalizeTechnologyAnalysis(
-          rawSnapshot.technologyAnalysis,
-        ),
-
-      trendAnalysis:
-        normalizeTrendAnalysis(
-          rawSnapshot.trendAnalysis,
-        ),
-
-      repositoryHighlights:
-        normalizeRepositoryHighlights(
-          rawSnapshot.repositoryHighlights,
-        ),
-    },
+    analytics: null,
   };
 }
 

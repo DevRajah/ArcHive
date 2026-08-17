@@ -6,6 +6,9 @@ import { Worker } from "bullmq";
 import { Prisma, ReportStatus } from "@prisma/client";
 
 import { prisma } from "@archive/database";
+import {
+  CURRENT_REPORT_SCHEMA_VERSION,
+} from "@archive/types";
 
 import {
   EXECUTIVE_REPORT_QUEUE_NAME,
@@ -70,13 +73,12 @@ type ReportSource =
  */
 const API_BASE_URL =
   process.env.RUN_WORKERS_IN_API ===
-  "true"
-    ? `http://127.0.0.1:${
-        process.env.PORT ||
-        "6800"
-      }`
+    "true"
+    ? `http://127.0.0.1:${process.env.PORT ||
+    "6800"
+    }`
     : process.env.API_BASE_URL ||
-      "http://localhost:6800";
+    "http://localhost:6800";
 
 /**
  * Converts a normal JavaScript object into a value Prisma can safely
@@ -156,7 +158,7 @@ const fetchDashboardForReport = async (
 
     throw new Error(
       `Executive Report dashboard request failed with status ` +
-        `${response.status}: ${errorBody}`,
+      `${response.status}: ${errorBody}`,
     );
   }
 
@@ -285,8 +287,8 @@ const generateExecutiveReport = async ({
 
     throw new Error(
       `Executive Report ${reportId} was not found for ` +
-        `${metadata.sourceType.toLowerCase()} ` +
-        `${metadata.sourceId}.`,
+      `${metadata.sourceType.toLowerCase()} ` +
+      `${metadata.sourceId}.`,
     );
   }
 
@@ -368,18 +370,26 @@ const generateExecutiveReport = async ({
   const reportOutputDirectory =
     path.resolve(
       process.env.REPORT_STORAGE_DIR ??
-        path.join(
-          process.cwd(),
-          "storage",
-          "reports",
-        ),
+      path.join(
+        process.cwd(),
+        "storage",
+        "reports",
+      ),
     );
 
   const sourceMetadata =
     getSourceMetadata(source);
 
   const reportSnapshot = {
-    schemaVersion: 3,
+    /*
+     * The persisted Executive Report schema version is owned by the
+     * shared contract package.
+     *
+     * This prevents the worker and report consumers from independently
+     * drifting onto different "current" schema versions.
+     */
+    schemaVersion:
+      CURRENT_REPORT_SCHEMA_VERSION,
 
     reportId,
 
@@ -602,7 +612,7 @@ reportWorker.on(
      */
     const maximumAttempts =
       typeof job.opts.attempts ===
-      "number"
+        "number"
         ? job.opts.attempts
         : 1;
 

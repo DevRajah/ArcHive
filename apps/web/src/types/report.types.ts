@@ -1,89 +1,55 @@
+import type {
+  EngineeringTrendAnalysis,
+  ExecutiveKpis,
+  ExecutiveReportAnalytics,
+  ExecutiveReportSnapshotV3,
+  ExecutiveSummary,
+  ReportRiskSeverity,
+  ReportSchemaVersion,
+  ReportTrendDirection,
+  RepositoryHighlight,
+  RepositoryHighlights,
+  RiskBreakdown,
+  TechnologyAnalysis,
+} from "@archive/types";
+
+/*
+ * Re-export the shared Executive Report types from this frontend module.
+ *
+ * Future me:
+ * Existing web components import report types from "@/types/report.types".
+ * Re-exporting them here preserves that frontend import boundary while
+ * @archive/types remains the canonical source of truth for the persisted
+ * Executive Report contract.
+ */
+export type {
+  EngineeringTrendAnalysis,
+  ExecutiveKpis,
+  ExecutiveReportSnapshotV3,
+  ExecutiveSummary,
+  ReportRiskSeverity,
+  ReportSchemaVersion,
+  ReportTrendDirection,
+  RepositoryHighlight,
+  RepositoryHighlights,
+  RiskBreakdown,
+  TechnologyAnalysis,
+} from "@archive/types";
+
 export type ReportStatus =
   | "QUEUED"
   | "GENERATING"
   | "COMPLETED"
   | "FAILED";
 
-export type ReportSchemaVersion = 1 | 2;
-
-export type ReportRiskSeverity =
-  | "CRITICAL"
-  | "HIGH"
-  | "MEDIUM"
-  | "LOW";
-
-export type ReportTrendDirection =
-  | "IMPROVING"
-  | "DECLINING"
-  | "STABLE"
-  | "UNKNOWN";
-
-export interface ExecutiveSummary {
-  headline: string;
-  overallHealth: string;
-  strengths: string[];
-  concerns: string[];
-  recommendations: string[];
-}
-
-export interface ExecutiveKpis {
-  repositories: number;
-  averageArchitectureScore: number;
-  highRiskRepositories: number;
-  recommendations: number;
-  technologies: number;
-  engineeringEvents: number;
-}
-
-export interface RiskBreakdown {
-  critical: number;
-  high: number;
-  medium: number;
-  low: number;
-  unknown: number;
-  total: number;
-  highestSeverity: ReportRiskSeverity | null;
-}
-
-export interface TechnologyInsight {
-  name: string;
-  usageCount: number;
-  category: string | null;
-  percentage: number | null;
-}
-
-export interface TechnologyAnalysis {
-  totalTechnologies: number;
-  topTechnologies: TechnologyInsight[];
-  dominantTechnology: string | null;
-  categories: Record<string, number>;
-}
-
-export interface TrendPoint {
-  label: string;
-  value: number;
-}
-
-export interface EngineeringTrendAnalysis {
-  direction: ReportTrendDirection;
-  percentageChange: number | null;
-  latestValue: number | null;
-  previousValue: number | null;
-  points: TrendPoint[];
-}
-
-export interface RepositoryHighlight {
-  repositoryId: string | null;
-  name: string;
-  score: number;
-  riskLevel: string | null;
-}
-
-export interface RepositoryHighlights {
-  strongest: RepositoryHighlight[];
-  needsAttention: RepositoryHighlight[];
-}
-
+/*
+ * This represents the raw Organization Dashboard snapshot stored inside
+ * personal Executive Reports.
+ *
+ * The dashboard itself remains a web/API-specific structure. The shared
+ * @archive/types package owns the common Executive Report analytics
+ * contract rather than this application-specific dashboard shape.
+ */
 export interface OrganizationDashboardSnapshot {
   overview: Record<string, unknown>;
   rankings: unknown[];
@@ -94,6 +60,31 @@ export interface OrganizationDashboardSnapshot {
   trends: Record<string, unknown>;
 }
 
+/**
+ * Schema V1 is ArcHive's genuine legacy Executive Report format.
+ *
+ * Older reports may only contain the raw organization snapshot. We keep
+ * this contract so historical reports remain visible without pretending
+ * that they contain executive analytics that were introduced later.
+ */
+export interface ExecutiveReportSnapshotV1 {
+  schemaVersion: 1;
+
+  reportId: string;
+  title: string;
+  description?: string | null;
+  generatedAt: string;
+
+  organization: OrganizationDashboardSnapshot;
+}
+
+/**
+ * Schema V2 is a supported historical Executive Report format.
+ *
+ * It contains the executive analytics used by the current report UI,
+ * but it predates the explicit USER / TEAM source metadata introduced
+ * by Schema V3.
+ */
 export interface ExecutiveReportSnapshotV2 {
   schemaVersion: 2;
 
@@ -113,25 +104,44 @@ export interface ExecutiveReportSnapshotV2 {
 }
 
 /**
- * Older reports may only contain the raw organization snapshot.
+ * Schema V3 is the current Executive Report contract.
  *
- * We keep this type so legacy reports remain visible without
- * pretending they contain Schema v2 executive analytics.
+ * The common V3 structure is owned by @archive/types. Personal reports
+ * specialise only the stored Organization Dashboard snapshot.
  */
-export interface ExecutiveReportSnapshotV1 {
-  schemaVersion: 1;
+export type PersonalExecutiveReportSnapshotV3 =
+  ExecutiveReportSnapshotV3<
+    OrganizationDashboardSnapshot
+  >;
 
-  reportId: string;
-  title: string;
-  description?: string | null;
-  generatedAt: string;
-
-  organization: OrganizationDashboardSnapshot;
-}
-
+/**
+ * Executive Report schemas deliberately understood by this frontend.
+ *
+ * V1 is legacy.
+ * V2 is supported historical.
+ * V3 is supported current.
+ */
 export type ExecutiveReportSnapshot =
   | ExecutiveReportSnapshotV1
-  | ExecutiveReportSnapshotV2;
+  | ExecutiveReportSnapshotV2
+  | PersonalExecutiveReportSnapshotV3;
+
+/**
+ * Minimal representation of a persisted Executive Report whose schema
+ * version this frontend does not understand.
+ *
+ * Future me:
+ * Persisted data can outlive a particular frontend deployment. An older
+ * frontend may therefore encounter a newer report, such as Schema V4.
+ *
+ * Preserve the numeric version instead of coercing that report into V1,
+ * V2 or V3. Unknown future schemas are unsupported, not legacy.
+ */
+export interface UnsupportedExecutiveReportSnapshot {
+  schemaVersion: number;
+
+  [key: string]: unknown;
+}
 
 export interface ReportListItem {
   id: string;
@@ -151,7 +161,17 @@ export interface ExecutiveReport
   extends ReportListItem {
   userId: string;
 
-  reportData: ExecutiveReportSnapshot | null;
+  /*
+   * The API normally returns one of ArcHive's known report schemas.
+   *
+   * The unsupported shape is also accepted at this boundary because
+   * stored reports may have been produced by a newer ArcHive version
+   * than the frontend currently understands.
+   */
+  reportData:
+    | ExecutiveReportSnapshot
+    | UnsupportedExecutiveReportSnapshot
+    | null;
 
   pdfPath: string | null;
   csvPath: string | null;
@@ -201,22 +221,65 @@ export interface ReportStatusResponse {
 }
 
 /**
+ * Describes whether this frontend understands the persisted report
+ * contract it received.
+ *
+ * LEGACY:
+ * Genuine Schema V1 historical data.
+ *
+ * SUPPORTED:
+ * A report schema this frontend understands and can render correctly.
+ *
+ * UNSUPPORTED:
+ * A schema version exists, but this frontend does not know its contract.
+ */
+export type ReportCompatibility =
+  | "LEGACY"
+  | "SUPPORTED"
+  | "UNSUPPORTED";
+
+/**
  * Single frontend model consumed by the report drawer.
  *
- * Both Schema v1 and Schema v2 reports are normalized into this
- * shape by report.service.ts.
+ * Future me:
+ * The analytics themselves come from the shared Executive Report
+ * contract. This frontend model adds only compatibility and
+ * normalization state needed by the personal report UI.
  */
 export interface NormalizedExecutiveReport
   extends ExecutiveReport {
-  schemaVersion: ReportSchemaVersion | null;
+  /*
+   * Preserve the actual persisted schema number.
+   *
+   * Do not restrict this property to ReportSchemaVersion. If an older
+   * frontend receives Schema V4, we still need to preserve "4" so the
+   * UI can explain that V4 is unsupported.
+   */
+  schemaVersion: number | null;
+
+  /*
+   * null means there is no report snapshot available yet, so there is
+   * no schema compatibility decision to make.
+   */
+  compatibility:
+    | ReportCompatibility
+    | null;
+
+  /*
+   * Temporary compatibility field for existing report UI code.
+   *
+   * Batch 4 will move presentation logic to `compatibility`.
+   * Until then, keep this field so we do not break the existing drawer.
+   */
   isLegacy: boolean;
 
-  analytics: {
-    executiveSummary: ExecutiveSummary;
-    executiveKpis: ExecutiveKpis;
-    riskBreakdown: RiskBreakdown;
-    technologyAnalysis: TechnologyAnalysis;
-    trendAnalysis: EngineeringTrendAnalysis;
-    repositoryHighlights: RepositoryHighlights;
-  } | null;
+  /*
+   * Only supported analytical report schemas expose normalized analytics.
+   *
+   * V1 and unknown future schemas intentionally return null here rather
+   * than manufacturing analytics that the persisted contract does not
+   * contain or that this frontend does not understand.
+   */
+  analytics:
+    ExecutiveReportAnalytics | null;
 }
