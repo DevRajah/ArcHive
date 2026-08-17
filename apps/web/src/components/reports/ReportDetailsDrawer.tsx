@@ -429,20 +429,19 @@ export function ReportDetailsDrawer({
 
   const analytics = report.analytics;
 
-  const strongestRepositories =
-    analytics?.repositoryHighlights.strongest ?? [];
-
-  const repositoriesRequiringAttention =
-    analytics?.repositoryHighlights.needsAttention ?? [];
-
   /*
-   * Keep the technology collection explicitly typed.
+   * Keep report collections explicitly typed.
    *
    * Future me:
-   * Do not rely on workspace/build-environment inference here. Vercel
-   * performs a clean TypeScript build and must be able to determine the
-   * callback element type without depending on previously built artifacts.
+   * Vercel performs a clean TypeScript build and should not need to rely
+   * on workspace/incremental inference to determine callback item types.
    */
+  const strongestRepositories: RepositoryHighlight[] =
+    analytics?.repositoryHighlights.strongest ?? [];
+
+  const repositoriesRequiringAttention: RepositoryHighlight[] =
+    analytics?.repositoryHighlights.needsAttention ?? [];
+
   const topTechnologies: TechnologyInsight[] =
     analytics?.technologyAnalysis.topTechnologies ?? [];
 
@@ -548,7 +547,7 @@ export function ReportDetailsDrawer({
 
                           <ul className="space-y-2">
                             {analytics.executiveSummary.strengths.map(
-                              (strength, index) => (
+                              (strength: string, index: number) => (
                                 <li
                                   key={`${report.id}-strength-${index}`}
                                   className="flex gap-3 text-sm leading-6 text-muted-foreground"
@@ -574,7 +573,7 @@ export function ReportDetailsDrawer({
 
                           <ul className="space-y-2">
                             {analytics.executiveSummary.concerns.map(
-                              (concern, index) => (
+                              (concern: string, index: number) => (
                                 <li
                                   key={`${report.id}-concern-${index}`}
                                   className="flex gap-3 text-sm leading-6 text-muted-foreground"
@@ -601,7 +600,7 @@ export function ReportDetailsDrawer({
 
                           <ul className="space-y-2">
                             {analytics.executiveSummary.recommendations.map(
-                              (recommendation, index) => (
+                              (recommendation: string, index: number) => (
                                 <li
                                   key={`${report.id}-recommendation-${index}`}
                                   className="flex gap-3 text-sm leading-6 text-muted-foreground"
