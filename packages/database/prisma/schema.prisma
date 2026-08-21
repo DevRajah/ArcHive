@@ -63,8 +63,19 @@ model User {
   teamInvitationsReceived TeamInvitation[] @relation("TeamInvitationInvitee")
 teamInvitationsSent     TeamInvitation[] @relation("TeamInvitationInvitedBy")
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+ /**
+ * The most recent time the user explicitly interacted with ArcHive.
+ *
+ * Future me:
+ * Do not update this from background workers, GitHub webhooks,
+ * scheduled refreshes, or other automatic system activity.
+ *
+ * This field represents USER activity, not repository activity.
+ */
+lastActivityAt DateTime?
+
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
 }
 
 model Repository {

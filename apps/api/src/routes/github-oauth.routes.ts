@@ -2,6 +2,9 @@ import { FastifyInstance, FastifyReply } from "fastify";
 import axios from "axios";
 import { prisma } from "@archive/database";
 import jwt from "jsonwebtoken";
+import {
+  touchUserActivity,
+} from "../utils/user-activity";
 
 type GitHubAccessTokenResponse = {
   access_token: string;
@@ -166,6 +169,16 @@ export const githubOAuthRoutes = async (app: FastifyInstance) => {
           },
         });
       }
+
+      /**
+ * A successful GitHub OAuth callback represents a real user
+ * actively signing in to ArcHive.
+ *
+ * Background GitHub webhook activity must never update this field.
+ */
+      await touchUserActivity(
+        user.id,
+      );
 
       const appToken = jwt.sign(
         {

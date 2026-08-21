@@ -13,6 +13,10 @@ import {
   type ReportSource,
 } from "@archive/types";
 
+import {
+  touchUserActivity,
+} from "../../utils/user-activity";
+
 /**
  * Creates and queues a new personal Executive Report.
  *
@@ -116,6 +120,16 @@ export async function createReport(
         jobId:
           report.id,
       },
+    );
+
+    /**
+ * The user explicitly requested this report.
+ *
+ * We record activity when ArcHive has successfully accepted and
+ * queued the request, not when the background worker later finishes it.
+ */
+    await touchUserActivity(
+      userId,
     );
   } catch (error) {
     const message =
