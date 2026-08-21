@@ -4,6 +4,9 @@ import axios from "axios";
 import {
   generateRepositoryIntelligence,
 } from "../services/repository-intelligence.service";
+import {
+  touchUserActivity,
+} from "../utils/user-activity";
 /**
  * Describes what actually happened when ArcHive receives an import request.
  *
@@ -835,6 +838,22 @@ export const githubSyncRoutes =
               result.status ===
               "ALREADY_TRACKED",
           ).length;
+
+                /**
+         * The import request was explicitly initiated by the user.
+         *
+         * Future me:
+         * Record activity once for the whole successful request, not once per
+         * repository. This keeps batch imports from creating unnecessary user
+         * activity writes.
+         *
+         * IMPORTED, RETRACKED, and ALREADY_TRACKED all count as genuine user
+         * interaction with ArcHive, even when the final repository state does
+         * not change.
+         */
+        await touchUserActivity(
+          user.id,
+        );
 
         return {
           success: true,
