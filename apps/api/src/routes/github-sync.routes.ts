@@ -839,18 +839,18 @@ export const githubSyncRoutes =
               "ALREADY_TRACKED",
           ).length;
 
-                /**
-         * The import request was explicitly initiated by the user.
-         *
-         * Future me:
-         * Record activity once for the whole successful request, not once per
-         * repository. This keeps batch imports from creating unnecessary user
-         * activity writes.
-         *
-         * IMPORTED, RETRACKED, and ALREADY_TRACKED all count as genuine user
-         * interaction with ArcHive, even when the final repository state does
-         * not change.
-         */
+        /**
+ * The import request was explicitly initiated by the user.
+ *
+ * Future me:
+ * Record activity once for the whole successful request, not once per
+ * repository. This keeps batch imports from creating unnecessary user
+ * activity writes.
+ *
+ * IMPORTED, RETRACKED, and ALREADY_TRACKED all count as genuine user
+ * interaction with ArcHive, even when the final repository state does
+ * not change.
+ */
         await touchUserActivity(
           user.id,
         );
@@ -943,6 +943,17 @@ export const githubSyncRoutes =
             },
           });
 
+        /**
+     * Untracking is an explicit user action.
+     *
+     * Future me:
+     * Record this as user activity only after the repository state
+     * has been updated successfully.
+     */
+        await touchUserActivity(
+          userId,
+        );
+
         return {
           success: true,
           message: "Repository untracked successfully",
@@ -951,55 +962,198 @@ export const githubSyncRoutes =
       }
     );
 
-    app.patch("/users/:userId/repositories/retrack", async (request, reply) => {
-      const { userId } = request.params as { userId: string };
-      const { fullName } = request.body as { fullName?: string };
+    app.patch(
+      "/users/:userId/repositories/retrack",
+      async (request, reply) => {
+        const { userId } =
+          request.params as {
+            userId: string;
+          };
 
-      if (!fullName) {
-        return reply.status(400).send({
-          success: false,
-          message: "fullName is required",
+        const { fullName } =
+          request.body as {
+            fullName?: string;
+          };
+
+        if (!fullName) {
+          return reply.status(400).send({
+            success: false,
+            message:
+              "fullName is required",
+          });
+        }
+
+        /**
+         * Confirm that the ArcHive user exists.
+         *
+         * We also need the GitHub access token because a genuine
+         * retrack must restore the repository's webhook lifecycle.
+         */
+        const user =
+          await prisma.user.findUnique({
+            where: {
+              id: userId,
+            },
+
+            select: {
+              id: true,
+              githubAccessToken: true,
+            },
+          });
+
+        if (!user) {
+          return reply.status(404).send({
+            success: false,
+            message:
+              "User not found",
+          });
+        }
+
+        /**
+     * A real retrack must restore the repository webhook.
+     *
+     * Without a GitHub access token we cannot safely ensure that webhook,
+     * so fail explicitly instead of pretending retracking completed.
+     */
+        if (!user.githubAccessToken) {
+          return reply.status(400).send({
+            success: false,
+            message:
+              "GitHub access token is unavailable. Reconnect your GitHub account before retracking this repository.",
+          });
+        }
+
+        /**
+         * Repository.fullName is currently globally unique in ArcHive,
+         * so it identifies the existing logical repository row.
+         */
+        const repository =
+          await prisma.repository.findUnique({
+            where: {
+              fullName,
+            },
+          });
+
+        if (!repository) {
+          return reply.status(404).send({
+            success: false,
+            message:
+              "Repository does not exist in ArcHive yet. Import it first.",
+          });
+        }
+
+        /**
+         * Do not allow one ArcHive user to take ownership of a repository
+         * that is actively tracked by another user.
+         *
+         * Future me:
+         * This must remain aligned with import-selected ownership semantics.
+         * Until repository tracking becomes a separate user/repository relation,
+         * Repository.userId represents the active tracking owner.
+         */
+        if (
+          repository.isTracked &&
+          repository.userId &&
+          repository.userId !==
+          user.id
+        ) {
+          return reply.status(409).send({
+            success: false,
+            message:
+              `Repository ${repository.fullName} is already tracked by another ArcHive user.`,
+          });
+        }
+
+        /**
+         * If this user already tracks the repository, retrack is idempotent.
+         *
+         * Do not reinstall the webhook.
+         * Do not regenerate repository intelligence.
+         *
+         * The request still represents genuine user interaction with ArcHive,
+         * so lastActivityAt should still be updated.
+         */
+        if (
+          repository.isTracked &&
+          repository.userId ===
+          user.id
+        ) {
+          await touchUserActivity(
+            user.id,
+          );
+
+          return {
+            success: true,
+            message:
+              "Repository is already tracked",
+            data: repository,
+          };
+        }
+
+        /**
+         * The repository exists but is not currently tracked by this user.
+         *
+         * Restore ownership/tracking on the existing row instead of creating
+         * another logical Repository record.
+         */
+        const updatedRepository =
+          await prisma.repository.update({
+            where: {
+              id: repository.id,
+            },
+
+            data: {
+              userId: user.id,
+              isTracked: true,
+            },
+          });
+
+        /**
+         * Retracking restores the repository to ArcHive's active lifecycle.
+         *
+         * Ensuring the webhook allows ArcHive to receive future GitHub changes.
+         *
+         * installRepositoryWebhook() is already idempotent and checks whether
+         * ArcHive's webhook exists before creating another one.
+         */
+        await installRepositoryWebhook({
+          githubAccessToken:
+            user.githubAccessToken,
+
+          repositoryFullName:
+            updatedRepository.fullName,
         });
-      }
 
-      const user = await prisma.user.findUnique({
-        where: { id: userId },
-      });
-
-      if (!user) {
-        return reply.status(404).send({
-          success: false,
-          message: "User not found",
-        });
-      }
-
-      const repository = await prisma.repository.findUnique({
-        where: { fullName },
-      });
-
-      if (!repository) {
-        return reply.status(404).send({
-          success: false,
-          message: "Repository does not exist in ArcHive yet. Import it first.",
-        });
-      }
-
-      const updatedRepository =
-        await prisma.repository.update({
-          where: {
-            id: repository.id,
-          },
-
-          data: {
-            userId,
-            isTracked: true,
-          },
+        /**
+         * The webhook only covers future changes.
+         *
+         * Generate canonical repository intelligence immediately so Architecture,
+         * Narrative, Intelligence Report, Advisor, and other intelligence-backed
+         * pages represent the repository's current state as soon as tracking
+         * resumes.
+         */
+        await generateIntelligence({
+          repositoryId:
+            updatedRepository.id,
         });
 
-      return {
-        success: true,
-        message: "Repository retracked successfully",
-        data: updatedRepository,
-      };
-    });
+        /**
+         * Only mark activity after the complete user-triggered retrack operation
+         * has succeeded.
+         *
+         * Background intelligence generation elsewhere must not call this helper.
+         */
+        await touchUserActivity(
+          user.id,
+        );
+
+        return {
+          success: true,
+          message:
+            "Repository retracked successfully",
+          data:
+            updatedRepository,
+        };
+      },
+    );
   };

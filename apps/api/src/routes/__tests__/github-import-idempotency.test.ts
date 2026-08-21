@@ -65,6 +65,9 @@ describe(
         const originalUserFindUnique =
             userDelegate.findUnique;
 
+        const originalUserUpdate =
+            userDelegate.update;
+
         const originalRepositoryFindFirst =
             repositoryDelegate.findUnique;
 
@@ -96,12 +99,35 @@ describe(
 
             userDelegate.findUnique =
                 async () => user;
+
+            /**
+             * Routes that represent genuine user activity call
+             * touchUserActivity(), which updates User.lastActivityAt.
+             *
+             * Use a safe default mock so existing route regressions never
+             * accidentally hit the real test database with our synthetic user ID.
+             *
+             * Tests that specifically verify activity semantics can override
+             * this mock and count/assert the calls themselves.
+             */
+            userDelegate.update =
+                async (args: any) => {
+                    return {
+                        ...user,
+
+                        lastActivityAt:
+                            args.data.lastActivityAt,
+                    };
+                };
         });
 
 
         afterEach(() => {
             userDelegate.findUnique =
                 originalUserFindUnique;
+
+            userDelegate.update =
+                originalUserUpdate;
 
             repositoryDelegate.findUnique =
                 originalRepositoryFindFirst;
@@ -914,5 +940,729 @@ describe(
                 );
             },
         );
+
+
+
+        test(
+            "dedicated retrack restores an untracked repository and records user activity",
+            async () => {
+                const existingRepository = {
+                    id: "dedicated-untracked-repository-id",
+
+                    githubRepoId:
+                        githubRepository.githubRepoId,
+
+                    name:
+                        githubRepository.name,
+
+                    owner:
+                        githubRepository.owner,
+
+                    fullName:
+                        githubRepository.fullName,
+
+                    description:
+                        githubRepository.description,
+
+                    defaultBranch:
+                        githubRepository.defaultBranch,
+
+                    language:
+                        githubRepository.language,
+
+                    stars:
+                        githubRepository.stars,
+
+                    forks:
+                        githubRepository.forks,
+
+                    userId: null,
+
+                    isTracked: false,
+                };
+
+                let repositoryUpdateCalls = 0;
+                let userActivityUpdateCalls = 0;
+                let webhookListCalls = 0;
+                let webhookCreateCalls = 0;
+                let intelligenceGenerationCalls = 0;
+
+                repositoryDelegate.findUnique =
+                    async () =>
+                        existingRepository;
+
+                repositoryDelegate.update =
+                    async (args: any) => {
+                        repositoryUpdateCalls += 1;
+
+                        assert.equal(
+                            args.where.id,
+                            existingRepository.id,
+                        );
+
+                        assert.equal(
+                            args.data.userId,
+                            userId,
+                        );
+
+                        assert.equal(
+                            args.data.isTracked,
+                            true,
+                        );
+
+                        return {
+                            ...existingRepository,
+                            ...args.data,
+                        };
+                    };
+
+                /**
+                 * touchUserActivity() owns the canonical
+                 * lastActivityAt update.
+                 */
+                userDelegate.update =
+                    async (args: any) => {
+                        userActivityUpdateCalls += 1;
+
+                        assert.equal(
+                            args.where.id,
+                            userId,
+                        );
+
+                        assert.ok(
+                            args.data.lastActivityAt
+                            instanceof Date,
+                        );
+
+                        return {
+                            ...user,
+                            lastActivityAt:
+                                args.data.lastActivityAt,
+                        };
+                    };
+
+                /**
+                 * No ArcHive webhook exists yet.
+                 * Retracking should restore it.
+                 */
+                axios.get =
+                    async () => {
+                        webhookListCalls += 1;
+
+                        return {
+                            data: [],
+                        } as any;
+                    };
+
+                axios.post =
+                    async () => {
+                        webhookCreateCalls += 1;
+
+                        return {
+                            data: {
+                                id: 555,
+                                active: true,
+                                events: [
+                                    "push",
+                                    "pull_request",
+                                ],
+                            },
+                        } as any;
+                    };
+
+                const app =
+                    await buildApp({
+                        generateRepositoryIntelligence:
+                            async ({
+                                repositoryId,
+                            }) => {
+                                intelligenceGenerationCalls += 1;
+
+                                assert.equal(
+                                    repositoryId,
+                                    existingRepository.id,
+                                );
+
+                                return {} as any;
+                            },
+                    });
+
+                const response =
+                    await app.inject({
+                        method: "PATCH",
+
+                        url:
+                            `/api/github/users/${userId}` +
+                            "/repositories/retrack",
+
+                        payload: {
+                            fullName:
+                                existingRepository.fullName,
+                        },
+                    });
+
+                await app.close();
+
+                assert.equal(
+                    response.statusCode,
+                    200,
+                );
+
+                const body =
+                    response.json();
+
+                assert.equal(
+                    body.success,
+                    true,
+                );
+
+                assert.equal(
+                    body.message,
+                    "Repository retracked successfully",
+                );
+
+                /**
+                 * The existing logical repository row
+                 * must be reused.
+                 */
+                assert.equal(
+                    body.data.id,
+                    existingRepository.id,
+                );
+
+                assert.equal(
+                    body.data.userId,
+                    userId,
+                );
+
+                assert.equal(
+                    body.data.isTracked,
+                    true,
+                );
+
+                assert.equal(
+                    repositoryUpdateCalls,
+                    1,
+                );
+
+                assert.equal(
+                    webhookListCalls,
+                    1,
+                );
+
+                assert.equal(
+                    webhookCreateCalls,
+                    1,
+                );
+
+                assert.equal(
+                    intelligenceGenerationCalls,
+                    1,
+                );
+
+                assert.equal(
+                    userActivityUpdateCalls,
+                    1,
+                );
+            },
+        );
+
+
+        test(
+            "dedicated retrack is idempotent when the repository is already tracked by the same user",
+            async () => {
+                const existingRepository = {
+                    id: "already-tracked-dedicated-id",
+
+                    githubRepoId:
+                        githubRepository.githubRepoId,
+
+                    name:
+                        githubRepository.name,
+
+                    owner:
+                        githubRepository.owner,
+
+                    fullName:
+                        githubRepository.fullName,
+
+                    description:
+                        githubRepository.description,
+
+                    defaultBranch:
+                        githubRepository.defaultBranch,
+
+                    language:
+                        githubRepository.language,
+
+                    stars:
+                        githubRepository.stars,
+
+                    forks:
+                        githubRepository.forks,
+
+                    userId,
+
+                    isTracked: true,
+                };
+
+                let repositoryUpdateCalls = 0;
+                let userActivityUpdateCalls = 0;
+                let webhookListCalls = 0;
+                let webhookCreateCalls = 0;
+                let intelligenceGenerationCalls = 0;
+
+                repositoryDelegate.findUnique =
+                    async () =>
+                        existingRepository;
+
+                /**
+                 * An already-tracked repository must
+                 * not undergo another tracking transition.
+                 */
+                repositoryDelegate.update =
+                    async () => {
+                        repositoryUpdateCalls += 1;
+
+                        throw new Error(
+                            "Repository should not be updated for an idempotent retrack.",
+                        );
+                    };
+
+                userDelegate.update =
+                    async (args: any) => {
+                        userActivityUpdateCalls += 1;
+
+                        assert.equal(
+                            args.where.id,
+                            userId,
+                        );
+
+                        assert.ok(
+                            args.data.lastActivityAt
+                            instanceof Date,
+                        );
+
+                        return {
+                            ...user,
+                            lastActivityAt:
+                                args.data.lastActivityAt,
+                        };
+                    };
+
+                axios.get =
+                    async () => {
+                        webhookListCalls += 1;
+
+                        throw new Error(
+                            "Webhook lookup should not run for an already-tracked repository.",
+                        );
+                    };
+
+                axios.post =
+                    async () => {
+                        webhookCreateCalls += 1;
+
+                        throw new Error(
+                            "Webhook creation should not run for an already-tracked repository.",
+                        );
+                    };
+
+                const app =
+                    await buildApp({
+                        generateRepositoryIntelligence:
+                            async () => {
+                                intelligenceGenerationCalls += 1;
+
+                                throw new Error(
+                                    "Intelligence should not regenerate for an already-tracked repository.",
+                                );
+                            },
+                    });
+
+                const response =
+                    await app.inject({
+                        method: "PATCH",
+
+                        url:
+                            `/api/github/users/${userId}` +
+                            "/repositories/retrack",
+
+                        payload: {
+                            fullName:
+                                existingRepository.fullName,
+                        },
+                    });
+
+                await app.close();
+
+                assert.equal(
+                    response.statusCode,
+                    200,
+                );
+
+                const body =
+                    response.json();
+
+                assert.equal(
+                    body.success,
+                    true,
+                );
+
+                assert.equal(
+                    body.message,
+                    "Repository is already tracked",
+                );
+
+                assert.equal(
+                    body.data.id,
+                    existingRepository.id,
+                );
+
+                assert.equal(
+                    repositoryUpdateCalls,
+                    0,
+                );
+
+                assert.equal(
+                    webhookListCalls,
+                    0,
+                );
+
+                assert.equal(
+                    webhookCreateCalls,
+                    0,
+                );
+
+                assert.equal(
+                    intelligenceGenerationCalls,
+                    0,
+                );
+
+                /**
+                 * Even an idempotent successful request
+                 * is genuine human use of ArcHive.
+                 */
+                assert.equal(
+                    userActivityUpdateCalls,
+                    1,
+                );
+            },
+        );
+
+
+        test(
+            "dedicated retrack rejects a repository actively tracked by another user without side effects",
+            async () => {
+                const existingRepository = {
+                    id: "other-user-repository-id",
+
+                    githubRepoId:
+                        githubRepository.githubRepoId,
+
+                    name:
+                        githubRepository.name,
+
+                    owner:
+                        githubRepository.owner,
+
+                    fullName:
+                        githubRepository.fullName,
+
+                    description:
+                        githubRepository.description,
+
+                    defaultBranch:
+                        githubRepository.defaultBranch,
+
+                    language:
+                        githubRepository.language,
+
+                    stars:
+                        githubRepository.stars,
+
+                    forks:
+                        githubRepository.forks,
+
+                    userId:
+                        "another-user-id",
+
+                    isTracked: true,
+                };
+
+                let repositoryUpdateCalls = 0;
+                let userActivityUpdateCalls = 0;
+                let webhookCalls = 0;
+                let intelligenceGenerationCalls = 0;
+
+                repositoryDelegate.findUnique =
+                    async () =>
+                        existingRepository;
+
+                repositoryDelegate.update =
+                    async () => {
+                        repositoryUpdateCalls += 1;
+
+                        throw new Error(
+                            "Ownership must not change.",
+                        );
+                    };
+
+                userDelegate.update =
+                    async () => {
+                        userActivityUpdateCalls += 1;
+
+                        throw new Error(
+                            "Failed retrack must not update user activity.",
+                        );
+                    };
+
+                axios.get =
+                    async () => {
+                        webhookCalls += 1;
+
+                        throw new Error(
+                            "Webhook setup must not run after ownership rejection.",
+                        );
+                    };
+
+                axios.post =
+                    async () => {
+                        webhookCalls += 1;
+
+                        throw new Error(
+                            "Webhook setup must not run after ownership rejection.",
+                        );
+                    };
+
+                const app =
+                    await buildApp({
+                        generateRepositoryIntelligence:
+                            async () => {
+                                intelligenceGenerationCalls += 1;
+
+                                throw new Error(
+                                    "Intelligence must not run after ownership rejection.",
+                                );
+                            },
+                    });
+
+                const response =
+                    await app.inject({
+                        method: "PATCH",
+
+                        url:
+                            `/api/github/users/${userId}` +
+                            "/repositories/retrack",
+
+                        payload: {
+                            fullName:
+                                existingRepository.fullName,
+                        },
+                    });
+
+                await app.close();
+
+                assert.equal(
+                    response.statusCode,
+                    409,
+                );
+
+                const body =
+                    response.json();
+
+                assert.equal(
+                    body.success,
+                    false,
+                );
+
+                assert.match(
+                    body.message,
+                    /already tracked by another ArcHive user/i,
+                );
+
+                assert.equal(
+                    repositoryUpdateCalls,
+                    0,
+                );
+
+                assert.equal(
+                    webhookCalls,
+                    0,
+                );
+
+                assert.equal(
+                    intelligenceGenerationCalls,
+                    0,
+                );
+
+                assert.equal(
+                    userActivityUpdateCalls,
+                    0,
+                );
+
+                /**
+                 * The original owner remains untouched.
+                 */
+                assert.equal(
+                    existingRepository.userId,
+                    "another-user-id",
+                );
+
+                assert.equal(
+                    existingRepository.isTracked,
+                    true,
+                );
+            },
+        );
+
+
+        test(
+            "dedicated retrack fails safely when the user has no GitHub access token",
+            async () => {
+                const userWithoutGitHubToken = {
+                    ...user,
+
+                    githubAccessToken: null,
+                };
+
+                let repositoryLookupCalls = 0;
+                let repositoryUpdateCalls = 0;
+                let userActivityUpdateCalls = 0;
+                let webhookCalls = 0;
+                let intelligenceGenerationCalls = 0;
+
+                /**
+                 * Override the normal user fixture for
+                 * this test only.
+                 */
+                userDelegate.findUnique =
+                    async () =>
+                        userWithoutGitHubToken;
+
+                repositoryDelegate.findUnique =
+                    async () => {
+                        repositoryLookupCalls += 1;
+
+                        return null;
+                    };
+
+                repositoryDelegate.update =
+                    async () => {
+                        repositoryUpdateCalls += 1;
+
+                        throw new Error(
+                            "Repository state must not change without a GitHub token.",
+                        );
+                    };
+
+                userDelegate.update =
+                    async () => {
+                        userActivityUpdateCalls += 1;
+
+                        throw new Error(
+                            "Failed retrack must not update user activity.",
+                        );
+                    };
+
+                axios.get =
+                    async () => {
+                        webhookCalls += 1;
+
+                        throw new Error(
+                            "GitHub must not be called without an access token.",
+                        );
+                    };
+
+                axios.post =
+                    async () => {
+                        webhookCalls += 1;
+
+                        throw new Error(
+                            "GitHub must not be called without an access token.",
+                        );
+                    };
+
+                const app =
+                    await buildApp({
+                        generateRepositoryIntelligence:
+                            async () => {
+                                intelligenceGenerationCalls += 1;
+
+                                throw new Error(
+                                    "Intelligence must not run when retrack validation fails.",
+                                );
+                            },
+                    });
+
+                const response =
+                    await app.inject({
+                        method: "PATCH",
+
+                        url:
+                            `/api/github/users/${userId}` +
+                            "/repositories/retrack",
+
+                        payload: {
+                            fullName:
+                                githubRepository.fullName,
+                        },
+                    });
+
+                await app.close();
+
+                assert.equal(
+                    response.statusCode,
+                    400,
+                );
+
+                const body =
+                    response.json();
+
+                assert.equal(
+                    body.success,
+                    false,
+                );
+
+                assert.match(
+                    body.message,
+                    /GitHub access token is unavailable/i,
+                );
+
+                /**
+                 * Our guard occurs before repository mutation
+                 * and before all GitHub/intelligence side effects.
+                 */
+                assert.equal(
+                    repositoryUpdateCalls,
+                    0,
+                );
+
+                assert.equal(
+                    webhookCalls,
+                    0,
+                );
+
+                assert.equal(
+                    intelligenceGenerationCalls,
+                    0,
+                );
+
+                assert.equal(
+                    userActivityUpdateCalls,
+                    0,
+                );
+
+                /**
+                 * If your guard is immediately after user lookup,
+                 * repository lookup should not even be necessary.
+                 */
+                assert.equal(
+                    repositoryLookupCalls,
+                    0,
+                );
+            },
+        );
+
     },
 );
