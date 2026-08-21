@@ -11,9 +11,9 @@ export type PackageTechnologyDefinition = {
    * runtime implementation.
    */
   category:
-    | "RUNTIME"
-    | "DEVELOPMENT"
-    | "INFRASTRUCTURE";
+  | "RUNTIME"
+  | "DEVELOPMENT"
+  | "INFRASTRUCTURE";
 
   /**
    * Human-readable explanation stored with the evidence.
@@ -42,6 +42,27 @@ export const PACKAGE_TECHNOLOGY_MAP:
       category: "RUNTIME",
       description:
         "Detected the Next.js framework package.",
+    },
+
+    {
+      technology: "Tailwind CSS",
+
+      packages: [
+        "tailwindcss",
+
+        // Tailwind v4 commonly uses this package
+        // when Tailwind is integrated through PostCSS.
+        "@tailwindcss/postcss",
+
+        // Tailwind v4 also provides an official
+        // first-party Vite integration.
+        "@tailwindcss/vite",
+      ],
+
+      category: "DEVELOPMENT",
+
+      description:
+        "Detected Tailwind CSS styling dependencies.",
     },
 
     {

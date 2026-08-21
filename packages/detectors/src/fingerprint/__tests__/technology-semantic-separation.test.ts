@@ -17,6 +17,10 @@ import type {
 } from "../shared";
 
 import {
+    detectTechnologyFingerprint,
+} from "../../technology-fingerprint";
+
+import {
     getEngineeringSignalsForTechnology,
 } from "../technology-engineering-signal";
 
@@ -683,6 +687,108 @@ describe(
                 assert.equal(
                     state.technologies.has(
                         "Socket.IO / Realtime Events",
+                    ),
+                    false,
+                );
+            },
+        );
+
+        it(
+            "detects Tailwind CSS from the tailwindcss package",
+            () => {
+                const result =
+                    detectTechnologyFingerprint(
+                        [
+                            "package.json",
+                        ],
+                        [],
+                        "",
+                        [
+                            {
+                                path: "package.json",
+
+                                content:
+                                    JSON.stringify({
+                                        devDependencies: {
+                                            tailwindcss:
+                                                "^4.1.0",
+                                        },
+                                    }),
+                            },
+                        ],
+                    );
+
+                assert.ok(
+                    result.technologies.includes(
+                        "Tailwind CSS",
+                    ),
+                );
+            },
+        );
+
+
+        it(
+            "detects Tailwind CSS from the official Tailwind Vite package",
+            () => {
+                const result =
+                    detectTechnologyFingerprint(
+                        [
+                            "package.json",
+                        ],
+                        [],
+                        "",
+                        [
+                            {
+                                path: "package.json",
+
+                                content:
+                                    JSON.stringify({
+                                        devDependencies: {
+                                            "@tailwindcss/vite":
+                                                "^4.1.0",
+                                        },
+                                    }),
+                            },
+                        ],
+                    );
+
+                assert.ok(
+                    result.technologies.includes(
+                        "Tailwind CSS",
+                    ),
+                );
+            },
+        );
+
+
+        it(
+            "does not infer Tailwind CSS from PostCSS alone",
+            () => {
+                const result =
+                    detectTechnologyFingerprint(
+                        [
+                            "package.json",
+                        ],
+                        [],
+                        "",
+                        [
+                            {
+                                path: "package.json",
+
+                                content:
+                                    JSON.stringify({
+                                        devDependencies: {
+                                            postcss:
+                                                "^8.5.0",
+                                        },
+                                    }),
+                            },
+                        ],
+                    );
+
+                assert.equal(
+                    result.technologies.includes(
+                        "Tailwind CSS",
                     ),
                     false,
                 );
