@@ -93,7 +93,13 @@ type CanonicalIntelligenceReport = {
 
       capabilities?: Record<string, boolean>;
 
-      evidenceResults?: string[];
+      evidenceResults?: {
+        repositoryType: string;
+        confidence: number;
+        evidence: string[];
+        strongestEvidence: string[];
+        totalScore: number;
+      }[];
     };
 
     assessment?: {
@@ -181,13 +187,13 @@ export default function RepositoryCapabilitiesPage() {
 
   const capabilityReport =
     capabilityData as
-      | RepositoryCapabilitiesResponse
-      | undefined;
+    | RepositoryCapabilitiesResponse
+    | undefined;
 
   const intelligenceReport =
     intelligenceData as
-      | CanonicalIntelligenceReport
-      | undefined;
+    | CanonicalIntelligenceReport
+    | undefined;
 
   const repository =
     intelligenceReport?.repository ??
@@ -199,6 +205,62 @@ export default function RepositoryCapabilitiesPage() {
   const identity = intelligence?.identity;
   const dna = identity?.repositoryDNA;
   const signals = intelligence?.signals;
+  /**
+ * User-facing classification evidence.
+ *
+ * Future me:
+ * reasoningSignals contains the complete detector explanation trail.
+ * That is useful for debugging/auditing, but it is too noisy for the
+ * main capability page.
+ *
+ * EvidenceResult is already ranked by the backend intelligence engine,
+ * so this page only performs presentation filtering. It does NOT
+ * calculate new intelligence or assign its own semantic scores.
+ */
+  const classificationEvidence = useMemo(() => {
+    const evidenceResults =
+      signals?.evidenceResults ?? [];
+
+    const canonicalRepositoryTypes =
+      new Set(
+        identity?.repositoryTypes ?? [],
+      );
+
+    /**
+     * Prefer evidence belonging to repository types that survived
+     * canonical repository-type resolution.
+     *
+     * This prevents evidence for rejected competing identities from
+     * dominating the explanation shown to the user.
+     */
+    const relevantEvidence =
+      evidenceResults.filter(
+        (item) =>
+          canonicalRepositoryTypes.has(
+            item.repositoryType,
+          ),
+      );
+
+    return relevantEvidence
+      .sort(
+        (a, b) =>
+          b.totalScore -
+          a.totalScore,
+      )
+      .flatMap(
+        (item) =>
+          item.strongestEvidence,
+      )
+      .filter(
+        (item, index, items) =>
+          Boolean(item) &&
+          items.indexOf(item) === index,
+      )
+      .slice(0, 5);
+  }, [
+    signals?.evidenceResults,
+    identity?.repositoryTypes,
+  ]);
   const assessment = intelligence?.assessment;
 
   /**
@@ -336,13 +398,13 @@ export default function RepositoryCapabilitiesPage() {
 
                 {intelligenceReport?.summary
                   ?.primaryRepositoryType && (
-                  <Badge>
-                    {formatFilterLabel(
-                      intelligenceReport.summary
-                        .primaryRepositoryType
-                    )}
-                  </Badge>
-                )}
+                    <Badge>
+                      {formatFilterLabel(
+                        intelligenceReport.summary
+                          .primaryRepositoryType
+                      )}
+                    </Badge>
+                  )}
               </div>
 
               <p className="mt-2 max-w-3xl text-muted-foreground">
@@ -596,9 +658,12 @@ export default function RepositoryCapabilitiesPage() {
                   </p>
 
                   <InsightList
-                    items={reasoningSignals}
-                    empty="No reasoning signals detected yet."
-                    limit={6}
+                    items={
+                      classificationEvidence.length > 0
+                        ? classificationEvidence
+                        : reasoningSignals.slice(0, 5)
+                    } empty="No reasoning signals detected yet."
+                    limit={5}
                   />
                 </div>
 
@@ -608,11 +673,7 @@ export default function RepositoryCapabilitiesPage() {
                   </p>
 
                   <InsightList
-                    items={
-                      capabilityEvidence.length
-                        ? capabilityEvidence
-                        : signals?.evidenceResults
-                    }
+                    items={capabilityEvidence}
                     empty="No structured capability evidence detected yet."
                     limit={6}
                   />
