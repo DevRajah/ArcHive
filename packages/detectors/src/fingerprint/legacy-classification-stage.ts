@@ -655,38 +655,6 @@ export const applyLegacyClassificationStage = ({
     );
   }
 
-  /**
-   * Energy monitoring.
-   */
-  if (
-    includesAny(combinedText, [
-      "energy",
-      "power",
-      "electricity",
-      "meter",
-      "household",
-      "consumption",
-      "iot",
-      "smart grid",
-    ])
-  ) {
-
-    add(architectureDomains, [
-      "ENERGY_SYSTEMS",
-    ]);
-
-    add(engineeringSignals, [
-      "REALTIME_MONITORING",
-    ]);
-
-    add(repositoryTypes, [
-      "ENERGY_PLATFORM",
-    ]);
-
-    addReasoningSignal(
-      "Detected energy monitoring patterns",
-    );
-  }
 
   /**
    * Engineering-intelligence platform.

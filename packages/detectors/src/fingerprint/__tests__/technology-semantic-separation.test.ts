@@ -418,30 +418,39 @@ describe(
         );
 
         it(
-            "keeps energy-monitoring semantics outside technologies",
+            "does not infer an energy platform from generic legacy keywords alone",
             () => {
-                const state =
-                    createState();
+                const state = createState();
 
+                /**
+                 * These words can legitimately appear in repositories that have
+                 * nothing to do with energy systems.
+                 *
+                 * Legacy classification previously treated any one of them as
+                 * enough evidence for an energy platform, which caused false
+                 * positives in repositories such as ArcHive.
+                 */
                 applyLegacyClassificationStage({
                     filesChanged: [
-                        "src/energy.ts",
+                        "src/monitoring/power-status.ts",
                     ],
 
                     combinedText: `
-            energy
-            electricity
-            meter
-            consumption
-            smart grid
-          `,
+        power
+        monitoring
+        consumption
+      `,
 
                     state,
                 });
 
+                /**
+                 * Domain identity must now come from the structured evidence
+                 * pipeline rather than loose legacy keyword matching.
+                 */
                 assert.equal(
-                    state.technologies.has(
-                        "Energy Monitoring",
+                    state.repositoryTypes.has(
+                        "ENERGY_PLATFORM",
                     ),
                     false,
                 );
@@ -450,7 +459,21 @@ describe(
                     state.architectureDomains.has(
                         "ENERGY_SYSTEMS",
                     ),
-                    true,
+                    false,
+                );
+
+                assert.equal(
+                    state.engineeringSignals.has(
+                        "REALTIME_MONITORING",
+                    ),
+                    false,
+                );
+
+                assert.equal(
+                    state.reasoningSignals.includes(
+                        "Detected energy monitoring patterns",
+                    ),
+                    false,
                 );
             },
         );
