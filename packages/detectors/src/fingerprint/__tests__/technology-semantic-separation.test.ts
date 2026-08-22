@@ -479,6 +479,122 @@ describe(
         );
 
         it(
+            "does not classify detector vocabulary as an implemented energy platform",
+            () => {
+                const result =
+                    detectTechnologyFingerprint(
+                        [
+                            "packages/detectors/src/evidence/detectors/energy-evidence.ts",
+                        ],
+                        [],
+                        "",
+                        [
+                            {
+                                path:
+                                    "packages/detectors/src/evidence/detectors/energy-evidence.ts",
+
+                                content: `
+              const signals = [
+                "kilowatt",
+                "kwh",
+                "meter reading",
+                "energy usage",
+                "electricity tariff",
+                "power generation",
+                "grid demand",
+                "renewable generation",
+                "energy consumption"
+              ];
+            `,
+                            },
+                        ],
+                    );
+
+                assert.equal(
+                    result.repositoryTypes.includes(
+                        "ENERGY_PLATFORM",
+                    ),
+                    false,
+                );
+
+                assert.equal(
+                    result.architectureDomains.includes(
+                        "SMART_ENERGY_SYSTEMS",
+                    ),
+                    false,
+                );
+
+                assert.equal(
+                    result.engineeringSignals.includes(
+                        "ENERGY_MONITORING",
+                    ),
+                    false,
+                );
+            },
+        );
+
+        it(
+            "detects implemented energy-domain models from corroborated energy evidence",
+            () => {
+                const result =
+                    detectTechnologyFingerprint(
+                        [
+                            "src/energy-consumption/consumption.service.ts",
+                        ],
+                        [],
+                        "",
+                        [
+                            {
+                                path:
+                                    "src/energy-consumption/consumption.service.ts",
+
+                                content: `
+              export const calculateUsage = (
+                meterReading: number,
+                previousMeterReading: number
+              ) => {
+                const energyConsumption =
+                  meterReading -
+                  previousMeterReading;
+
+                const kwh =
+                  energyConsumption;
+
+                return {
+                  meterReading,
+                  energyConsumption,
+                  kwh
+                };
+              };
+            `,
+                            },
+                        ],
+                    );
+
+                assert.equal(
+                    result.repositoryTypes.includes(
+                        "ENERGY_PLATFORM",
+                    ),
+                    true,
+                );
+
+                assert.equal(
+                    result.architectureDomains.includes(
+                        "SMART_ENERGY_SYSTEMS",
+                    ),
+                    true,
+                );
+
+                assert.equal(
+                    result.engineeringSignals.includes(
+                        "ENERGY_MONITORING",
+                    ),
+                    true,
+                );
+            },
+        );
+
+        it(
             "is deterministic for identical repository evidence",
             () => {
                 const run = () => {

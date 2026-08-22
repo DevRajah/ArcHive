@@ -52,8 +52,77 @@ export const detectEnergyEvidence = (
 
   const hasEnergyDomainModels =
     repositoryFiles.some((file) => {
+      const normalizedPath =
+        file.path
+          .replace(/\\/g, "/")
+          .toLowerCase();
+
       const content =
-        file.content.toLowerCase();
+        file.content;
+
+      /**
+       * Energy vocabulary alone is not enough.
+       *
+       * ArcHive itself contains an energy detector whose source code
+       * lists terms such as "kwh", "meter reading", and
+       * "energy consumption". Those strings describe what ArcHive
+       * knows how to detect; they do not mean ArcHive implements
+       * an energy-monitoring product.
+       *
+       * Require the implementation file itself to live in an
+       * energy-domain context before its contents can establish
+       * ENERGY_PLATFORM evidence.
+       */
+      const hasEnergyDomainPath =
+        [
+          /(^|\/)energy([./_-]|$)/,
+          /(^|\/)meters?([./_-]|$)/,
+          /(^|\/)tariffs?([./_-]|$)/,
+          /(^|\/)electricity([./_-]|$)/,
+          /(^|\/)consumption([./_-]|$)/,
+          /(^|\/)households?([./_-]|$)/,
+          /(^|\/)smart-grid([./_-]|$)/,
+          /(^|\/)renewables?([./_-]|$)/,
+          /(^|\/)power-usage([./_-]|$)/,
+        ].some((pattern) =>
+          pattern.test(
+            normalizedPath,
+          ),
+        );
+
+      if (!hasEnergyDomainPath) {
+        return false;
+      }
+
+      /**
+       * Normalize common identifier separators so implementation names such as:
+       *
+       * meterReading
+       * meter_reading
+       * meter-reading
+       *
+       * can all be evaluated as the same domain concept.
+       *
+       * This is safe here because we already required the file itself to live
+       * inside an energy-domain implementation path.
+       */
+      const normalizedContent =
+        content
+          // Split camelCase:
+          // meterReading -> meter reading
+          .replace(
+            /([a-z0-9])([A-Z])/g,
+            "$1 $2",
+          )
+
+          // Treat common identifier separators as spaces.
+          .replace(
+            /[_-]+/g,
+            " ",
+          )
+
+          .toLowerCase();
+
 
       const signals = [
         "kilowatt",
@@ -67,9 +136,14 @@ export const detectEnergyEvidence = (
         "energy consumption",
       ];
 
-      return signals.filter((signal) =>
-        content.includes(signal),
-      ).length >= 2;
+
+      return (
+        signals.filter((signal) =>
+          normalizedContent.includes(
+            signal,
+          ),
+        ).length >= 2
+      );
     });
 
   const hasStrongEnergyPurpose =
