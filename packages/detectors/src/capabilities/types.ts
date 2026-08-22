@@ -9,6 +9,10 @@ export type CapabilityKey =
   | "TESTING"
   | "OBSERVABILITY";
 
+import type {
+  EvidenceContext,
+} from "../evidence";
+
 export type CapabilityResult = {
   key: CapabilityKey;
   confidence: number;
@@ -16,16 +20,25 @@ export type CapabilityResult = {
 };
 
 export type CapabilityContextInput = {
-  filesChanged: string[];
-  commitMessages: string[];
-  repositoryContext?: string;
+  /**
+   * Canonical repository evidence produced by the evidence stage.
+   *
+   * Future me:
+   * Do not rebuild repository evidence from arbitrary strings here.
+   * Capability detectors should consume the same evidence model used
+   * by the rest of the fingerprint pipeline.
+   */
+  evidenceContext: EvidenceContext;
 };
 
 export type CapabilityContext = {
-  filesChanged: string[];
-  commitMessages: string[];
-  combinedText: string;
+  /**
+   * Canonical evidence for the repository.
+   */
+  evidenceContext: EvidenceContext;
+
   capabilities: CapabilityResult[];
+
   addCapability: (
     key: CapabilityKey,
     confidence: number,

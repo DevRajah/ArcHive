@@ -57,21 +57,48 @@ export const buildEngineeringStage = ({
   /**
    * Detect the engineering capabilities supported by the repository.
    */
+  /**
+   * Detect engineering capabilities from the same canonical evidence
+   * context used by the rest of the fingerprint pipeline.
+   *
+   * Future me:
+   * Do not reconstruct capability evidence from combined repository
+   * text here. That previously allowed descriptive repository language
+   * and detector-related paths to masquerade as implementation evidence.
+   */
   const capabilities =
     detectEngineeringCapabilities({
-      filesChanged,
-      commitMessages,
-
-      /**
-       * Preserve the current behaviour exactly.
-       *
-       * The existing implementation passes combinedText here rather
-       * than the original repositoryContext.
-       */
-      repositoryContext:
-        combinedText,
+      evidenceContext,
     });
+  /**
+ * Realtime architecture is promoted only from a confirmed
+ * implementation-backed realtime capability.
+ *
+ * Future me:
+ * Do not recreate realtime architecture from repository prose here.
+ * detectRealtimeCapability() already requires confirmed technology
+ * evidence from the canonical evidence pipeline.
+ */
+const hasRealtimeCapability =
+  capabilities.some(
+    (capability) =>
+      capability.key ===
+      "REALTIME_SYSTEMS",
+  );
 
+if (hasRealtimeCapability) {
+  architectureDomains.add(
+    "REALTIME_SYSTEMS",
+  );
+
+  engineeringSignals.add(
+    "REALTIME_INFRASTRUCTURE",
+  );
+
+  addReasoningSignal(
+    "Confirmed realtime implementation evidence supports realtime architecture.",
+  );
+}
   const repositoryPersona =
     inferRepositoryPersona(
       Array.from(

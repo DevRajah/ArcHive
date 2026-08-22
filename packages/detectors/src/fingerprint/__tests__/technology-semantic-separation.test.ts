@@ -606,11 +606,18 @@ describe(
         );
 
         it(
-            "recognizes canonical realtime evidence consistently",
+            "recognizes implementation-oriented realtime evidence",
             () => {
                 assert.equal(
                     hasRealtimeEvidence(
-                        "Repository uses socket.io for live updates",
+                        "Repository uses socket.io",
+                    ),
+                    true,
+                );
+
+                assert.equal(
+                    hasRealtimeEvidence(
+                        "socket.emit('notification', payload)",
                     ),
                     true,
                 );
@@ -624,14 +631,7 @@ describe(
 
                 assert.equal(
                     hasRealtimeEvidence(
-                        "Repository publishes an event stream",
-                    ),
-                    true,
-                );
-
-                assert.equal(
-                    hasRealtimeEvidence(
-                        "Repository uses pubsub messaging",
+                        "WebSocket server implementation",
                     ),
                     true,
                 );
@@ -651,42 +651,132 @@ describe(
         );
 
         it(
-            "adds REALTIME_SYSTEMS architecture domain from canonical realtime evidence",
+            "adds REALTIME_SYSTEMS only when realtime implementation is confirmed",
             () => {
-                const state =
-                    createState();
+                const result =
+                    detectTechnologyFingerprint(
+                        [
+                            "package.json",
+                        ],
+                        [],
+                        "",
+                        [
+                            {
+                                path: "package.json",
 
-                applyLegacyClassificationStage({
-                    filesChanged: [
-                        "src/events/stream.ts",
-                    ],
-
-                    combinedText: `
-        server-sent events
-        live updates
-        event stream
-      `,
-
-                    state,
-                });
+                                content:
+                                    JSON.stringify({
+                                        dependencies: {
+                                            "socket.io":
+                                                "^4.8.0",
+                                        },
+                                    }),
+                            },
+                        ],
+                    );
 
                 assert.equal(
-                    state.architectureDomains.has(
+                    result.technologies.includes(
+                        "Socket.IO",
+                    ),
+                    true,
+                );
+
+                assert.equal(
+                    result.capabilities.some(
+                        (capability) =>
+                            capability.key ===
+                            "REALTIME_SYSTEMS",
+                    ),
+                    true,
+                );
+
+                assert.equal(
+                    result.architectureDomains.includes(
                         "REALTIME_SYSTEMS",
                     ),
                     true,
                 );
 
                 assert.equal(
-                    state.engineeringSignals.has(
+                    result.engineeringSignals.includes(
                         "REALTIME_INFRASTRUCTURE",
                     ),
                     true,
                 );
+            },
+        );
+
+
+        it(
+            "does not infer realtime architecture from descriptive wording alone",
+            () => {
+                const result =
+                    detectTechnologyFingerprint(
+                        [
+                            "README.md",
+                        ],
+
+                        [
+                            "Improve realtime dashboard and live updates",
+                        ],
+
+                        `
+          Realtime analytics dashboard.
+
+          The application provides live updates
+          and an event stream experience.
+        `,
+
+                        [
+                            {
+                                path: "README.md",
+
+                                content: `
+              # Example App
+
+              Realtime dashboard with live updates.
+
+              Event stream support is part of
+              the product experience.
+            `,
+                            },
+                        ],
+                    );
 
                 assert.equal(
-                    state.technologies.has(
-                        "Socket.IO / Realtime Events",
+                    result.technologies.includes(
+                        "Socket.IO",
+                    ),
+                    false,
+                );
+
+                assert.equal(
+                    result.technologies.includes(
+                        "WebSocket",
+                    ),
+                    false,
+                );
+
+                assert.equal(
+                    result.capabilities.some(
+                        (capability) =>
+                            capability.key ===
+                            "REALTIME_SYSTEMS",
+                    ),
+                    false,
+                );
+
+                assert.equal(
+                    result.architectureDomains.includes(
+                        "REALTIME_SYSTEMS",
+                    ),
+                    false,
+                );
+
+                assert.equal(
+                    result.engineeringSignals.includes(
+                        "REALTIME_INFRASTRUCTURE",
                     ),
                     false,
                 );

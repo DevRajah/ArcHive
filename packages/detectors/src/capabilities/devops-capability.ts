@@ -2,7 +2,14 @@ import { includesAny } from "../evidence/evidence-utils";
 import { CapabilityContext } from "./types";
 
 export const detectDevopsCapability = (context: CapabilityContext) => {
-  const { combinedText, addCapability } = context;
+ const {
+  evidenceContext,
+  addCapability,
+} = context;
+
+const {
+  combinedText,
+} = evidenceContext;
 
   if (
     includesAny(combinedText, [

@@ -7,9 +7,6 @@ import {
   includesAny,
 } from "./shared";
 
-import {
-  hasRealtimeEvidence,
-} from "../realtime-evidence";
 
 /**
  * Repository purposes that represent meaningful product/domain identity.
@@ -463,36 +460,7 @@ export const applyLegacyClassificationStage = ({
     );
   }
 
-  /**
-   * Realtime infrastructure.
-   *
-   * Capability and architecture-domain detection intentionally share the
-   * canonical realtime evidence rule so these two intelligence layers cannot
-   * disagree simply because they use different keyword vocabularies.
-   */
-  if (
-    hasRealtimeEvidence(
-      combinedText,
-    )
-  ) {
-    add(
-      architectureDomains,
-      [
-        "REALTIME_SYSTEMS",
-      ],
-    );
 
-    add(
-      engineeringSignals,
-      [
-        "REALTIME_INFRASTRUCTURE",
-      ],
-    );
-
-    addReasoningSignal(
-      "Detected realtime communication or live event-delivery infrastructure",
-    );
-  }
 
   /**
    * Queues and background jobs.

@@ -9,19 +9,17 @@ import { detectQueueCapability } from "./queue-capability";
 import { detectRealtimeCapability } from "./realtime-capability";
 import { detectTestingCapability } from "./testing-capability";
 
+import type {
+  EvidenceContext,
+} from "../evidence";
+
 export const detectEngineeringCapabilities = ({
-  filesChanged,
-  commitMessages,
-  repositoryContext,
+  evidenceContext,
 }: {
-  filesChanged: string[];
-  commitMessages: string[];
-  repositoryContext?: string;
+  evidenceContext: EvidenceContext;
 }) => {
   const context = createCapabilityContext({
-    filesChanged,
-    commitMessages,
-    repositoryContext,
+    evidenceContext,
   });
 
   detectApiCapability(context);
