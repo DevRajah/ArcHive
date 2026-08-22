@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import {
   ArrowLeft,
@@ -184,6 +184,9 @@ export default function RepositoryCapabilitiesPage() {
     data: intelligenceData,
     isLoading: isIntelligenceLoading,
   } = useRepositoryIntelligenceReport(repoId);
+
+  const [showAllCapabilityEvidence, setShowAllCapabilityEvidence] =
+    useState(false);
 
   const capabilityReport =
     capabilityData as
@@ -673,10 +676,34 @@ export default function RepositoryCapabilitiesPage() {
                   </p>
 
                   <InsightList
-                    items={capabilityEvidence}
+                    items={
+                      showAllCapabilityEvidence
+                        ? capabilityEvidence
+                        : capabilityEvidence.slice(0, 6)
+                    }
                     empty="No structured capability evidence detected yet."
-                    limit={6}
+                    limit={
+                      showAllCapabilityEvidence
+                        ? capabilityEvidence.length
+                        : 6
+                    }
                   />
+
+                  {capabilityEvidence.length > 6 && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setShowAllCapabilityEvidence(
+                          (current) => !current
+                        )
+                      }
+                      className="mt-3 text-sm text-muted-foreground underline-offset-4 hover:underline"
+                    >
+                      {showAllCapabilityEvidence
+                        ? "Show less"
+                        : `+${capabilityEvidence.length - 6} more`}
+                    </button>
+                  )}
                 </div>
               </div>
 
