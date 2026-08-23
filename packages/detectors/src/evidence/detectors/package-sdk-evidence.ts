@@ -121,7 +121,17 @@ export const detectPackageSdkEvidence = (
   let hasTypeDeclarations =
     false;
 
-  let hasPackageEntrypoint =
+
+  /**
+ * Publication metadata is stronger evidence than a generic `main`
+ * entrypoint.
+ *
+ * Future me:
+ * Many ordinary Node.js applications define `main: "index.js"`.
+ * That alone must not cause ArcHive to classify the repository as a
+ * reusable package or SDK.
+ */
+  let hasPublicationMetadata =
     false;
 
   for (const file of packageManifests) {
@@ -165,6 +175,11 @@ export const detectPackageSdkEvidence = (
           manifest.publishConfig !== null
         );
 
+      if (hasPublicationField) {
+        hasPublicationMetadata =
+          true;
+      }
+
       if (
         !isPrivate &&
         (
@@ -190,10 +205,6 @@ export const detectPackageSdkEvidence = (
           true;
       }
 
-      if (hasEntryField) {
-        hasPackageEntrypoint =
-          true;
-      }
     } catch {
       /**
        * One malformed package manifest must not stop analysis.
@@ -266,7 +277,8 @@ export const detectPackageSdkEvidence = (
     hasPublishablePackageManifest &&
     (
       hasPublicExports ||
-      hasPackageEntrypoint
+      hasTypeDeclarations ||
+      hasPublicationMetadata
     )
   ) {
     addEvidence(
