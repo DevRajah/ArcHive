@@ -262,79 +262,109 @@ export default function ArchitectureAdvisorPage({
                 ? [
                     {
                         id: "architecture",
-                        title: "Architecture Concerns",
+                        title: "Architecture Findings",
                         description:
-                            "Structural design concerns found in the repository architecture.",
+                            "Architecture observations, improvement opportunities, unverified conditions, and confirmed risks identified by the advisor.",
                         findings:
                             assessment.architectureConcerns,
                     },
                     {
                         id: "production",
-                        title: "Production Risks",
+                        title: "Production Readiness Findings",
                         description:
-                            "Conditions that may affect safe and predictable production operation.",
+                            "Evidence-backed observations related to production readiness and operational preparation.",
                         findings:
                             assessment.productionRisks,
                     },
                     {
                         id: "security",
-                        title: "Security Observations",
+                        title: "Security Findings",
                         description:
-                            "Security-related signals requiring engineering review.",
+                            "Security-related findings classified by their backend-owned semantic meaning.",
                         findings:
                             assessment.securityObservations,
                     },
                     {
                         id: "scalability",
-                        title: "Scalability Concerns",
+                        title: "Scalability Findings",
                         description:
-                            "Potential limitations as traffic, workloads, and data volumes grow.",
+                            "Engineering findings related to workload growth, capacity, and scaling behaviour.",
                         findings:
                             assessment.scalabilityConcerns,
                     },
                     {
                         id: "reliability",
-                        title: "Reliability Concerns",
+                        title: "Reliability Findings",
                         description:
-                            "Signals affecting resilience, fault tolerance, and service continuity.",
+                            "Engineering findings related to resilience, fault tolerance, recovery, and service continuity.",
                         findings:
                             assessment.reliabilityConcerns,
                     },
                     {
                         id: "maintainability",
-                        title: "Maintainability",
+                        title: "Maintainability Findings",
                         description:
-                            "Factors that may increase the long-term cost of changing the system.",
+                            "Engineering findings related to long-term maintainability and the cost of safely changing the system.",
                         findings:
                             assessment.maintainabilityConcerns,
                     },
                     {
                         id: "observability",
-                        title: "Observability",
+                        title: "Observability Findings",
                         description:
-                            "Logging, metrics, tracing, diagnostics, and operational visibility.",
+                            "Findings related to logging, metrics, tracing, diagnostics, and operational visibility.",
                         findings:
                             assessment.observabilityConcerns,
                     },
                     {
                         id: "data",
-                        title: "Data Concerns",
+                        title: "Data Findings",
                         description:
-                            "Signals related to persistence, integrity, access, and data lifecycle.",
+                            "Findings related to persistence, data integrity, access, and data lifecycle concerns.",
                         findings:
                             assessment.dataConcerns,
                     },
                     {
                         id: "delivery",
-                        title: "Delivery Concerns",
+                        title: "Delivery Findings",
                         description:
-                            "Deployment, testing, release, and engineering workflow observations.",
+                            "Findings related to build validation, deployment, release automation, and engineering workflow.",
                         findings:
                             assessment.deliveryConcerns,
                     },
                 ]
                 : [],
         [assessment]
+    );
+
+    /*
+ * Confirmed risk is derived only from the backend-owned `kind`
+ * discriminator.
+ *
+ * Future me:
+ * Do NOT infer confirmed risk from:
+ *
+ * - severity
+ * - low architecture scores
+ * - low production-readiness scores
+ * - section names such as "production"
+ * - missing/unverified capabilities
+ *
+ * Only kind === "CONFIRMED_RISK" establishes confirmed adverse evidence.
+ */
+    const confirmedRiskCount = useMemo(
+        () =>
+            findingSections.reduce(
+                (count, section) =>
+                    count +
+                    section.findings.filter(
+                        (finding) =>
+                            finding.kind ===
+                            "CONFIRMED_RISK"
+                    ).length,
+                0
+            ),
+        [findingSections]
     );
 
     async function handleRefresh() {
@@ -483,11 +513,13 @@ export default function ArchitectureAdvisorPage({
                                 assessment.overallAssessment
                             }
                             maturityLabel={
-                                assessment.maturityLabel
+                                displayMaturityLabel(
+                                    assessment.maturityLabel
+                                )
                             }
-                            riskScore={percentage(
-                                assessment.overallRiskScore
-                            )}
+                            confirmedRiskCount={
+                                confirmedRiskCount
+                            }
                             confidenceScore={percentage(
                                 assessment.confidenceScore
                             )}
@@ -703,6 +735,12 @@ export default function ArchitectureAdvisorPage({
                                     )}
                                 </section>
 
+                                <AdvisorEvidencePanel
+                                    evidence={
+                                        assessment.evidenceSummary
+                                    }
+                                />
+
                                 {findingSections.map(
                                     (section) => (
                                         <AdvisorFindingSection
@@ -776,53 +814,6 @@ export default function ArchitectureAdvisorPage({
                             </section>
                         )}
 
-                        {findingSections.map(
-                            (section) => (
-                                <AdvisorFindingSection
-                                    key={section.id}
-                                    title={section.title}
-                                    description={
-                                        section.description
-                                    }
-                                    findings={
-                                        section.findings
-                                    }
-                                />
-                            )
-                        )}
-
-                        <section>
-                            <SectionHeading
-                                eyebrow="Engineering roadmap"
-                                title="Priority Actions"
-                                description="The highest-value actions ArcHive recommends addressing first."
-                            />
-
-                            <div className="mt-6">
-                                <AdvisorPriorityRoadmap
-                                    actions={
-                                        assessment.priorityActions
-                                    }
-                                />
-                            </div>
-                        </section>
-
-                        <section>
-                            <SectionHeading
-                                eyebrow="Recommended sequence"
-                                title="Recommended Next Steps"
-                                description="A practical implementation sequence for improving the repository."
-                            />
-
-                            <div className="mt-6">
-                                <RecommendedSteps
-                                    steps={
-                                        assessment.recommendedNextSteps
-                                    }
-                                />
-                            </div>
-                        </section>
-
                         <AdvisorEvidencePanel
                             evidence={
                                 assessment.evidenceSummary
@@ -892,13 +883,12 @@ export default function ArchitectureAdvisorPage({
         </AppShell>
     );
 }
-
 function AdvisorHero({
     repositoryId,
     repositoryName,
     assessment,
     maturityLabel,
-    riskScore,
+    confirmedRiskCount,
     confidenceScore,
     evidenceSufficient,
     generatedAt,
@@ -909,7 +899,7 @@ function AdvisorHero({
     repositoryName?: string;
     assessment: string;
     maturityLabel: string;
-    riskScore: number;
+    confirmedRiskCount: number;
     confidenceScore: number;
     evidenceSufficient: boolean;
     generatedAt: string;
@@ -917,22 +907,33 @@ function AdvisorHero({
     onRefresh: () => void;
 }) {
     /*
-     * A backend risk score of 0 has two very different meanings:
+     * Confirmed risk is intentionally presented as evidence state,
+     * not as probability.
      *
-     * 1. When evidence is sufficient, it is a legitimate assessment.
-     * 2. When evidence is insufficient, it is a sentinel value because
-     *    ArcHive cannot yet calculate meaningful repository risk.
+     * "None detected" means ArcHive has not positively established a
+     * CONFIRMED_RISK finding from the available evidence.
      *
-     * Preserve that distinction in presentation rather than treating
-     * every numeric zero as verified repository health.
+     * It does NOT mean:
+     *
+     * - zero chance of failure
+     * - repository verified safe
+     * - perfect production health
      */
-    const riskDisplayValue = evidenceSufficient
-        ? `${riskScore}%`
-        : "Not yet assessed";
+    const confirmedRiskDisplayValue =
+        !evidenceSufficient
+            ? "Not yet assessed"
+            : confirmedRiskCount === 0
+                ? "None detected"
+                : `${confirmedRiskCount} confirmed`;
 
-    const riskDescription = evidenceSufficient
-        ? "Lower is healthier"
-        : "More repository intelligence is needed";
+    const confirmedRiskDescription =
+        !evidenceSufficient
+            ? "More repository intelligence is needed"
+            : confirmedRiskCount === 0
+                ? "No confirmed adverse conditions were identified from the available repository evidence."
+                : confirmedRiskCount === 1
+                    ? "1 confirmed adverse condition was identified from the available repository evidence."
+                    : `${confirmedRiskCount} confirmed adverse conditions were identified from the available repository evidence.`;
 
     /*
      * Prefer the backend-owned assessment narrative whenever it exists.
@@ -1032,9 +1033,13 @@ function AdvisorHero({
 
                 <div className="mt-8 grid gap-4 border-t border-border pt-6 sm:grid-cols-3">
                     <HeroMetric
-                        label="Overall Risk"
-                        value={riskDisplayValue}
-                        description={riskDescription}
+                        label="Confirmed Risk"
+                        value={
+                            confirmedRiskDisplayValue
+                        }
+                        description={
+                            confirmedRiskDescription
+                        }
                         icon={ShieldAlert}
                     />
 

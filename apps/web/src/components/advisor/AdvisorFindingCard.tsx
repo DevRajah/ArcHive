@@ -2,14 +2,20 @@
 
 import { motion } from "framer-motion";
 import {
+    CircleHelp,
     FileSearch,
     Lightbulb,
+    ShieldAlert,
+    Sparkles,
 } from "lucide-react";
 
 import { AdvisorSeverityBadge } from "@/components/advisor/AdvisorSeverityBadge";
 import { Badge } from "@/components/ui/badge";
 
-import type { AdvisorFinding } from "@/types/architecture-advisor.types";
+import type {
+    AdvisorFinding,
+    ArchitectureAdvisorFindingKind,
+} from "@/types/architecture-advisor.types";
 
 function normalizeEvidence(
     evidence: string[] | string
@@ -25,6 +31,51 @@ function normalizeEvidence(
     return [evidence];
 }
 
+/**
+ * Presentation metadata for the backend-owned finding kind.
+ *
+ * Important:
+ * This does not infer semantics from severity, title or category.
+ * It only translates the canonical backend discriminator into readable UI.
+ */
+function getFindingKindPresentation(
+    kind: ArchitectureAdvisorFindingKind
+) {
+    switch (kind) {
+        case "STRENGTH":
+            return {
+                label: "Strength",
+                icon: Sparkles,
+                className:
+                    "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
+            };
+
+        case "IMPROVEMENT":
+            return {
+                label: "Improvement",
+                icon: Lightbulb,
+                className:
+                    "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
+            };
+
+        case "UNVERIFIED":
+            return {
+                label: "Unverified",
+                icon: CircleHelp,
+                className:
+                    "border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-400",
+            };
+
+        case "CONFIRMED_RISK":
+            return {
+                label: "Confirmed Risk",
+                icon: ShieldAlert,
+                className:
+                    "border-destructive/30 bg-destructive/10 text-destructive",
+            };
+    }
+}
+
 export function AdvisorFindingCard({
     finding,
     index = 0,
@@ -35,6 +86,14 @@ export function AdvisorFindingCard({
     const evidence = normalizeEvidence(
         finding.evidence
     );
+
+    const kindPresentation =
+        getFindingKindPresentation(
+            finding.kind
+        );
+
+    const KindIcon =
+        kindPresentation.icon;
 
     return (
         <motion.article
@@ -52,15 +111,39 @@ export function AdvisorFindingCard({
             }}
             transition={{
                 duration: 0.35,
-                delay: Math.min(index * 0.04, 0.2),
+                delay: Math.min(
+                    index * 0.04,
+                    0.2
+                ),
             }}
             className="rounded-xl border border-border bg-card p-5 shadow-sm"
         >
             <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
                 <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
+                        {/*
+                         * `kind` is the primary semantic label.
+                         *
+                         * Severity remains visible, but it must never be used
+                         * as a substitute for confirmed-risk semantics.
+                         */}
+                        <Badge
+                            variant="outline"
+                            className={
+                                kindPresentation.className
+                            }
+                        >
+                            <KindIcon className="mr-1.5 h-3.5 w-3.5" />
+
+                            {
+                                kindPresentation.label
+                            }
+                        </Badge>
+
                         <AdvisorSeverityBadge
-                            severity={finding.severity}
+                            severity={
+                                finding.severity
+                            }
                         />
 
                         <Badge variant="outline">
@@ -87,13 +170,19 @@ export function AdvisorFindingCard({
 
                     <ul className="mt-3 space-y-2">
                         {evidence.map(
-                            (item, evidenceIndex) => (
+                            (
+                                item,
+                                evidenceIndex
+                            ) => (
                                 <li
                                     key={`${item}-${evidenceIndex}`}
                                     className="flex gap-2 text-sm leading-6 text-muted-foreground"
                                 >
                                     <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
-                                    <span>{item}</span>
+
+                                    <span>
+                                        {item}
+                                    </span>
                                 </li>
                             )
                         )}
@@ -109,7 +198,9 @@ export function AdvisorFindingCard({
                     </div>
 
                     <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                        {finding.recommendation}
+                        {
+                            finding.recommendation
+                        }
                     </p>
                 </div>
             )}
