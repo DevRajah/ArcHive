@@ -989,6 +989,163 @@ describe(
             },
         );
 
+        it(
+            "does not classify a normal Node application as a package library from main alone",
+            () => {
+                const result =
+                    detectTechnologyFingerprint(
+                        [
+                            "package.json",
+                            "src/index.ts",
+                        ],
+                        [],
+                        "",
+                        [
+                            {
+                                path:
+                                    "package.json",
+
+                                content: JSON.stringify({
+                                    name: "telegram-bot",
+
+                                    /**
+                                     * Ordinary Node applications commonly use `main`
+                                     * as an application entrypoint.
+                                     *
+                                     * This must not be treated as proof that the
+                                     * repository is a reusable package or SDK.
+                                     */
+                                    main: "src/index.js",
+
+                                    dependencies: {
+                                        "node-telegram-bot-api":
+                                            "^0.66.0",
+                                    },
+                                }),
+                            },
+
+                            {
+                                path:
+                                    "src/index.ts",
+
+                                content: `
+              import TelegramBot from "node-telegram-bot-api";
+
+              const bot =
+                new TelegramBot(
+                  process.env.BOT_TOKEN ?? "",
+                );
+
+              bot.on("message", async (message) => {
+                console.log(message.text);
+              });
+            `,
+                            },
+                        ],
+                    );
+
+                assert.equal(
+                    result.repositoryTypes.includes(
+                        "PACKAGE_LIBRARY",
+                    ),
+                    false,
+                );
+            },
+        );
+
+        it(
+            "detects a genuine reusable package from exports types and publication metadata",
+            () => {
+                const result =
+                    detectTechnologyFingerprint(
+                        [
+                            "package.json",
+                            "src/index.ts",
+                        ],
+                        [],
+                        "",
+                        [
+                            {
+                                path:
+                                    "package.json",
+
+                                content: JSON.stringify({
+                                    name:
+                                        "@example/payments-sdk",
+
+                                    version:
+                                        "1.0.0",
+
+                                    exports: {
+                                        ".": "./dist/index.js",
+                                    },
+
+                                    types:
+                                        "./dist/index.d.ts",
+
+                                    files: [
+                                        "dist",
+                                    ],
+
+                                    publishConfig: {
+                                        access: "public",
+                                    },
+                                }),
+                            },
+
+                            {
+                                path:
+                                    "src/index.ts",
+
+                                content: `
+              export interface PaymentClientOptions {
+                apiKey: string;
+              }
+
+              export type PaymentResult = {
+                success: boolean;
+              };
+
+              export class PaymentClient {
+                constructor(
+                  public options:
+                    PaymentClientOptions,
+                ) {}
+
+                async createPayment():
+                  Promise<PaymentResult> {
+                  return {
+                    success: true,
+                  };
+                }
+              }
+            `,
+                            },
+                        ],
+                    );
+
+                assert.equal(
+                    result.repositoryTypes.includes(
+                        "PACKAGE_LIBRARY",
+                    ),
+                    true,
+                );
+
+                assert.equal(
+                    result.architectureDomains.includes(
+                        "LIBRARY_ARCHITECTURE",
+                    ),
+                    true,
+                );
+
+                assert.equal(
+                    result.engineeringSignals.includes(
+                        "REUSABLE_SOFTWARE_COMPONENTS",
+                    ),
+                    true,
+                );
+            },
+        );
 
         it(
             "does not infer Tailwind CSS from PostCSS alone",
