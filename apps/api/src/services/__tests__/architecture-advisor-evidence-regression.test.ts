@@ -230,7 +230,7 @@ describe(
     );
 
     test(
-      "known low scores still create real risk when evidence exists",
+      "low assessment scores do not automatically become repository risk",
       () => {
         const risk =
           __architectureAdvisorTestUtils
@@ -246,21 +246,81 @@ describe(
               }
             );
 
-        /**
-         * Production readiness:
-         *   (100 - 50) * 0.20 = 10
-         *
-         * Architecture:
-         *   (100 - 40) * 0.15 = 9
-         *
-         * Total = 19
-         *
-         * This proves the fix does NOT remove legitimate score-based risk.
-         * It removes only risk caused by missing data.
-         */
         assert.equal(
           risk,
-          19
+          0,
+          "Weak architecture or readiness scores describe assessment quality and must not be converted directly into risk."
+        );
+      }
+    );
+
+    test(
+      "only confirmed adverse findings contribute to overall risk",
+      () => {
+        const findings = [
+          {
+            key: "improvement-example",
+            category: "ARCHITECTURE",
+            kind: "IMPROVEMENT",
+            severity: "HIGH",
+            title: "Architecture could improve",
+            description:
+              "An improvement opportunity.",
+            evidence: [
+              "Architecture score is low.",
+            ],
+            recommendation:
+              "Improve the architecture.",
+          },
+
+          {
+            key: "unverified-example",
+            category: "OBSERVABILITY",
+            kind: "UNVERIFIED",
+            severity: "HIGH",
+            title: "Observability not verified",
+            description:
+              "ArcHive could not verify observability.",
+            evidence: [
+              "No canonical observability evidence was available.",
+            ],
+            recommendation:
+              "Review observability.",
+          },
+
+          {
+            key: "confirmed-risk-example",
+            category: "RELIABILITY",
+            kind: "CONFIRMED_RISK",
+            severity: "HIGH",
+            title: "Confirmed reliability risk",
+            description:
+              "ArcHive detected a concrete adverse reliability condition.",
+            evidence: [
+              "Positive repository evidence confirms the condition.",
+            ],
+            recommendation:
+              "Address the confirmed reliability problem.",
+          },
+        ] as any;
+
+        const risk =
+          __architectureAdvisorTestUtils
+            .calculateOverallRiskScore(
+              findings,
+              {
+                confidenceScore: 90,
+                maturityScore: 90,
+                architectureScore: 90,
+                capabilityScore: 90,
+                engineeringQualityScore: 90,
+                productionReadinessScore: 90,
+              }
+            );
+
+        assert.ok(
+          risk > 0,
+          "A CONFIRMED_RISK finding must contribute to overall risk."
         );
       }
     );

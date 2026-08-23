@@ -1436,73 +1436,56 @@ const hasSufficientAdvisorEvidence = ({
   );
 };
 
+/**
+ * Calculates repository risk from confirmed adverse findings only.
+ *
+ * Future me:
+ *
+ * Advisor scores describe quality, maturity, and readiness.
+ * They must not be converted directly into risk penalties.
+ *
+ * Likewise:
+ *
+ * STRENGTH
+ *   = positive evidence
+ *
+ * IMPROVEMENT
+ *   = something that could be improved
+ *
+ * UNVERIFIED
+ *   = ArcHive could not confirm whether something exists
+ *
+ * CONFIRMED_RISK
+ *   = positive evidence of an adverse condition
+ *
+ * Only CONFIRMED_RISK findings are allowed to contribute to
+ * the repository's overall risk score.
+ */
 const calculateOverallRiskScore = (
   findings: ArchitectureAdvisorFinding[],
-  scores: ArchitectureAdvisorScores
+  _scores: ArchitectureAdvisorScores
 ) => {
-  /**
-   * Only confirmed adverse conditions are allowed to contribute
-   * direct finding-risk points.
-   *
-   * Future me:
-   * - STRENGTH describes positive evidence.
-   * - IMPROVEMENT describes an opportunity or derived assessment.
-   * - UNVERIFIED means ArcHive could not confirm something.
-   *
-   * None of those should inflate repository risk.
-   *
-   * CONFIRMED_RISK requires affirmative evidence of a problematic
-   * engineering condition.
-   */
+  const confirmedRisks =
+    findings.filter(
+      (finding) =>
+        finding.kind === "CONFIRMED_RISK"
+    );
+
   const findingRisk =
-    findings
-      .filter(
-        (finding) =>
-          finding.kind === "CONFIRMED_RISK",
-      )
-      .reduce(
-        (total, finding) =>
-          total +
-          severityWeight[finding.severity],
-        0,
-      );
-
-  const normalizedFindingRisk = Math.min(
-    65,
-    findingRisk
-  );
-
-  /**
-   * Future me:
-   * null means "ArcHive does not know yet".
-   *
-   * It must not mean:
-   * "therefore add risk".
-   *
-   * Missing evidence should reduce confidence, not increase risk.
-   */
-  const readinessPenalty =
-    scores.productionReadinessScore === null
-      ? 0
-      : (100 -
-        scores.productionReadinessScore) *
-      0.2;
-
-  const architecturePenalty =
-    scores.architectureScore === null
-      ? 0
-      : (100 -
-        scores.architectureScore) *
-      0.15;
+    confirmedRisks.reduce(
+      (total, finding) =>
+        total +
+        severityWeight[finding.severity],
+      0
+    );
 
   return clampScore(
-    normalizedFindingRisk +
-    readinessPenalty +
-    architecturePenalty
+    Math.min(
+      100,
+      findingRisk
+    )
   );
 };
-
-
 
 const calculateConfidenceScore = ({
   repository,
