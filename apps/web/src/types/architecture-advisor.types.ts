@@ -26,7 +26,16 @@ export type ArchitectureAdvisorFindingKind =
 export interface AdvisorFinding {
     key?: string;
 
-    kind: ArchitectureAdvisorFindingKind;
+    /*
+ * New assessments always return `kind`.
+ *
+ * This remains optional in the frontend contract because ArcHive may load
+ * persisted assessments created before finding kinds were introduced.
+ *
+ * Missing kind must never be interpreted as CONFIRMED_RISK, IMPROVEMENT,
+ * UNVERIFIED, or STRENGTH.
+ */
+    kind?: ArchitectureAdvisorFindingKind;
 
     severity: AdvisorSeverity;
     category: string;
@@ -45,10 +54,10 @@ export interface AdvisorStrength {
     key?: string;
 
     /*
-     * Strengths are still returned in their own backend collection, but
-     * the backend now also explicitly identifies their semantic kind.
-     */
-    kind: "STRENGTH";
+ * Current backend assessments return STRENGTH explicitly.
+ * Older persisted assessments may predate the semantic discriminator.
+ */
+    kind?: "STRENGTH";
 
     severity: AdvisorSeverity;
     category: string;

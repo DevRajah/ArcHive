@@ -35,11 +35,18 @@ function normalizeEvidence(
  * Presentation metadata for the backend-owned finding kind.
  *
  * Important:
- * This does not infer semantics from severity, title or category.
- * It only translates the canonical backend discriminator into readable UI.
+ * This does not infer semantics from severity, title, category,
+ * section name, or recommendation text.
+ *
+ * New Architecture Advisor assessments should always provide `kind`,
+ * but older persisted assessments may predate that discriminator.
+ *
+ * In that legacy case, we deliberately show "Classification unavailable"
+ * rather than guessing whether the finding means improvement,
+ * unverified evidence, strength, or confirmed risk.
  */
 function getFindingKindPresentation(
-    kind: ArchitectureAdvisorFindingKind
+    kind?: ArchitectureAdvisorFindingKind
 ) {
     switch (kind) {
         case "STRENGTH":
@@ -73,6 +80,21 @@ function getFindingKindPresentation(
                 className:
                     "border-destructive/30 bg-destructive/10 text-destructive",
             };
+
+        default:
+            /*
+             * Backward compatibility for persisted advisor assessments
+             * generated before finding.kind was introduced.
+             *
+             * Missing semantic classification must never be translated into
+             * CONFIRMED_RISK, IMPROVEMENT, UNVERIFIED, or STRENGTH by the UI.
+             */
+            return {
+                label: "Classification unavailable",
+                icon: CircleHelp,
+                className:
+                    "border-border bg-muted/50 text-muted-foreground",
+            };
     }
 }
 
@@ -92,6 +114,10 @@ export function AdvisorFindingCard({
             finding.kind
         );
 
+    /*
+     * getFindingKindPresentation always returns a valid presentation
+     * object, including for older persisted findings with no kind.
+     */
     const KindIcon =
         kindPresentation.icon;
 
@@ -124,8 +150,8 @@ export function AdvisorFindingCard({
                         {/*
                          * `kind` is the primary semantic label.
                          *
-                         * Severity remains visible, but it must never be used
-                         * as a substitute for confirmed-risk semantics.
+                         * Severity remains visible, but severity alone must
+                         * never be interpreted as confirmed risk.
                          */}
                         <Badge
                             variant="outline"
