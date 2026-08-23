@@ -17,9 +17,31 @@ export type ArchitectureAdvisorCategory =
   | "DELIVERY"
   | "ENGINEERING_QUALITY";
 
+export type ArchitectureAdvisorFindingKind =
+  | "STRENGTH"
+  | "CONFIRMED_RISK"
+  | "IMPROVEMENT"
+  | "UNVERIFIED";
+  ;
+
 export type ArchitectureAdvisorFinding = {
   key: string;
   category: ArchitectureAdvisorCategory;
+  /**
+  * Describes what this finding actually means.
+  *
+  * CONFIRMED_RISK
+  * ArcHive has positive evidence of a problematic condition.
+  *
+  * IMPROVEMENT
+  * ArcHive has identified something worth improving or reviewing,
+  * but this is not evidence of an active engineering risk.
+  *
+  * UNVERIFIED
+  * ArcHive could not confirm whether a capability/control exists.
+  * Missing evidence must not automatically become negative evidence.
+  */
+  kind: ArchitectureAdvisorFindingKind;
   severity: ArchitectureAdvisorSeverity;
   title: string;
   description: string;

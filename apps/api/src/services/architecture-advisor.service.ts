@@ -7,6 +7,7 @@ import type {
   ArchitectureAdvisorCategory,
   ArchitectureAdvisorEvidenceSummary,
   ArchitectureAdvisorFinding,
+  ArchitectureAdvisorFindingKind,
   ArchitectureAdvisorHistoryItem,
   ArchitectureAdvisorScores,
   ArchitectureAdvisorSeverity,
@@ -219,6 +220,7 @@ const hasArchitectureDomain = (
 const createFinding = ({
   key,
   category,
+  kind,
   severity,
   title,
   description,
@@ -227,6 +229,12 @@ const createFinding = ({
 }: {
   key: string;
   category: ArchitectureAdvisorCategory;
+  /**
+ * Finding kind and severity are deliberately separate.
+ *
+ * A HIGH-priority improvement is not automatically a HIGH confirmed risk.
+ */
+  kind: ArchitectureAdvisorFindingKind;
   severity: ArchitectureAdvisorSeverity;
   title: string;
   description: string;
@@ -236,6 +244,7 @@ const createFinding = ({
   return {
     key,
     category,
+    kind,
     severity,
     title,
     description,
@@ -467,14 +476,19 @@ const buildStrengths = ({
   ) {
     strengths.push(
       createFinding({
-        key: "strong-architecture-score",
-        category: "ARCHITECTURE",
+        key: "strong-production-readiness",
+
+        // This is positive evidence, not a risk or recommendation.
+        kind: "STRENGTH",
+
+        category: "PRODUCTION_READINESS",
         severity: "INFO",
-        title: "Strong architecture score",
+        title:
+          "Strong production-readiness signals",
         description:
-          "The repository demonstrates a healthy architecture profile based on the available intelligence signals.",
+          "The repository includes several characteristics associated with production-capable systems.",
         evidence: [
-          `Architecture score: ${signals.scores.architectureScore}/100`,
+          `Production readiness score: ${signals.scores.productionReadinessScore}/100`,
         ],
       })
     );
@@ -486,15 +500,18 @@ const buildStrengths = ({
   ) {
     strengths.push(
       createFinding({
-        key: "strong-production-readiness",
-        category: "PRODUCTION_READINESS",
+        key: "strong-architecture-score",
+
+        // This is positive evidence, not a risk or recommendation.
+        kind: "STRENGTH",
+
+        category: "ARCHITECTURE",
         severity: "INFO",
-        title:
-          "Strong production-readiness signals",
+        title: "Strong architecture score",
         description:
-          "The repository includes several characteristics associated with production-capable systems.",
+          "The repository demonstrates a healthy architecture profile based on the available intelligence signals.",
         evidence: [
-          `Production readiness score: ${signals.scores.productionReadinessScore}/100`,
+          `Architecture score: ${signals.scores.architectureScore}/100`,
         ],
       })
     );
@@ -510,6 +527,7 @@ const buildStrengths = ({
     strengths.push(
       createFinding({
         key: "containerization-detected",
+        kind: "STRENGTH",
         category: "DELIVERY",
         severity: "INFO",
         title: "Containerization detected",
@@ -540,6 +558,7 @@ const buildStrengths = ({
     strengths.push(
       createFinding({
         key: "asynchronous-processing-detected",
+        kind: "STRENGTH",
         category: "SCALABILITY",
         severity: "INFO",
         title:
@@ -573,6 +592,7 @@ const buildStrengths = ({
     strengths.push(
       createFinding({
         key: "operational-capabilities-detected",
+        kind: "STRENGTH",
         category: "ENGINEERING_QUALITY",
         severity: "INFO",
         title:
@@ -590,6 +610,7 @@ const buildStrengths = ({
     strengths.push(
       createFinding({
         key: "architecture-evolution-visible",
+        kind: "STRENGTH",
         category: "MAINTAINABILITY",
         severity: "INFO",
         title:
@@ -607,6 +628,7 @@ const buildStrengths = ({
     strengths.push(
       createFinding({
         key: "repository-intelligence-baseline",
+        kind: "STRENGTH",
         category: "ENGINEERING_QUALITY",
         severity: "INFO",
         title:
@@ -642,6 +664,7 @@ const buildArchitectureConcerns = ({
     findings.push(
       createFinding({
         key: "low-architecture-score",
+        kind: "IMPROVEMENT",
         category: "ARCHITECTURE",
         severity: "HIGH",
         title:
@@ -662,6 +685,7 @@ const buildArchitectureConcerns = ({
     findings.push(
       createFinding({
         key: "moderate-architecture-score",
+        kind: "IMPROVEMENT",
         category: "ARCHITECTURE",
         severity: "MEDIUM",
         title:
@@ -683,6 +707,7 @@ const buildArchitectureConcerns = ({
     findings.push(
       createFinding({
         key: "broad-architecture-surface",
+        kind: "IMPROVEMENT",
         category: "ARCHITECTURE",
         severity: "MEDIUM",
         title:
@@ -702,6 +727,7 @@ const buildArchitectureConcerns = ({
     findings.push(
       createFinding({
         key: "multiple-repository-identities",
+        kind: "IMPROVEMENT",
         category: "ARCHITECTURE",
         severity: "MEDIUM",
         title:
@@ -738,6 +764,7 @@ const buildProductionRisks = ({
     findings.push(
       createFinding({
         key: "low-production-readiness",
+        kind: "IMPROVEMENT",
         category: "PRODUCTION_READINESS",
         severity: "CRITICAL",
         title:
@@ -758,6 +785,7 @@ const buildProductionRisks = ({
     findings.push(
       createFinding({
         key: "moderate-production-readiness",
+        kind: "IMPROVEMENT",
         category: "PRODUCTION_READINESS",
         severity: "HIGH",
         title:
@@ -777,6 +805,7 @@ const buildProductionRisks = ({
     findings.push(
       createFinding({
         key: "repository-not-tracked",
+        kind: "UNVERIFIED",
         category: "PRODUCTION_READINESS",
         severity: "MEDIUM",
         title:
@@ -802,6 +831,7 @@ const buildProductionRisks = ({
     findings.push(
       createFinding({
         key: "deployment-packaging-not-detected",
+        kind: "UNVERIFIED",
         category: "DELIVERY",
         severity: "LOW",
         title:
@@ -846,6 +876,7 @@ const buildSecurityObservations = ({
     findings.push(
       createFinding({
         key: "authentication-not-detected",
+        kind: "UNVERIFIED",
         category: "SECURITY",
         severity: "MEDIUM",
         title:
@@ -870,6 +901,7 @@ const buildSecurityObservations = ({
     findings.push(
       createFinding({
         key: "audit-capability-not-detected",
+        kind: "UNVERIFIED",
         category: "SECURITY",
         severity: "LOW",
         title:
@@ -916,6 +948,7 @@ const buildScalabilityConcerns = ({
     findings.push(
       createFinding({
         key: "broad-capability-without-queue",
+        kind: "IMPROVEMENT",
         category: "SCALABILITY",
         severity: "MEDIUM",
         title:
@@ -939,6 +972,7 @@ const buildScalabilityConcerns = ({
     findings.push(
       createFinding({
         key: "broad-domain-without-cache",
+        kind: "IMPROVEMENT",
         category: "SCALABILITY",
         severity: "LOW",
         title:
@@ -980,6 +1014,7 @@ const buildReliabilityConcerns = ({
     findings.push(
       createFinding({
         key: "queue-redis-resilience-review",
+        kind: "UNVERIFIED",
         category: "RELIABILITY",
         severity: "MEDIUM",
         title:
@@ -1010,6 +1045,7 @@ const buildReliabilityConcerns = ({
     findings.push(
       createFinding({
         key: "failure-recovery-review",
+        kind: "UNVERIFIED",
         category: "RELIABILITY",
         severity: "MEDIUM",
         title:
@@ -1048,6 +1084,7 @@ const buildMaintainabilityConcerns = ({
     findings.push(
       createFinding({
         key: "low-engineering-quality",
+        kind: "IMPROVEMENT",
         category: "MAINTAINABILITY",
         severity: "HIGH",
         title:
@@ -1069,6 +1106,7 @@ const buildMaintainabilityConcerns = ({
     findings.push(
       createFinding({
         key: "high-architecture-change-volume",
+        kind: "IMPROVEMENT",
         category: "MAINTAINABILITY",
         severity: "MEDIUM",
         title:
@@ -1116,6 +1154,7 @@ const buildObservabilityConcerns = ({
     findings.push(
       createFinding({
         key: "observability-not-detected",
+        kind: "UNVERIFIED",
         category: "OBSERVABILITY",
         severity: "HIGH",
         title:
@@ -1164,6 +1203,7 @@ const buildDataConcerns = ({
     findings.push(
       createFinding({
         key: "database-governance-review",
+        kind: "UNVERIFIED",
         category: "DATA",
         severity: "MEDIUM",
         title:
@@ -1217,6 +1257,7 @@ const buildDeliveryConcerns = ({
     findings.push(
       createFinding({
         key: "delivery-automation-not-detected",
+        kind: "UNVERIFIED",
         category: "DELIVERY",
         severity: "MEDIUM",
         title:
@@ -1242,6 +1283,7 @@ const convertActiveRecommendations = (
     (recommendation) =>
       createFinding({
         key: `existing-${recommendation.recommendationKey}`,
+        kind: "IMPROVEMENT",
         category: "ENGINEERING_QUALITY",
         severity: "MEDIUM",
         title: recommendation.title,
@@ -1398,12 +1440,32 @@ const calculateOverallRiskScore = (
   findings: ArchitectureAdvisorFinding[],
   scores: ArchitectureAdvisorScores
 ) => {
-  const findingRisk = findings.reduce(
-    (total, finding) =>
-      total +
-      severityWeight[finding.severity],
-    0
-  );
+  /**
+   * Only confirmed adverse conditions are allowed to contribute
+   * direct finding-risk points.
+   *
+   * Future me:
+   * - STRENGTH describes positive evidence.
+   * - IMPROVEMENT describes an opportunity or derived assessment.
+   * - UNVERIFIED means ArcHive could not confirm something.
+   *
+   * None of those should inflate repository risk.
+   *
+   * CONFIRMED_RISK requires affirmative evidence of a problematic
+   * engineering condition.
+   */
+  const findingRisk =
+    findings
+      .filter(
+        (finding) =>
+          finding.kind === "CONFIRMED_RISK",
+      )
+      .reduce(
+        (total, finding) =>
+          total +
+          severityWeight[finding.severity],
+        0,
+      );
 
   const normalizedFindingRisk = Math.min(
     65,
