@@ -1589,21 +1589,29 @@ const buildOverallAssessment = ({
     return `${repository.name} does not yet have enough repository intelligence for a reliable architecture risk assessment. Process the repository or allow additional engineering evidence to accumulate before treating Advisor findings as authoritative.`;
   }
 
+  const normalizedMaturityLabel =
+    maturityLabel.toLowerCase();
+
+  const maturityArticle =
+    /^[aeiou]/i.test(normalizedMaturityLabel)
+      ? "an"
+      : "a";
+
   /**
    * Confirmed risks are the only findings allowed to drive risk language.
    *
    * Severity alone is not proof of risk.
    */
   if (criticalRiskCount > 0) {
-    return `${repository.name} has a ${maturityLabel.toLowerCase()} engineering profile. ArcHive detected ${criticalRiskCount} confirmed critical risk${criticalRiskCount === 1 ? "" : "s"} based on the available repository evidence. These findings should receive immediate engineering review.`;
+    return `${repository.name} has ${maturityArticle} ${normalizedMaturityLabel} engineering profile. ArcHive detected ${criticalRiskCount} confirmed critical risk${criticalRiskCount === 1 ? "" : "s"} based on the available repository evidence. These findings should receive immediate engineering review.`;
   }
 
   if (highRiskCount > 0) {
-    return `${repository.name} has a ${maturityLabel.toLowerCase()} engineering profile. ArcHive detected ${highRiskCount} confirmed high-priority risk${highRiskCount === 1 ? "" : "s"} based on the available repository evidence. Targeted remediation is recommended.`;
+    return `${repository.name} has ${maturityArticle} ${normalizedMaturityLabel} engineering profile. ArcHive detected ${highRiskCount} confirmed high-priority risk${highRiskCount === 1 ? "" : "s"} based on the available repository evidence. Targeted remediation is recommended.`;
   }
 
   if (confirmedRiskCount > 0) {
-    return `${repository.name} has a ${maturityLabel.toLowerCase()} engineering profile. ArcHive detected ${confirmedRiskCount} confirmed engineering risk${confirmedRiskCount === 1 ? "" : "s"}, producing an overall risk score of ${riskScore}/100.`;
+    return `${repository.name} has ${maturityArticle} ${normalizedMaturityLabel} engineering profile. ArcHive detected ${confirmedRiskCount} confirmed engineering risk${confirmedRiskCount === 1 ? "" : "s"}, producing an overall risk score of ${riskScore}/100.`;
   }
 
   /**
@@ -1616,471 +1624,534 @@ const buildOverallAssessment = ({
     improvementCount > 0 &&
     unverifiedCount > 0
   ) {
-    return `${repository.name} has a ${maturityLabel.toLowerCase()} engineering profile with no confirmed adverse engineering risks detected from the currently available evidence. ArcHive identified ${improvementCount} improvement area${improvementCount === 1 ? "" : "s"} and ${unverifiedCount} area${unverifiedCount === 1 ? "" : "s"} that could not be fully verified.`;
+    return `${repository.name} has ${maturityArticle} ${normalizedMaturityLabel} engineering profile with no confirmed adverse engineering risks detected from the currently available evidence. ArcHive identified ${improvementCount} improvement area${improvementCount === 1 ? "" : "s"} and ${unverifiedCount} area${unverifiedCount === 1 ? "" : "s"} that could not be fully verified.`;
   }
 
   if (improvementCount > 0) {
-    return `${repository.name} has a ${maturityLabel.toLowerCase()} engineering profile with no confirmed adverse engineering risks detected from the currently available evidence. ArcHive identified ${improvementCount} improvement area${improvementCount === 1 ? "" : "s"} for further engineering refinement.`;
+    return `${repository.name} has ${maturityArticle} ${normalizedMaturityLabel} engineering profile with no confirmed adverse engineering risks detected from the currently available evidence. ArcHive identified ${improvementCount} improvement area${improvementCount === 1 ? "" : "s"} for further engineering refinement.`;
   }
 
   if (unverifiedCount > 0) {
-    return `${repository.name} has a ${maturityLabel.toLowerCase()} engineering profile with no confirmed adverse engineering risks detected from the currently available evidence. ArcHive identified ${unverifiedCount} area${unverifiedCount === 1 ? "" : "s"} that could not be fully verified from the available repository evidence.`;
+    return `${repository.name} has ${maturityArticle} ${normalizedMaturityLabel} engineering profile with no confirmed adverse engineering risks detected from the currently available evidence. ArcHive identified ${unverifiedCount} area${unverifiedCount === 1 ? "" : "s"} that could not be fully verified from the available repository evidence.`;
   }
 
-  return `${repository.name} has a ${maturityLabel.toLowerCase()} engineering profile with no confirmed adverse engineering risks detected from the currently available evidence.`;
+  return `${repository.name} has ${maturityArticle} ${normalizedMaturityLabel} engineering profile with no confirmed adverse engineering risks detected from the currently available evidence.`;
 };
 
-const buildActions = (
-  findings: ArchitectureAdvisorFinding[]
-) => {
-  const actionableFindings = findings.filter(
-    (finding) => finding.recommendation
-  );
-
-  return actionableFindings
-    .sort((a, b) => {
-      const severityDifference =
-        severityPriority[b.severity] -
-        severityPriority[a.severity];
-
-      if (severityDifference !== 0) {
-        return severityDifference;
-      }
-
-      return a.title.localeCompare(b.title);
-    })
-    .map(
-      (
-        finding,
-        index
-      ): ArchitectureAdvisorAction => ({
-        key: `action-${finding.key}`,
-        priority: index + 1,
-        severity: finding.severity,
-        category: finding.category,
-        title: finding.title,
-        description:
-          finding.recommendation ||
-          finding.description,
-        rationale: finding.description,
-      })
+  const buildActions = (
+    findings: ArchitectureAdvisorFinding[]
+  ) => {
+    const actionableFindings = findings.filter(
+      (finding) => finding.recommendation
     );
-};
 
-const buildEvidenceSummary = ({
-  repository,
-  signals,
+    return actionableFindings
+      .sort((a, b) => {
+        const severityDifference =
+          severityPriority[b.severity] -
+          severityPriority[a.severity];
 
-}: {
-  repository: RepositoryAdvisorSource;
-  signals: AdvisorSignals;
-}): ArchitectureAdvisorEvidenceSummary => {
-  return {
-    evidenceSufficient:
-      hasSufficientAdvisorEvidence({
-        repository,
-        signals,
-      }),
+        if (severityDifference !== 0) {
+          return severityDifference;
+        }
 
-    intelligenceSnapshotAvailable:
-      Boolean(signals.snapshotId),
-
-    intelligenceSnapshotCreatedAt:
-      signals.snapshotCreatedAt,
-
-    architectureChangeCount:
-      repository.architectureChanges.length,
-
-    activeRecommendationCount:
-      repository.engineeringRecommendations
-        .length,
-
-    technologyCount:
-      signals.technologies.length,
-
-    architectureDomainCount:
-      signals.architectureDomains.length,
-
-    repositoryTypeCount:
-      signals.repositoryTypes.length,
-
-    capabilityCount:
-      signals.capabilities.length,
-  };
-};
-
-const parseJsonArray = <T>(
-  value: Prisma.JsonValue
-): T[] => {
-  return Array.isArray(value)
-    ? (value as T[])
-    : [];
-};
-
-const buildAssessmentResponse = ({
-  snapshot,
-  repository,
-  signals,
-}: {
-  snapshot: {
-    id: string;
-    overallAssessment: string;
-    maturityLabel: string;
-    strengths: Prisma.JsonValue;
-    architectureConcerns: Prisma.JsonValue;
-    productionRisks: Prisma.JsonValue;
-    securityObservations: Prisma.JsonValue;
-    scalabilityConcerns: Prisma.JsonValue;
-    reliabilityConcerns: Prisma.JsonValue;
-    maintainabilityConcerns: Prisma.JsonValue;
-    observabilityConcerns: Prisma.JsonValue;
-    dataConcerns: Prisma.JsonValue;
-    deliveryConcerns: Prisma.JsonValue;
-    priorityActions: Prisma.JsonValue;
-    recommendedNextSteps: Prisma.JsonValue;
-    evidenceSummary: Prisma.JsonValue;
-    overallRiskScore: number;
-    confidenceScore: number;
-    sourceIntelligenceSnapshotId:
-    | string
-    | null;
-    generatedAt: Date;
+        return a.title.localeCompare(b.title);
+      })
+      .map(
+        (
+          finding,
+          index
+        ): ArchitectureAdvisorAction => ({
+          key: `action-${finding.key}`,
+          priority: index + 1,
+          severity: finding.severity,
+          category: finding.category,
+          title: finding.title,
+          description:
+            finding.recommendation ||
+            finding.description,
+          rationale: finding.description,
+        })
+      );
   };
 
-  repository: RepositoryAdvisorSource;
-  signals: AdvisorSignals;
-}): ArchitectureAdvisorAssessment => {
-  return {
-    id: snapshot.id,
-
-    repository: {
-      id: repository.id,
-      name: repository.name,
-      fullName: repository.fullName,
-      description: repository.description,
-      language: repository.language,
-      defaultBranch:
-        repository.defaultBranch,
-      isTracked: repository.isTracked,
-      updatedAt: repository.updatedAt,
-    },
-
-    overallAssessment:
-      snapshot.overallAssessment,
-
-    maturityLabel: snapshot.maturityLabel,
-
-    overallRiskScore:
-      snapshot.overallRiskScore,
-
-    confidenceScore:
-      snapshot.confidenceScore,
-
-    scores: signals.scores,
-
-    technologies: signals.technologies,
-
-    architectureDomains:
-      signals.architectureDomains,
-
-    repositoryTypes:
-      signals.repositoryTypes,
-
-    capabilities: signals.capabilities,
-
-    strengths: parseJsonArray(
-      snapshot.strengths
-    ),
-
-    architectureConcerns: parseJsonArray(
-      snapshot.architectureConcerns
-    ),
-
-    productionRisks: parseJsonArray(
-      snapshot.productionRisks
-    ),
-
-    securityObservations: parseJsonArray(
-      snapshot.securityObservations
-    ),
-
-    scalabilityConcerns: parseJsonArray(
-      snapshot.scalabilityConcerns
-    ),
-
-    reliabilityConcerns: parseJsonArray(
-      snapshot.reliabilityConcerns
-    ),
-
-    maintainabilityConcerns: parseJsonArray(
-      snapshot.maintainabilityConcerns
-    ),
-
-    observabilityConcerns: parseJsonArray(
-      snapshot.observabilityConcerns
-    ),
-
-    dataConcerns: parseJsonArray(
-      snapshot.dataConcerns
-    ),
-
-    deliveryConcerns: parseJsonArray(
-      snapshot.deliveryConcerns
-    ),
-
-    priorityActions: parseJsonArray(
-      snapshot.priorityActions
-    ),
-
-    recommendedNextSteps: parseJsonArray(
-      snapshot.recommendedNextSteps
-    ),
-
-    evidenceSummary:
-      snapshot.evidenceSummary as unknown as ArchitectureAdvisorEvidenceSummary,
-
-    sourceIntelligenceSnapshotId:
-      snapshot.sourceIntelligenceSnapshotId,
-
-    generatedAt: snapshot.generatedAt,
-  };
-};
-
-/**
- * Builds Advisor findings only when the current repository intelligence is
- * strong enough to make absence meaningful.
- *
- * Future me:
- * "Not detected" is not the same thing as "confirmed absent".
- */
-const buildEvidenceAwareFindingBuckets = ({
-  repository,
-  signals,
-}: {
-  repository: RepositoryAdvisorSource;
-  signals: AdvisorSignals;
-}) => {
-  const evidenceIsSufficient =
-    hasSufficientAdvisorEvidence({
-      repository,
-      signals,
-    });
-
-  if (!evidenceIsSufficient) {
-    return {
-      evidenceIsSufficient,
-
-      buckets: {
-        strengths: [],
-        architectureConcerns: [],
-        productionRisks: [],
-        securityObservations: [],
-        scalabilityConcerns: [],
-        reliabilityConcerns: [],
-        maintainabilityConcerns: [],
-        observabilityConcerns: [],
-        dataConcerns: [],
-        deliveryConcerns: [],
-      } satisfies FindingBuckets,
-    };
-  }
-
-  return {
-    evidenceIsSufficient,
-
-    buckets: buildFindingBuckets({
-      repository,
-      signals,
-    }),
-  };
-};
-
-const createAdvisorAssessment = async (
-  repository: RepositoryAdvisorSource
-) => {
-  const signals = extractSignals(
-    repository
-  );
-
-  const {
-    evidenceIsSufficient,
-    buckets,
-  } = buildEvidenceAwareFindingBuckets({
+  const buildEvidenceSummary = ({
     repository,
     signals,
-  });
 
-  const concerns = getAllConcerns(
-    buckets
-  );
+  }: {
+    repository: RepositoryAdvisorSource;
+    signals: AdvisorSignals;
+  }): ArchitectureAdvisorEvidenceSummary => {
+    return {
+      evidenceSufficient:
+        hasSufficientAdvisorEvidence({
+          repository,
+          signals,
+        }),
 
-  const overallRiskScore =
-    evidenceIsSufficient
-      ? calculateOverallRiskScore(
-        concerns,
-        signals.scores
-      )
-      : 0;
+      intelligenceSnapshotAvailable:
+        Boolean(signals.snapshotId),
 
-  const confidenceScore =
-    calculateConfidenceScore({
-      repository,
-      signals,
-    });
+      intelligenceSnapshotCreatedAt:
+        signals.snapshotCreatedAt,
 
-  const maturityLabel =
-    getMaturityLabel(
-      signals.scores,
-      evidenceIsSufficient
-    );
-  /**
-   * Finding severity tells us urgency/importance.
-   * Finding kind tells us what the evidence actually means.
-   *
-   * Future me:
-   * Never describe an IMPROVEMENT or UNVERIFIED finding as a confirmed risk
-   * merely because its severity is HIGH or CRITICAL.
-   */
-  const confirmedRisks = concerns.filter(
-    (finding) =>
-      finding.kind === "CONFIRMED_RISK"
-  );
+      architectureChangeCount:
+        repository.architectureChanges.length,
 
-  const improvements = concerns.filter(
-    (finding) =>
-      finding.kind === "IMPROVEMENT"
-  );
+      activeRecommendationCount:
+        repository.engineeringRecommendations
+          .length,
 
-  const unverifiedFindings = concerns.filter(
-    (finding) =>
-      finding.kind === "UNVERIFIED"
-  );
+      technologyCount:
+        signals.technologies.length,
 
-  const criticalRiskCount =
-    confirmedRisks.filter(
-      (finding) =>
-        finding.severity === "CRITICAL"
-    ).length;
+      architectureDomainCount:
+        signals.architectureDomains.length,
 
-  const highRiskCount =
-    confirmedRisks.filter(
-      (finding) =>
-        finding.severity === "HIGH"
-    ).length;
+      repositoryTypeCount:
+        signals.repositoryTypes.length,
 
-  const priorityActions = buildActions(
-    concerns
-  );
+      capabilityCount:
+        signals.capabilities.length,
+    };
+  };
 
-  const recommendedNextSteps =
-    priorityActions.slice(0, 10);
+  const parseJsonArray = <T>(
+    value: Prisma.JsonValue
+  ): T[] => {
+    return Array.isArray(value)
+      ? (value as T[])
+      : [];
+  };
 
-  const evidenceSummary =
-    buildEvidenceSummary({
-      repository,
-      signals,
-    });
-
-  const overallAssessment =
-    buildOverallAssessment({
-      repository,
-      riskScore: overallRiskScore,
-      maturityLabel,
-
-      confirmedRiskCount:
-        confirmedRisks.length,
-
-      criticalRiskCount,
-      highRiskCount,
-
-      improvementCount:
-        improvements.length,
-
-      unverifiedCount:
-        unverifiedFindings.length,
-
-      evidenceIsSufficient,
-    });
-
-  const snapshot =
-    await prisma.architectureAdvisorSnapshot.create(
-      {
-        data: {
-          repositoryId: repository.id,
-
-          overallAssessment,
-          maturityLabel,
-
-          strengths:
-            buckets.strengths as unknown as Prisma.InputJsonValue,
-
-          architectureConcerns:
-            buckets.architectureConcerns as unknown as Prisma.InputJsonValue,
-
-          productionRisks:
-            buckets.productionRisks as unknown as Prisma.InputJsonValue,
-
-          securityObservations:
-            buckets.securityObservations as unknown as Prisma.InputJsonValue,
-
-          scalabilityConcerns:
-            buckets.scalabilityConcerns as unknown as Prisma.InputJsonValue,
-
-          reliabilityConcerns:
-            buckets.reliabilityConcerns as unknown as Prisma.InputJsonValue,
-
-          maintainabilityConcerns:
-            buckets.maintainabilityConcerns as unknown as Prisma.InputJsonValue,
-
-          observabilityConcerns:
-            buckets.observabilityConcerns as unknown as Prisma.InputJsonValue,
-
-          dataConcerns:
-            buckets.dataConcerns as unknown as Prisma.InputJsonValue,
-
-          deliveryConcerns:
-            buckets.deliveryConcerns as unknown as Prisma.InputJsonValue,
-
-          priorityActions:
-            priorityActions as unknown as Prisma.InputJsonValue,
-
-          recommendedNextSteps:
-            recommendedNextSteps as unknown as Prisma.InputJsonValue,
-
-          evidenceSummary:
-            evidenceSummary as unknown as Prisma.InputJsonValue,
-
-          overallRiskScore,
-          confidenceScore,
-
-          sourceIntelligenceSnapshotId:
-            signals.snapshotId,
-        },
-      }
-    );
-
-  return buildAssessmentResponse({
+  const buildAssessmentResponse = ({
     snapshot,
     repository,
     signals,
-  });
-};
+  }: {
+    snapshot: {
+      id: string;
+      overallAssessment: string;
+      maturityLabel: string;
+      strengths: Prisma.JsonValue;
+      architectureConcerns: Prisma.JsonValue;
+      productionRisks: Prisma.JsonValue;
+      securityObservations: Prisma.JsonValue;
+      scalabilityConcerns: Prisma.JsonValue;
+      reliabilityConcerns: Prisma.JsonValue;
+      maintainabilityConcerns: Prisma.JsonValue;
+      observabilityConcerns: Prisma.JsonValue;
+      dataConcerns: Prisma.JsonValue;
+      deliveryConcerns: Prisma.JsonValue;
+      priorityActions: Prisma.JsonValue;
+      recommendedNextSteps: Prisma.JsonValue;
+      evidenceSummary: Prisma.JsonValue;
+      overallRiskScore: number;
+      confidenceScore: number;
+      sourceIntelligenceSnapshotId:
+      | string
+      | null;
+      generatedAt: Date;
+    };
 
-export const architectureAdvisorService = {
-  async getLatestAssessment(
-    repositoryId: string
-  ): Promise<ArchitectureAdvisorAssessment | null> {
-    const repository =
-      await loadRepository(repositoryId);
+    repository: RepositoryAdvisorSource;
+    signals: AdvisorSignals;
+  }): ArchitectureAdvisorAssessment => {
+    return {
+      id: snapshot.id,
 
-    if (!repository) {
-      return null;
+      repository: {
+        id: repository.id,
+        name: repository.name,
+        fullName: repository.fullName,
+        description: repository.description,
+        language: repository.language,
+        defaultBranch:
+          repository.defaultBranch,
+        isTracked: repository.isTracked,
+        updatedAt: repository.updatedAt,
+      },
+
+      overallAssessment:
+        snapshot.overallAssessment,
+
+      maturityLabel: snapshot.maturityLabel,
+
+      overallRiskScore:
+        snapshot.overallRiskScore,
+
+      confidenceScore:
+        snapshot.confidenceScore,
+
+      scores: signals.scores,
+
+      technologies: signals.technologies,
+
+      architectureDomains:
+        signals.architectureDomains,
+
+      repositoryTypes:
+        signals.repositoryTypes,
+
+      capabilities: signals.capabilities,
+
+      strengths: parseJsonArray(
+        snapshot.strengths
+      ),
+
+      architectureConcerns: parseJsonArray(
+        snapshot.architectureConcerns
+      ),
+
+      productionRisks: parseJsonArray(
+        snapshot.productionRisks
+      ),
+
+      securityObservations: parseJsonArray(
+        snapshot.securityObservations
+      ),
+
+      scalabilityConcerns: parseJsonArray(
+        snapshot.scalabilityConcerns
+      ),
+
+      reliabilityConcerns: parseJsonArray(
+        snapshot.reliabilityConcerns
+      ),
+
+      maintainabilityConcerns: parseJsonArray(
+        snapshot.maintainabilityConcerns
+      ),
+
+      observabilityConcerns: parseJsonArray(
+        snapshot.observabilityConcerns
+      ),
+
+      dataConcerns: parseJsonArray(
+        snapshot.dataConcerns
+      ),
+
+      deliveryConcerns: parseJsonArray(
+        snapshot.deliveryConcerns
+      ),
+
+      priorityActions: parseJsonArray(
+        snapshot.priorityActions
+      ),
+
+      recommendedNextSteps: parseJsonArray(
+        snapshot.recommendedNextSteps
+      ),
+
+      evidenceSummary:
+        snapshot.evidenceSummary as unknown as ArchitectureAdvisorEvidenceSummary,
+
+      sourceIntelligenceSnapshotId:
+        snapshot.sourceIntelligenceSnapshotId,
+
+      generatedAt: snapshot.generatedAt,
+    };
+  };
+
+  /**
+   * Builds Advisor findings only when the current repository intelligence is
+   * strong enough to make absence meaningful.
+   *
+   * Future me:
+   * "Not detected" is not the same thing as "confirmed absent".
+   */
+  const buildEvidenceAwareFindingBuckets = ({
+    repository,
+    signals,
+  }: {
+    repository: RepositoryAdvisorSource;
+    signals: AdvisorSignals;
+  }) => {
+    const evidenceIsSufficient =
+      hasSufficientAdvisorEvidence({
+        repository,
+        signals,
+      });
+
+    if (!evidenceIsSufficient) {
+      return {
+        evidenceIsSufficient,
+
+        buckets: {
+          strengths: [],
+          architectureConcerns: [],
+          productionRisks: [],
+          securityObservations: [],
+          scalabilityConcerns: [],
+          reliabilityConcerns: [],
+          maintainabilityConcerns: [],
+          observabilityConcerns: [],
+          dataConcerns: [],
+          deliveryConcerns: [],
+        } satisfies FindingBuckets,
+      };
     }
 
-    const signals = extractSignals(repository);
+    return {
+      evidenceIsSufficient,
+
+      buckets: buildFindingBuckets({
+        repository,
+        signals,
+      }),
+    };
+  };
+
+  const createAdvisorAssessment = async (
+    repository: RepositoryAdvisorSource
+  ) => {
+    const signals = extractSignals(
+      repository
+    );
+
+    const {
+      evidenceIsSufficient,
+      buckets,
+    } = buildEvidenceAwareFindingBuckets({
+      repository,
+      signals,
+    });
+
+    const concerns = getAllConcerns(
+      buckets
+    );
+
+    const overallRiskScore =
+      evidenceIsSufficient
+        ? calculateOverallRiskScore(
+          concerns,
+          signals.scores
+        )
+        : 0;
+
+    const confidenceScore =
+      calculateConfidenceScore({
+        repository,
+        signals,
+      });
+
+    const maturityLabel =
+      getMaturityLabel(
+        signals.scores,
+        evidenceIsSufficient
+      );
+    /**
+     * Finding severity tells us urgency/importance.
+     * Finding kind tells us what the evidence actually means.
+     *
+     * Future me:
+     * Never describe an IMPROVEMENT or UNVERIFIED finding as a confirmed risk
+     * merely because its severity is HIGH or CRITICAL.
+     */
+    const confirmedRisks = concerns.filter(
+      (finding) =>
+        finding.kind === "CONFIRMED_RISK"
+    );
+
+    const improvements = concerns.filter(
+      (finding) =>
+        finding.kind === "IMPROVEMENT"
+    );
+
+    const unverifiedFindings = concerns.filter(
+      (finding) =>
+        finding.kind === "UNVERIFIED"
+    );
+
+    const criticalRiskCount =
+      confirmedRisks.filter(
+        (finding) =>
+          finding.severity === "CRITICAL"
+      ).length;
+
+    const highRiskCount =
+      confirmedRisks.filter(
+        (finding) =>
+          finding.severity === "HIGH"
+      ).length;
+
+    const priorityActions = buildActions(
+      concerns
+    );
+
+    const recommendedNextSteps =
+      priorityActions.slice(0, 10);
+
+    const evidenceSummary =
+      buildEvidenceSummary({
+        repository,
+        signals,
+      });
+
+    const overallAssessment =
+      buildOverallAssessment({
+        repository,
+        riskScore: overallRiskScore,
+        maturityLabel,
+
+        confirmedRiskCount:
+          confirmedRisks.length,
+
+        criticalRiskCount,
+        highRiskCount,
+
+        improvementCount:
+          improvements.length,
+
+        unverifiedCount:
+          unverifiedFindings.length,
+
+        evidenceIsSufficient,
+      });
 
     const snapshot =
-      await prisma.architectureAdvisorSnapshot.findFirst(
+      await prisma.architectureAdvisorSnapshot.create(
+        {
+          data: {
+            repositoryId: repository.id,
+
+            overallAssessment,
+            maturityLabel,
+
+            strengths:
+              buckets.strengths as unknown as Prisma.InputJsonValue,
+
+            architectureConcerns:
+              buckets.architectureConcerns as unknown as Prisma.InputJsonValue,
+
+            productionRisks:
+              buckets.productionRisks as unknown as Prisma.InputJsonValue,
+
+            securityObservations:
+              buckets.securityObservations as unknown as Prisma.InputJsonValue,
+
+            scalabilityConcerns:
+              buckets.scalabilityConcerns as unknown as Prisma.InputJsonValue,
+
+            reliabilityConcerns:
+              buckets.reliabilityConcerns as unknown as Prisma.InputJsonValue,
+
+            maintainabilityConcerns:
+              buckets.maintainabilityConcerns as unknown as Prisma.InputJsonValue,
+
+            observabilityConcerns:
+              buckets.observabilityConcerns as unknown as Prisma.InputJsonValue,
+
+            dataConcerns:
+              buckets.dataConcerns as unknown as Prisma.InputJsonValue,
+
+            deliveryConcerns:
+              buckets.deliveryConcerns as unknown as Prisma.InputJsonValue,
+
+            priorityActions:
+              priorityActions as unknown as Prisma.InputJsonValue,
+
+            recommendedNextSteps:
+              recommendedNextSteps as unknown as Prisma.InputJsonValue,
+
+            evidenceSummary:
+              evidenceSummary as unknown as Prisma.InputJsonValue,
+
+            overallRiskScore,
+            confidenceScore,
+
+            sourceIntelligenceSnapshotId:
+              signals.snapshotId,
+          },
+        }
+      );
+
+    return buildAssessmentResponse({
+      snapshot,
+      repository,
+      signals,
+    });
+  };
+
+  export const architectureAdvisorService = {
+    async getLatestAssessment(
+      repositoryId: string
+    ): Promise<ArchitectureAdvisorAssessment | null> {
+      const repository =
+        await loadRepository(repositoryId);
+
+      if (!repository) {
+        return null;
+      }
+
+      const signals = extractSignals(repository);
+
+      const snapshot =
+        await prisma.architectureAdvisorSnapshot.findFirst(
+          {
+            where: {
+              repositoryId,
+            },
+
+            orderBy: {
+              generatedAt: "desc",
+            },
+          }
+        );
+
+      /*
+       * The first read creates a baseline automatically. This means the
+       * frontend can open the advisor page without requiring a separate setup
+       * action, while later refreshes remain explicit and auditable.
+       */
+      if (!snapshot) {
+        return createAdvisorAssessment(
+          repository
+        );
+      }
+
+      return buildAssessmentResponse({
+        snapshot,
+        repository,
+        signals,
+      });
+    },
+
+    async refreshAssessment(
+      repositoryId: string
+    ): Promise<ArchitectureAdvisorAssessment | null> {
+      const repository =
+        await loadRepository(repositoryId);
+
+      if (!repository) {
+        return null;
+      }
+
+      return createAdvisorAssessment(repository);
+    },
+
+    async getAssessmentHistory(
+      repositoryId: string
+    ): Promise<
+      ArchitectureAdvisorHistoryItem[] | null
+    > {
+      const repositoryExists =
+        await prisma.repository.findUnique({
+          where: {
+            id: repositoryId,
+          },
+
+          select: {
+            id: true,
+          },
+        });
+
+      if (!repositoryExists) {
+        return null;
+      }
+
+      return prisma.architectureAdvisorSnapshot.findMany(
         {
           where: {
             repositoryId,
@@ -2089,116 +2160,53 @@ export const architectureAdvisorService = {
           orderBy: {
             generatedAt: "desc",
           },
+
+          take: 50,
+
+          select: {
+            id: true,
+            repositoryId: true,
+            overallAssessment: true,
+            maturityLabel: true,
+            overallRiskScore: true,
+            confidenceScore: true,
+            generatedAt: true,
+          },
         }
       );
+    },
 
-    /*
-     * The first read creates a baseline automatically. This means the
-     * frontend can open the advisor page without requiring a separate setup
-     * action, while later refreshes remain explicit and auditable.
-     */
-    if (!snapshot) {
-      return createAdvisorAssessment(
-        repository
-      );
-    }
+    async getRepositoryOwnerId(
+      repositoryId: string
+    ) {
+      const repository =
+        await prisma.repository.findUnique({
+          where: {
+            id: repositoryId,
+          },
 
-    return buildAssessmentResponse({
-      snapshot,
-      repository,
-      signals,
-    });
-  },
+          select: {
+            userId: true,
+          },
+        });
 
-  async refreshAssessment(
-    repositoryId: string
-  ): Promise<ArchitectureAdvisorAssessment | null> {
-    const repository =
-      await loadRepository(repositoryId);
+      return repository?.userId ?? null;
+    },
+  };
 
-    if (!repository) {
-      return null;
-    }
-
-    return createAdvisorAssessment(repository);
-  },
-
-  async getAssessmentHistory(
-    repositoryId: string
-  ): Promise<
-    ArchitectureAdvisorHistoryItem[] | null
-  > {
-    const repositoryExists =
-      await prisma.repository.findUnique({
-        where: {
-          id: repositoryId,
-        },
-
-        select: {
-          id: true,
-        },
-      });
-
-    if (!repositoryExists) {
-      return null;
-    }
-
-    return prisma.architectureAdvisorSnapshot.findMany(
-      {
-        where: {
-          repositoryId,
-        },
-
-        orderBy: {
-          generatedAt: "desc",
-        },
-
-        take: 50,
-
-        select: {
-          id: true,
-          repositoryId: true,
-          overallAssessment: true,
-          maturityLabel: true,
-          overallRiskScore: true,
-          confidenceScore: true,
-          generatedAt: true,
-        },
-      }
-    );
-  },
-
-  async getRepositoryOwnerId(
-    repositoryId: string
-  ) {
-    const repository =
-      await prisma.repository.findUnique({
-        where: {
-          id: repositoryId,
-        },
-
-        select: {
-          userId: true,
-        },
-      });
-
-    return repository?.userId ?? null;
-  },
-};
-
-/**
- * Internal regression-test surface.
- *
- * Future me:
- * These functions are exported only so the Advisor's scoring semantics can
- * be regression-tested without involving Prisma or the HTTP layer.
- *
- * Do not use this object from application code.
- */
-export const __architectureAdvisorTestUtils = {
-  hasSufficientAdvisorEvidence,
-  buildEvidenceAwareFindingBuckets,
-  calculateOverallRiskScore,
-  getMaturityLabel,
-  buildOverallAssessment,
-};
+  /**
+   * Internal regression-test surface.
+   *
+   * Future me:
+   * These functions are exported only so the Advisor's scoring semantics can
+   * be regression-tested without involving Prisma or the HTTP layer.
+   *
+   * Do not use this object from application code.
+   */
+  export const __architectureAdvisorTestUtils = {
+    hasSufficientAdvisorEvidence,
+    buildEvidenceAwareFindingBuckets,
+    calculateOverallRiskScore,
+    getMaturityLabel,
+    buildOverallAssessment,
+  };

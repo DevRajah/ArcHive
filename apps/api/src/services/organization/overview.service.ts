@@ -147,17 +147,20 @@ export const getOrganizationOverview = async (
     }
 
     /**
-     * Architecture Advisor risk aggregation.
+     * Risk assessment coverage.
      *
-     * A stored Advisor snapshot is not enough by itself.
+     * A repository is unassessed when:
      *
-     * Only evidence-sufficient assessments may:
+     * - no Architecture Advisor snapshot exists yet, or
+     * - an Advisor snapshot exists but does not contain enough evidence
+     *   for a trustworthy risk judgement.
      *
-     * - contribute to average risk
-     * - contribute to health/risk buckets
-     * - influence the organization-level risk level
+     * Only evidence-sufficient assessments may contribute to risk averages
+     * and health/risk buckets.
      */
-    if (latestAdvisor) {
+    if (!latestAdvisor) {
+      unassessedRiskRepositories++;
+    } else {
       const evidenceIsSufficient =
         hasSufficientAdvisorRiskEvidence(
           latestAdvisor.evidenceSummary,
@@ -171,10 +174,6 @@ export const getOrganizationOverview = async (
 
         riskCount++;
 
-        /**
-         * These buckets apply only after Advisor evidence
-         * has been established as sufficient.
-         */
         if (
           latestAdvisor.overallRiskScore < 30
         ) {
