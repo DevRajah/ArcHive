@@ -1568,39 +1568,66 @@ const buildOverallAssessment = ({
   repository,
   riskScore,
   maturityLabel,
-  concernCount,
-  criticalCount,
-  highCount,
+  confirmedRiskCount,
+  criticalRiskCount,
+  highRiskCount,
+  improvementCount,
+  unverifiedCount,
   evidenceIsSufficient,
 }: {
   repository: RepositoryAdvisorSource;
   riskScore: number;
   maturityLabel: string;
-  concernCount: number;
-  criticalCount: number;
-  highCount: number;
+  confirmedRiskCount: number;
+  criticalRiskCount: number;
+  highRiskCount: number;
+  improvementCount: number;
+  unverifiedCount: number;
   evidenceIsSufficient: boolean;
 }) => {
   if (!evidenceIsSufficient) {
     return `${repository.name} does not yet have enough repository intelligence for a reliable architecture risk assessment. Process the repository or allow additional engineering evidence to accumulate before treating Advisor findings as authoritative.`;
   }
 
-  if (criticalCount > 0) {
-    return `${repository.name} has a ${maturityLabel.toLowerCase()} engineering profile, but ArcHive detected ${criticalCount} critical architecture or production concern${criticalCount === 1 ? "" : "s"
-      }. These issues should be addressed before the repository is treated as operationally resilient.`;
+  /**
+   * Confirmed risks are the only findings allowed to drive risk language.
+   *
+   * Severity alone is not proof of risk.
+   */
+  if (criticalRiskCount > 0) {
+    return `${repository.name} has a ${maturityLabel.toLowerCase()} engineering profile. ArcHive detected ${criticalRiskCount} confirmed critical risk${criticalRiskCount === 1 ? "" : "s"} based on the available repository evidence. These findings should receive immediate engineering review.`;
   }
 
-  if (highCount > 0) {
-    return `${repository.name} has a ${maturityLabel.toLowerCase()} engineering profile with ${highCount} high-priority concern${highCount === 1 ? "" : "s"
-      }. The repository has a workable foundation, but targeted improvements are required to reduce engineering and operational risk.`;
+  if (highRiskCount > 0) {
+    return `${repository.name} has a ${maturityLabel.toLowerCase()} engineering profile. ArcHive detected ${highRiskCount} confirmed high-priority risk${highRiskCount === 1 ? "" : "s"} based on the available repository evidence. Targeted remediation is recommended.`;
   }
 
-  if (concernCount > 0) {
-    return `${repository.name} has a ${maturityLabel.toLowerCase()} engineering profile. ArcHive identified ${concernCount} improvement area${concernCount === 1 ? "" : "s"
-      }, with an overall risk score of ${riskScore}/100.`;
+  if (confirmedRiskCount > 0) {
+    return `${repository.name} has a ${maturityLabel.toLowerCase()} engineering profile. ArcHive detected ${confirmedRiskCount} confirmed engineering risk${confirmedRiskCount === 1 ? "" : "s"}, producing an overall risk score of ${riskScore}/100.`;
   }
 
-  return `${repository.name} has a ${maturityLabel.toLowerCase()} engineering profile with no major architecture risks detected from the currently available evidence.`;
+  /**
+   * From this point onward there are NO confirmed risks.
+   *
+   * Improvements and unverified areas must therefore be described
+   * without converting them into adverse claims.
+   */
+  if (
+    improvementCount > 0 &&
+    unverifiedCount > 0
+  ) {
+    return `${repository.name} has a ${maturityLabel.toLowerCase()} engineering profile with no confirmed adverse engineering risks detected from the currently available evidence. ArcHive identified ${improvementCount} improvement area${improvementCount === 1 ? "" : "s"} and ${unverifiedCount} area${unverifiedCount === 1 ? "" : "s"} that could not be fully verified.`;
+  }
+
+  if (improvementCount > 0) {
+    return `${repository.name} has a ${maturityLabel.toLowerCase()} engineering profile with no confirmed adverse engineering risks detected from the currently available evidence. ArcHive identified ${improvementCount} improvement area${improvementCount === 1 ? "" : "s"} for further engineering refinement.`;
+  }
+
+  if (unverifiedCount > 0) {
+    return `${repository.name} has a ${maturityLabel.toLowerCase()} engineering profile with no confirmed adverse engineering risks detected from the currently available evidence. ArcHive identified ${unverifiedCount} area${unverifiedCount === 1 ? "" : "s"} that could not be fully verified from the available repository evidence.`;
+  }
+
+  return `${repository.name} has a ${maturityLabel.toLowerCase()} engineering profile with no confirmed adverse engineering risks detected from the currently available evidence.`;
 };
 
 const buildActions = (
@@ -1906,15 +1933,40 @@ const createAdvisorAssessment = async (
       signals.scores,
       evidenceIsSufficient
     );
-
-  const criticalCount = concerns.filter(
+  /**
+   * Finding severity tells us urgency/importance.
+   * Finding kind tells us what the evidence actually means.
+   *
+   * Future me:
+   * Never describe an IMPROVEMENT or UNVERIFIED finding as a confirmed risk
+   * merely because its severity is HIGH or CRITICAL.
+   */
+  const confirmedRisks = concerns.filter(
     (finding) =>
-      finding.severity === "CRITICAL"
-  ).length;
+      finding.kind === "CONFIRMED_RISK"
+  );
 
-  const highCount = concerns.filter(
-    (finding) => finding.severity === "HIGH"
-  ).length;
+  const improvements = concerns.filter(
+    (finding) =>
+      finding.kind === "IMPROVEMENT"
+  );
+
+  const unverifiedFindings = concerns.filter(
+    (finding) =>
+      finding.kind === "UNVERIFIED"
+  );
+
+  const criticalRiskCount =
+    confirmedRisks.filter(
+      (finding) =>
+        finding.severity === "CRITICAL"
+    ).length;
+
+  const highRiskCount =
+    confirmedRisks.filter(
+      (finding) =>
+        finding.severity === "HIGH"
+    ).length;
 
   const priorityActions = buildActions(
     concerns
@@ -1934,9 +1986,19 @@ const createAdvisorAssessment = async (
       repository,
       riskScore: overallRiskScore,
       maturityLabel,
-      concernCount: concerns.length,
-      criticalCount,
-      highCount,
+
+      confirmedRiskCount:
+        confirmedRisks.length,
+
+      criticalRiskCount,
+      highRiskCount,
+
+      improvementCount:
+        improvements.length,
+
+      unverifiedCount:
+        unverifiedFindings.length,
+
       evidenceIsSufficient,
     });
 
