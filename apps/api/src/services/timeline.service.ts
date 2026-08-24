@@ -10,6 +10,10 @@ import type {
     TimelineSummary,
 } from "../types/timeline.types";
 
+import {
+    hasSufficientAdvisorRiskEvidence,
+} from "./organization/organization.utils";
+
 /*
 |--------------------------------------------------------------------------
 | Internal helper types
@@ -543,15 +547,32 @@ const normalizeAdvisorSnapshot = (
             ["confidenceScore"],
             0,
         );
+    /**
+ * Timeline severity describes the significance of the timeline event.
+ *
+ * It is not itself a repository risk classification.
+ *
+ * When Advisor evidence is insufficient, overallRiskScore = 0 means
+ * "no reliable risk judgement", not "confirmed LOW risk".
+ *
+ * The timeline event may still be LOW severity because an incomplete
+ * Advisor assessment is simply a low-severity informational event.
+ */
+    const evidenceIsSufficient =
+        hasSufficientAdvisorRiskEvidence(
+            snapshot.evidenceSummary,
+        );
 
-    const riskSeverity: TimelineSeverity =
-        overallRiskScore >= 80
-            ? "CRITICAL"
-            : overallRiskScore >= 60
-                ? "HIGH"
-                : overallRiskScore >= 30
-                    ? "MEDIUM"
-                    : "LOW";
+    const advisorEventSeverity: TimelineSeverity =
+        !evidenceIsSufficient
+            ? "LOW"
+            : overallRiskScore >= 80
+                ? "CRITICAL"
+                : overallRiskScore >= 60
+                    ? "HIGH"
+                    : overallRiskScore >= 30
+                        ? "MEDIUM"
+                        : "LOW";
 
     return {
         id: asString(
@@ -569,7 +590,7 @@ const normalizeAdvisorSnapshot = (
 
         description: overallAssessment,
 
-        severity: riskSeverity,
+        severity: advisorEventSeverity,
 
         timestamp: toIsoDate(
             snapshot.generatedAt,
@@ -583,6 +604,8 @@ const normalizeAdvisorSnapshot = (
             overallRiskScore,
 
             confidenceScore,
+
+            evidenceIsSufficient,
 
             strengths:
                 snapshot.strengths ?? [],
