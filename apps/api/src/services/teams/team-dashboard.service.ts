@@ -12,6 +12,10 @@ import type {
 } from "../../types/team-dashboard.types";
 
 import {
+    hasSufficientAdvisorRiskEvidence,
+} from "../organization/organization.utils";
+
+import {
     TeamNotFoundError,
 } from "./team-permission.service";
 
@@ -210,6 +214,12 @@ export const getTeamDashboard = async ({
                     repository
                         .architectureAdvisorSnapshots[0] ??
                     null;
+                const advisorEvidenceIsSufficient =
+                    advisor
+                        ? hasSufficientAdvisorRiskEvidence(
+                            advisor.evidenceSummary,
+                        )
+                        : false;
 
                 const overallScore = snapshot
                     ? calculateOverallScore([
@@ -265,9 +275,17 @@ export const getTeamDashboard = async ({
                         snapshot?.confidenceScore ??
                         null,
 
+                    /**
+  * null means there is currently no reliable Advisor risk judgement.
+  *
+  * Do not use 0 for insufficient evidence because 0 is a legitimate
+  * assessed risk score.
+  */
                     riskScore:
-                        advisor?.overallRiskScore ??
-                        null,
+                        advisor &&
+                            advisorEvidenceIsSufficient
+                            ? advisor.overallRiskScore
+                            : null,
 
                     overallScore,
 
@@ -441,6 +459,20 @@ export const getTeamDashboard = async ({
                         .architectureAdvisorSnapshots[0];
 
                 if (!advisor) {
+                    return null;
+                }
+
+                /**
+     * Only repositories with sufficient Advisor evidence belong
+     * in the team's assessed-risk distribution.
+     *
+     * A score of 0 with insufficient evidence does not mean LOW risk.
+     */
+                if (
+                    !hasSufficientAdvisorRiskEvidence(
+                        advisor.evidenceSummary,
+                    )
+                ) {
                     return null;
                 }
 

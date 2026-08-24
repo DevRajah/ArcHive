@@ -6,6 +6,7 @@ import {
 
 import {
   getRiskLevel,
+  hasSufficientAdvisorRiskEvidence,
   latestAdvisor,
   loadOrganizationRepositories,
 } from "./organization.utils";
@@ -37,6 +38,25 @@ export const getOrganizationRisks = async (
     const advisor = latestAdvisor(repository);
 
     if (!advisor) {
+      continue;
+    }
+
+    /**
+ * An Advisor snapshot can exist before ArcHive has enough canonical
+ * repository intelligence to make a real risk judgement.
+ *
+ * Future me:
+ * overallRiskScore = 0 on an insufficient-evidence assessment does NOT
+ * mean "LOW risk". It means no risk classification is available yet.
+ *
+ * Organization risk summaries must therefore contain only repositories
+ * whose Advisor assessment is evidence-sufficient.
+ */
+    if (
+      !hasSufficientAdvisorRiskEvidence(
+        advisor.evidenceSummary,
+      )
+    ) {
       continue;
     }
 

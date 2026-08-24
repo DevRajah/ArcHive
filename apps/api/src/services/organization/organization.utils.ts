@@ -164,6 +164,31 @@ export const getRiskLevel = (
 };
 
 /**
+ * Returns true only when an Architecture Advisor snapshot explicitly says
+ * there is enough repository evidence for a reliable risk judgement.
+ *
+ * Future me:
+ * A stored Advisor snapshot is not the same thing as an assessed repository.
+ * Missing or malformed evidenceSummary must therefore fail closed.
+ */
+export const hasSufficientAdvisorRiskEvidence = (
+  evidenceSummary: unknown,
+): boolean => {
+  if (
+    !evidenceSummary ||
+    typeof evidenceSummary !== "object" ||
+    Array.isArray(evidenceSummary)
+  ) {
+    return false;
+  }
+
+  return (
+    "evidenceSufficient" in evidenceSummary &&
+    evidenceSummary.evidenceSufficient === true
+  );
+};
+
+/**
  * Converts a repository risk score into a simpler health status.
  *
  * Lower risk represents a healthier repository.
