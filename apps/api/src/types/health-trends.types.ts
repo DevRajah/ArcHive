@@ -35,10 +35,11 @@ export type RiskLevel =
   | "LOW"
   | "MODERATE"
   | "HIGH"
-  | "CRITICAL";
+  | "CRITICAL"
+  | "UNASSESSED";
 
 export interface HealthMetricTrend {
-  current: number;
+  current: number | null;
 
   previous: number | null;
 
@@ -54,7 +55,7 @@ export interface HealthMetricTrend {
 export interface RepositoryHealthSummary {
   direction: RepositoryTrendDirection;
 
-  healthScore: number;
+  healthScore: number | null;
 
   previousHealthScore: number | null;
 
@@ -64,7 +65,7 @@ export interface RepositoryHealthSummary {
 
   riskLevel: RiskLevel;
 
-  confidenceScore: number;
+  confidenceScore: number | null;
 
   snapshotCount: number;
 
@@ -74,21 +75,21 @@ export interface RepositoryHealthSummary {
 }
 
 export interface RepositoryLatestScores {
-  architecture: number;
+  architecture: number | null;
 
-  engineeringQuality: number;
+  engineeringQuality: number | null;
 
-  productionReadiness: number;
+  productionReadiness: number | null;
 
-  capability: number;
+  capability: number | null;
 
-  maturity: number;
+  maturity: number | null;
 
-  confidence: number;
+  confidence: number | null;
 
-  risk: number;
+  risk: number | null;
 
-  health: number;
+  health: number | null;
 }
 
 export interface RepositoryHealthHistoryPoint {
@@ -98,35 +99,35 @@ export interface RepositoryHealthHistoryPoint {
 
   recordedAt: Date;
 
-  architecture: number;
+  architecture: number | null;
 
-  engineeringQuality: number;
+  engineeringQuality: number | null;
 
-  productionReadiness: number;
+  productionReadiness: number | null;
 
-  capability: number;
+  capability: number | null;
 
-  maturity: number;
+  maturity: number | null;
 
-  confidence: number;
+  confidence: number | null;
 
-  risk: number;
+  risk: number | null;
 
-  health: number;
+  health: number | null;
 }
 
 export interface RepositoryHealthChange {
   recordedAt: Date;
 
   metric:
-    | "ARCHITECTURE"
-    | "ENGINEERING_QUALITY"
-    | "PRODUCTION_READINESS"
-    | "CAPABILITY"
-    | "MATURITY"
-    | "CONFIDENCE"
-    | "RISK"
-    | "HEALTH";
+  | "ARCHITECTURE"
+  | "ENGINEERING_QUALITY"
+  | "PRODUCTION_READINESS"
+  | "CAPABILITY"
+  | "MATURITY"
+  | "CONFIDENCE"
+  | "RISK"
+  | "HEALTH";
 
   previous: number;
 

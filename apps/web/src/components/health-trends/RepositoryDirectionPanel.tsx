@@ -18,8 +18,8 @@ import type { RepositoryHealthDirection } from "@/types/repository-health-trends
 interface RepositoryDirectionPanelProps {
   direction: RepositoryHealthDirection;
   overallDelta: number | null;
-  confidenceScore: number;
-  riskScore: number;
+  confidenceScore: number | null;
+  riskScore: number | null;
 }
 
 export function RepositoryDirectionPanel({
@@ -101,17 +101,25 @@ export function RepositoryDirectionPanel({
             <DirectionSignal
               icon={Gauge}
               title="Assessment confidence"
-              description={`${Math.round(
-                confidenceScore,
-              )}/100 confidence in the available evidence.`}
+              description={
+                confidenceScore === null
+                  ? "Assessment confidence is not currently available."
+                  : `${Math.round(
+                    confidenceScore,
+                  )}/100 confidence in the available evidence.`
+              }
             />
 
             <DirectionSignal
               icon={ShieldCheck}
               title="Current risk exposure"
-              description={`${Math.round(
-                riskScore,
-              )}/100 repository risk. Lower is healthier.`}
+              description={
+                riskScore === null
+                  ? "Repository risk has not yet been assessed from sufficient evidence."
+                  : `${Math.round(
+                    riskScore,
+                  )}/100 repository risk. Lower is healthier.`
+              }
             />
           </div>
         </div>

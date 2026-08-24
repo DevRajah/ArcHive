@@ -9,6 +9,7 @@ export type RepositoryHealthRiskLevel =
   | "HIGH"
   | "MEDIUM"
   | "LOW"
+  | "UNASSESSED"
   | "UNKNOWN";
 
 export type RepositoryHealthMetricKey =
@@ -34,10 +35,22 @@ export type RepositoryHealthChangeDirection =
  * scale or a 0-100 scale. The UI normalises both formats before display.
  */
 export interface RepositoryHealthMetric {
-  score: number;
+  /*
+   * Some health metrics can legitimately be unavailable.
+   *
+   * In particular, ArcHive must not turn an unassessed Advisor risk
+   * into a numeric zero because zero means genuinely low risk.
+   */
+  score: number | null;
+
   previousScore: number | null;
+
   delta: number | null;
-  direction?: RepositoryHealthDirection | RepositoryHealthChangeDirection;
+
+  direction?:
+  | RepositoryHealthDirection
+  | RepositoryHealthChangeDirection;
+
   explanation?: string;
 }
 
@@ -74,21 +87,25 @@ export interface RepositoryHealthSnapshot {
   capability: number;
   maturity: number;
   confidence: number;
-  risk: number;
-  health: number;
+  /*
+ * Risk and overall health may be unavailable when the Advisor does not
+ * have sufficient evidence to make a trustworthy risk assessment.
+ */
+  risk: number | null;
+  health: number | null;
 }
 
 export interface RepositoryHealthSummary {
   repositoryId?: string;
   repositoryName?: string;
 
-  overallHealthScore: number;
+  overallHealthScore: number | null;
   previousOverallHealthScore: number | null;
   overallHealthDelta: number | null;
 
   direction: RepositoryHealthDirection;
   confidenceScore: number;
-  riskScore: number;
+  riskScore: number | null;
   riskLevel: RepositoryHealthRiskLevel;
 
   scoreBreakdown: RepositoryHealthScoreBreakdown;

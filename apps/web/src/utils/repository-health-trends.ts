@@ -130,6 +130,8 @@ export function getRiskLevelLabel(
 
     case "LOW":
       return "Low Risk";
+    case "UNASSESSED":
+      return "Not Assessed";
 
     default:
       return "Risk Unknown";
@@ -145,7 +147,7 @@ export function createFallbackMetric(
 
   const normalizedPrevious =
     previousScore === null ||
-    previousScore === undefined
+      previousScore === undefined
       ? null
       : normalizeHealthScore(previousScore);
 
@@ -164,16 +166,16 @@ export function createFallbackMetric(
 }
 
 export function getSnapshotDate(snapshot: {
-    recordedAt?: string;
-    generatedAt?: string;
-    createdAt?: string;
-    capturedAt?: string;
+  recordedAt?: string;
+  generatedAt?: string;
+  createdAt?: string;
+  capturedAt?: string;
 }) {
-    return (
-        snapshot.recordedAt ??
-        snapshot.generatedAt ??
-        snapshot.createdAt ??
-        snapshot.capturedAt ??
-        new Date().toISOString()
-    );
+  return (
+    snapshot.recordedAt ??
+    snapshot.generatedAt ??
+    snapshot.createdAt ??
+    snapshot.capturedAt ??
+    new Date().toISOString()
+  );
 }

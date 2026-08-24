@@ -26,13 +26,27 @@ import type {
 
 interface RepositoryHealthHeroProps {
   repositoryName: string;
-  overallHealthScore: number;
+
+  /**
+   * null means ArcHive does not currently have enough evidence
+   * to publish this score.
+   *
+   * It must never be rendered as numeric zero.
+   */
+  overallHealthScore: number | null;
+
   direction: RepositoryHealthDirection;
-  confidenceScore: number;
-  riskScore: number;
+
+  confidenceScore: number | null;
+
+  riskScore: number | null;
+
   riskLevel: RepositoryHealthRiskLevel;
+
   lastUpdatedAt?: string;
+
   isRefreshing: boolean;
+
   onRefresh: () => void;
 }
 
@@ -47,15 +61,26 @@ export function RepositoryHealthHero({
   isRefreshing,
   onRefresh,
 }: RepositoryHealthHeroProps) {
-  const health = normalizeHealthScore(
-    overallHealthScore,
-  );
+  const health =
+    overallHealthScore === null
+      ? null
+      : normalizeHealthScore(
+        overallHealthScore,
+      );
 
-  const confidence = normalizeHealthScore(
-    confidenceScore,
-  );
+  const confidence =
+    confidenceScore === null
+      ? null
+      : normalizeHealthScore(
+        confidenceScore,
+      );
 
-  const risk = normalizeHealthScore(riskScore);
+  const risk =
+    riskScore === null
+      ? null
+      : normalizeHealthScore(
+        riskScore,
+      );
 
   return (
     <motion.section
@@ -105,12 +130,16 @@ export function RepositoryHealthHero({
 
                 <div className="mt-2 flex items-end gap-2">
                   <p className="text-6xl font-bold tracking-tight md:text-7xl">
-                    {health}
+                    {health === null
+                      ? "Not assessed"
+                      : health}
                   </p>
 
-                  <span className="pb-2 text-lg font-medium text-muted-foreground">
-                    /100
-                  </span>
+                  {health !== null && (
+                    <span className="pb-2 text-lg font-medium text-muted-foreground">
+                      /100
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -130,11 +159,10 @@ export function RepositoryHealthHero({
             className="shrink-0"
           >
             <RefreshCcw
-              className={`mr-2 h-4 w-4 ${
-                isRefreshing
-                  ? "animate-spin"
-                  : ""
-              }`}
+              className={`mr-2 h-4 w-4 ${isRefreshing
+                ? "animate-spin"
+                : ""
+                }`}
             />
 
             {isRefreshing
@@ -153,15 +181,31 @@ export function RepositoryHealthHero({
 
           <HeroMetric
             label="Confidence"
-            value={`${confidence}%`}
-            description="Evidence confidence"
+            value={
+              confidence === null
+                ? "Not available"
+                : `${confidence}%`
+            }
+            description={
+              confidence === null
+                ? "More repository evidence is required"
+                : "Evidence confidence"
+            }
             icon={Gauge}
           />
 
           <HeroMetric
             label="Risk"
-            value={`${risk}%`}
-            description={getRiskLevelLabel(riskLevel)}
+            value={
+              risk === null
+                ? "Not assessed"
+                : `${risk}%`
+            }
+            description={
+              risk === null
+                ? "Insufficient evidence for a risk judgement"
+                : getRiskLevelLabel(riskLevel)
+            }
             icon={ShieldAlert}
           />
 

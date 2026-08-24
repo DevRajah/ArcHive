@@ -21,6 +21,10 @@ import type {
     TrendDirection,
 } from "../types/health-trends.types";
 
+import {
+    hasSufficientAdvisorRiskEvidence,
+} from "./organization/organization.utils";
+
 /*
 |--------------------------------------------------------------------------
 | Repository Health Trends Service
@@ -70,6 +74,8 @@ type SnapshotPair = {
         generatedAt: Date;
 
         sourceIntelligenceSnapshotId: string | null;
+
+        evidenceSummary: unknown;
     } | null;
 };
 
@@ -78,6 +84,17 @@ const clamp = (value: number) =>
 
 const safe = (value: number | null | undefined) =>
     value ?? 0;
+/**
+ * Preserves the difference between:
+ *
+ * 0    = ArcHive measured the metric and the score is genuinely zero.
+ * null = ArcHive does not have a score for this metric.
+ */
+const preserveScore = (
+    value: number | null | undefined
+): number | null => {
+    return value ?? null;
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -90,56 +107,138 @@ const safe = (value: number | null | undefined) =>
 
 const calculateHealthScore = (
     snapshot: SnapshotPair
-) => {
+): number | null => {
     const architecture =
-        safe(snapshot.intelligence.architectureScore);
+        preserveScore(
+            snapshot.intelligence.architectureScore
+        );
 
     const engineering =
-        safe(
+        preserveScore(
             snapshot.intelligence
                 .engineeringQualityScore
         );
 
     const production =
-        safe(
+        preserveScore(
             snapshot.intelligence
                 .productionReadinessScore
         );
 
     const capability =
-        safe(snapshot.intelligence.capabilityScore);
+        preserveScore(
+            snapshot.intelligence.capabilityScore
+        );
 
     const maturity =
-        safe(snapshot.intelligence.maturityScore);
+        preserveScore(
+            snapshot.intelligence.maturityScore
+        );
 
     const confidence =
         snapshot.advisor?.confidenceScore ??
-        safe(snapshot.intelligence.confidenceScore);
+        preserveScore(
+            snapshot.intelligence.confidenceScore
+        );
+
+    const advisorRiskIsAssessable =
+        snapshot.advisor !== null &&
+        hasSufficientAdvisorRiskEvidence(
+            snapshot.advisor.evidenceSummary
+        );
 
     const risk =
-        snapshot.advisor?.overallRiskScore ?? 0;
+        advisorRiskIsAssessable
+            ? snapshot.advisor!.overallRiskScore
+            : null;
 
+    /*
+     * Missing evidence must not behave like a zero score.
+     *
+     * Instead, only metrics that ArcHive genuinely knows participate
+     * in the composite health score.
+     */
+    const weightedMetrics: Array<{
+        value: number | null;
+        weight: number;
+    }> = [
+            {
+                value: architecture,
+                weight:
+                    HEALTH_SCORE_WEIGHTS.architecture,
+            },
+            {
+                value: engineering,
+                weight:
+                    HEALTH_SCORE_WEIGHTS
+                        .engineeringQuality,
+            },
+            {
+                value: production,
+                weight:
+                    HEALTH_SCORE_WEIGHTS
+                        .productionReadiness,
+            },
+            {
+                value: capability,
+                weight:
+                    HEALTH_SCORE_WEIGHTS.capability,
+            },
+            {
+                value: maturity,
+                weight:
+                    HEALTH_SCORE_WEIGHTS.maturity,
+            },
+            {
+                value: confidence,
+                weight:
+                    HEALTH_SCORE_WEIGHTS.confidence,
+            },
+            {
+                // Risk is inverted because lower risk means
+                // better repository health.
+                value:
+                    risk === null
+                        ? null
+                        : 100 - risk,
+                weight:
+                    HEALTH_SCORE_WEIGHTS.risk,
+            },
+        ];
+
+    let weightedTotal = 0;
+    let availableWeight = 0;
+
+    for (const metric of weightedMetrics) {
+        if (metric.value === null) {
+            continue;
+        }
+
+        weightedTotal +=
+            metric.value * metric.weight;
+
+        availableWeight += metric.weight;
+    }
+
+    /*
+     * No known metrics means there is no defensible health score.
+     */
+    if (availableWeight === 0) {
+        return null;
+    }
+
+    /*
+     * Re-normalize around the evidence that actually exists.
+     *
+     * Example:
+     *
+     * weightedTotal = 24
+     * availableWeight = 0.30
+     *
+     * health = 24 / 0.30 = 80
+     */
     return clamp(
-        architecture *
-        HEALTH_SCORE_WEIGHTS.architecture +
-
-        engineering *
-        HEALTH_SCORE_WEIGHTS.engineeringQuality +
-
-        production *
-        HEALTH_SCORE_WEIGHTS.productionReadiness +
-
-        capability *
-        HEALTH_SCORE_WEIGHTS.capability +
-
-        maturity *
-        HEALTH_SCORE_WEIGHTS.maturity +
-
-        confidence *
-        HEALTH_SCORE_WEIGHTS.confidence +
-
-        (100 - risk) *
-        HEALTH_SCORE_WEIGHTS.risk
+        weightedTotal / availableWeight
     );
 };
 
@@ -190,9 +289,33 @@ const determineRepositoryDirection = (
 };
 
 const calculateMetricTrend = (
-    current: number,
+    current: number | null,
     previous: number | null
 ): HealthMetricTrend => {
+    /*
+     * A trend cannot exist unless the current measurement exists.
+     */
+    if (current === null) {
+        return {
+            current: null,
+
+            previous,
+
+            change: null,
+
+            percentageChange: null,
+
+            direction:
+                "INSUFFICIENT_DATA",
+
+            status:
+                "INSUFFICIENT_DATA",
+        };
+    }
+
+    /*
+     * We have a current value but nothing historical to compare it with.
+     */
     if (previous === null) {
         return {
             current,
@@ -257,63 +380,73 @@ const classifyRisk = (
 const buildHistory = (
     snapshots: SnapshotPair[]
 ): RepositoryHealthHistoryPoint[] => {
-    return snapshots.map((snapshot) => ({
-        snapshotId:
-            snapshot.intelligence.id,
+    return snapshots.map((snapshot) => {
+        const advisorRiskIsAssessable =
+            snapshot.advisor !== null &&
+            hasSufficientAdvisorRiskEvidence(
+                snapshot.advisor.evidenceSummary
+            );
 
-        advisorSnapshotId:
-            snapshot.advisor?.id ?? null,
+        return {
+            snapshotId:
+                snapshot.intelligence.id,
 
-        recordedAt:
-            snapshot.intelligence.createdAt,
+            advisorSnapshotId:
+                snapshot.advisor?.id ?? null,
 
-        architecture:
-            safe(
-                snapshot.intelligence
-                    .architectureScore
-            ),
+            recordedAt:
+                snapshot.intelligence.createdAt,
 
-        engineeringQuality:
-            safe(
-                snapshot.intelligence
-                    .engineeringQualityScore
-            ),
+            architecture:
+                preserveScore(
+                    snapshot.intelligence
+                        .architectureScore
+                ),
 
-        productionReadiness:
-            safe(
-                snapshot.intelligence
-                    .productionReadinessScore
-            ),
+            engineeringQuality:
+                preserveScore(
+                    snapshot.intelligence
+                        .engineeringQualityScore
+                ),
 
-        capability:
-            safe(
-                snapshot.intelligence
-                    .capabilityScore
-            ),
+            productionReadiness:
+                preserveScore(
+                    snapshot.intelligence
+                        .productionReadinessScore
+                ),
 
-        maturity:
-            safe(
-                snapshot.intelligence
-                    .maturityScore
-            ),
+            capability:
+                preserveScore(
+                    snapshot.intelligence
+                        .capabilityScore
+                ),
 
-        confidence:
-            snapshot.advisor
-                ?.confidenceScore ??
-            safe(
-                snapshot.intelligence
-                    .confidenceScore
-            ),
+            maturity:
+                preserveScore(
+                    snapshot.intelligence
+                        .maturityScore
+                ),
 
-        risk:
-            snapshot.advisor
-                ?.overallRiskScore ?? 0,
+            confidence:
+                snapshot.advisor
+                    ?.confidenceScore ??
+                preserveScore(
+                    snapshot.intelligence
+                        .confidenceScore
+                ),
 
-        health:
-            calculateHealthScore(
-                snapshot
-            ),
-    }));
+            risk:
+                advisorRiskIsAssessable
+                    ? snapshot.advisor!
+                        .overallRiskScore
+                    : null,
+
+            health:
+                calculateHealthScore(
+                    snapshot
+                ),
+        };
+    });
 };
 
 const latest = <T>(
@@ -400,6 +533,8 @@ const loadRepositoryHistory = async (
                         generatedAt: true,
 
                         sourceIntelligenceSnapshotId: true,
+
+                        evidenceSummary: true,
                     },
                 },
             },
@@ -521,6 +656,19 @@ const buildChanges = (
         ] as const;
 
         for (const metric of metrics) {
+
+            /*
+ * A change is only meaningful when both measurements exist.
+ *
+ * Missing evidence is not a zero score and therefore must not
+ * generate an artificial improvement or regression.
+ */
+            if (
+                metric.previous === null ||
+                metric.current === null
+            ) {
+                continue;
+            }
             const difference =
                 metric.current -
                 metric.previous;
@@ -585,7 +733,10 @@ const buildSummary = (
         previous(history);
 
     const healthChange =
-        newest && older
+        newest?.health !== null &&
+            newest?.health !== undefined &&
+            older?.health !== null &&
+            older?.health !== undefined
             ? newest.health -
             older.health
             : null;
@@ -597,7 +748,7 @@ const buildSummary = (
             ),
 
         healthScore:
-            newest?.health ?? 0,
+            newest?.health ?? null,
 
         previousHealthScore:
             older?.health ?? null,
@@ -606,23 +757,25 @@ const buildSummary = (
             healthChange,
 
         maturity:
-            newest
-                ? newest.maturity >= 85
+            newest?.maturity == null
+                ? "UNKNOWN"
+                : newest.maturity >= 85
                     ? "ADVANCED"
                     : newest.maturity >= 70
                         ? "MATURE"
                         : newest.maturity >= 50
                             ? "DEVELOPING"
-                            : "EMERGING"
-                : "UNKNOWN",
+                            : "EMERGING",
 
         riskLevel:
-            classifyRisk(
-                newest?.risk ?? 0
-            ),
+            newest?.risk == null
+                ? "UNASSESSED"
+                : classifyRisk(
+                    newest.risk
+                ),
 
         confidenceScore:
-            newest?.confidence ?? 0,
+            newest?.confidence ?? null,
 
         snapshotCount:
             history.length,
@@ -654,14 +807,14 @@ const buildLatestScores = (
 
     if (!latestSnapshot) {
         return {
-            architecture: 0,
-            engineeringQuality: 0,
-            productionReadiness: 0,
-            capability: 0,
-            maturity: 0,
-            confidence: 0,
-            risk: 0,
-            health: 0,
+            architecture: null,
+            engineeringQuality: null,
+            productionReadiness: null,
+            capability: null,
+            maturity: null,
+            confidence: null,
+            risk: null,
+            health: null,
         };
     }
 
@@ -707,7 +860,7 @@ const buildTrendComparison = (
 
     if (!current) {
         const empty = calculateMetricTrend(
-            0,
+            null,
             null
         );
 
@@ -859,8 +1012,8 @@ const buildInsights = (
     }
 
     if (
-        summary.confidenceScore <
-        50
+        summary.confidenceScore !== null &&
+        summary.confidenceScore < 50
     ) {
         insights.push(
             "Confidence is limited because ArcHive has insufficient historical evidence."

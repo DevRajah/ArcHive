@@ -86,7 +86,7 @@ interface BackendHealthSummary {
     | "IMPROVING"
     | "DECLINING"
     | "STABLE";
-    healthScore: number;
+    healthScore: number | null;
     previousHealthScore: number | null;
     healthScoreChange: number | null;
     maturity: string;
@@ -94,7 +94,8 @@ interface BackendHealthSummary {
     | "LOW"
     | "MEDIUM"
     | "HIGH"
-    | "CRITICAL";
+    | "CRITICAL"
+    | "UNASSESSED";
     confidenceScore: number;
     snapshotCount: number;
     firstRecordedAt: string | null;
@@ -109,12 +110,12 @@ interface BackendLatestScores {
     capability: number;
     maturity: number;
     confidence: number;
-    risk: number;
-    health: number;
+    risk: number | null;
+    health: number | null;
 }
 
 interface BackendMetricTrend {
-    current: number;
+    current: number | null;
     previous: number | null;
     change: number | null;
     percentageChange?: number | null;
@@ -163,23 +164,38 @@ function buildHealthMetric(
     current: number | null | undefined,
     trend: BackendMetricTrend | undefined,
 ): RepositoryHealthMetric {
-    const score = normalizeHealthScore(
-        current ?? trend?.current ?? 0,
-    );
+    /*
+     * Missing evidence is different from a genuine score of zero.
+     *
+     * Do not allow null/undefined to pass through normalizeHealthScore(),
+     * because that utility intentionally converts invalid values to zero
+     * for ordinary numeric display purposes.
+     */
+    const rawCurrent =
+        current ?? trend?.current ?? null;
+
+    const score =
+        rawCurrent === null
+            ? null
+            : normalizeHealthScore(rawCurrent);
 
     const previousScore =
         trend?.previous === null ||
             trend?.previous === undefined
             ? null
-            : normalizeHealthScore(trend.previous);
+            : normalizeHealthScore(
+                trend.previous,
+            );
 
     const delta =
-        trend?.change === null ||
-            trend?.change === undefined
-            ? previousScore === null
-                ? null
-                : score - previousScore
-            : trend.change;
+        score === null
+            ? null
+            : trend?.change === null ||
+                trend?.change === undefined
+                ? previousScore === null
+                    ? null
+                    : score - previousScore
+                : trend.change;
 
     return {
         score,
