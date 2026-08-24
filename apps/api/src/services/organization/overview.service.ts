@@ -1,18 +1,15 @@
 import { prisma } from "@archive/database";
+
 import {
   OrganizationOverview,
   OrganizationQueryOptions,
   OrganizationRiskLevel,
 } from "../../types/organization.types";
 
-
 import {
-  getRepositoriesForScope,
-} from "../intelligence/repository-scope.service";
+  hasSufficientAdvisorRiskEvidence,
+} from "./organization.utils";
 
-import {
-  RepositoryScopeType,
-} from "../../types/repository-scope.types";
 
 /**
  * Returns a high-level engineering summary for all repositories
@@ -42,14 +39,24 @@ export const getOrganizationOverview = async (
     },
   });
 
-  const totalRepositories = repositories.length;
+  const totalRepositories =
+    repositories.length;
 
-  const analyzedRepositories = repositories.filter(
-    (repository) => repository.intelligenceSnapshots.length > 0,
-  ).length;
+  /**
+   * This remains repository-intelligence analysis coverage.
+   *
+   * It is deliberately separate from Architecture Advisor
+   * risk-assessment coverage.
+   */
+  const analyzedRepositories =
+    repositories.filter(
+      (repository) =>
+        repository.intelligenceSnapshots.length > 0,
+    ).length;
 
   const unanalyzedRepositories =
-    totalRepositories - analyzedRepositories;
+    totalRepositories -
+    analyzedRepositories;
 
   let architectureTotal = 0;
   let engineeringTotal = 0;
@@ -69,55 +76,123 @@ export const getOrganizationOverview = async (
   let warningRepositories = 0;
   let criticalRepositories = 0;
 
+  /**
+   * A repository can already have an Advisor snapshot while ArcHive
+   * still lacks enough canonical evidence to make a reliable risk
+   * judgement.
+   *
+   * Future me:
+   * overallRiskScore = 0 with insufficient evidence does NOT mean
+   * "healthy" or "LOW risk".
+   */
+  let unassessedRiskRepositories = 0;
+
   for (const repository of repositories) {
-    const latestSnapshot = repository.intelligenceSnapshots[0];
+    const latestSnapshot =
+      repository.intelligenceSnapshots[0];
+
     const latestAdvisor =
       repository.architectureAdvisorSnapshots[0];
 
-    if (latestSnapshot?.architectureScore != null) {
-      architectureTotal += latestSnapshot.architectureScore;
+    /**
+     * Repository intelligence assessment scores.
+     *
+     * These remain independent of Advisor risk semantics.
+     */
+    if (
+      latestSnapshot?.architectureScore != null
+    ) {
+      architectureTotal +=
+        latestSnapshot.architectureScore;
+
       architectureCount++;
     }
 
-    if (latestSnapshot?.engineeringQualityScore != null) {
-      engineeringTotal += latestSnapshot.engineeringQualityScore;
+    if (
+      latestSnapshot
+        ?.engineeringQualityScore != null
+    ) {
+      engineeringTotal +=
+        latestSnapshot.engineeringQualityScore;
+
       engineeringCount++;
     }
 
-    if (latestSnapshot?.productionReadinessScore != null) {
-      productionTotal += latestSnapshot.productionReadinessScore;
+    if (
+      latestSnapshot
+        ?.productionReadinessScore != null
+    ) {
+      productionTotal +=
+        latestSnapshot.productionReadinessScore;
+
       productionCount++;
     }
 
-    if (latestSnapshot?.maturityScore != null) {
-      maturityTotal += latestSnapshot.maturityScore;
+    if (
+      latestSnapshot?.maturityScore != null
+    ) {
+      maturityTotal +=
+        latestSnapshot.maturityScore;
+
       maturityCount++;
     }
 
-    if (latestSnapshot?.confidenceScore != null) {
-      confidenceTotal += latestSnapshot.confidenceScore;
+    if (
+      latestSnapshot?.confidenceScore != null
+    ) {
+      confidenceTotal +=
+        latestSnapshot.confidenceScore;
+
       confidenceCount++;
     }
 
+    /**
+     * Architecture Advisor risk aggregation.
+     *
+     * A stored Advisor snapshot is not enough by itself.
+     *
+     * Only evidence-sufficient assessments may:
+     *
+     * - contribute to average risk
+     * - contribute to health/risk buckets
+     * - influence the organization-level risk level
+     */
     if (latestAdvisor) {
-      riskTotal += latestAdvisor.overallRiskScore;
-      riskCount++;
+      const evidenceIsSufficient =
+        hasSufficientAdvisorRiskEvidence(
+          latestAdvisor.evidenceSummary,
+        );
 
-      /**
-       * Classify repositories by their overall risk.
-       *
-       * Lower risk means healthier repositories.
-       */
-      if (latestAdvisor.overallRiskScore < 30) {
-        healthyRepositories++;
-      } else if (latestAdvisor.overallRiskScore < 70) {
-        warningRepositories++;
+      if (!evidenceIsSufficient) {
+        unassessedRiskRepositories++;
       } else {
-        criticalRepositories++;
+        riskTotal +=
+          latestAdvisor.overallRiskScore;
+
+        riskCount++;
+
+        /**
+         * These buckets apply only after Advisor evidence
+         * has been established as sufficient.
+         */
+        if (
+          latestAdvisor.overallRiskScore < 30
+        ) {
+          healthyRepositories++;
+        } else if (
+          latestAdvisor.overallRiskScore < 70
+        ) {
+          warningRepositories++;
+        } else {
+          criticalRepositories++;
+        }
       }
     }
   }
 
+  /**
+   * Safely average only values that actually exist.
+   */
   const average = (
     total: number,
     count: number,
@@ -126,20 +201,50 @@ export const getOrganizationOverview = async (
       return null;
     }
 
-    return Number((total / count).toFixed(1));
+    return Number(
+      (total / count).toFixed(1),
+    );
   };
 
-  const averageRiskScore = average(riskTotal, riskCount);
+  /**
+   * Only evidence-sufficient Advisor assessments contributed
+   * to riskTotal/riskCount above.
+   */
+  const averageRiskScore =
+    average(
+      riskTotal,
+      riskCount,
+    );
 
-  let overallRiskLevel: OrganizationRiskLevel = "LOW";
+  /**
+   * null means:
+   *
+   * "There is currently no organization-level risk classification
+   * because no evidence-sufficient repository risk assessments exist."
+   *
+   * This is intentionally different from LOW.
+   */
+  let overallRiskLevel:
+    OrganizationRiskLevel | null =
+    null;
 
   if (averageRiskScore !== null) {
     if (averageRiskScore >= 80) {
-      overallRiskLevel = "CRITICAL";
-    } else if (averageRiskScore >= 60) {
-      overallRiskLevel = "HIGH";
-    } else if (averageRiskScore >= 30) {
-      overallRiskLevel = "MEDIUM";
+      overallRiskLevel =
+        "CRITICAL";
+    } else if (
+      averageRiskScore >= 60
+    ) {
+      overallRiskLevel =
+        "HIGH";
+    } else if (
+      averageRiskScore >= 30
+    ) {
+      overallRiskLevel =
+        "MEDIUM";
+    } else {
+      overallRiskLevel =
+        "LOW";
     }
   }
 
@@ -156,44 +261,61 @@ export const getOrganizationOverview = async (
 
     criticalRepositories,
 
+    /**
+     * Advisor snapshots that exist but cannot yet support
+     * a reliable risk judgement.
+     */
+    unassessedRiskRepositories,
+
     decliningRepositories: 0,
 
     improvingRepositories: 0,
 
     stableRepositories: 0,
 
-    averageArchitectureScore: average(
-      architectureTotal,
-      architectureCount,
-    ),
+    averageArchitectureScore:
+      average(
+        architectureTotal,
+        architectureCount,
+      ),
 
-    averageEngineeringQualityScore: average(
-      engineeringTotal,
-      engineeringCount,
-    ),
+    averageEngineeringQualityScore:
+      average(
+        engineeringTotal,
+        engineeringCount,
+      ),
 
-    averageProductionReadinessScore: average(
-      productionTotal,
-      productionCount,
-    ),
+    averageProductionReadinessScore:
+      average(
+        productionTotal,
+        productionCount,
+      ),
 
-    averageMaturityScore: average(
-      maturityTotal,
-      maturityCount,
-    ),
+    averageMaturityScore:
+      average(
+        maturityTotal,
+        maturityCount,
+      ),
 
     averageRiskScore,
 
     overallRiskLevel,
 
+    /**
+     * This remains repository-intelligence coverage,
+     * not Advisor risk-assessment coverage.
+     */
     analysisCoveragePercentage:
       totalRepositories === 0
         ? 0
         : Number(
+          (
             (
-              (analyzedRepositories / totalRepositories) *
-              100
-            ).toFixed(1),
-          ),
+              analyzedRepositories /
+              totalRepositories
+            ) *
+            100
+          ).toFixed(1),
+        ),
   };
 };

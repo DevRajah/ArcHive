@@ -72,6 +72,8 @@ export interface OrganizationOverview {
 
   criticalRepositories: number;
 
+  unassessedRiskRepositories: number;
+
   decliningRepositories: number;
 
   improvingRepositories: number;
@@ -88,7 +90,8 @@ export interface OrganizationOverview {
 
   averageRiskScore: number | null;
 
-  overallRiskLevel: OrganizationRiskLevel;
+  overallRiskLevel:
+  OrganizationRiskLevel | null;
 
   analysisCoveragePercentage: number;
 }
