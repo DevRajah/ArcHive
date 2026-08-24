@@ -2200,4 +2200,5 @@ export const __architectureAdvisorTestUtils = {
   buildEvidenceAwareFindingBuckets,
   calculateOverallRiskScore,
   getMaturityLabel,
+  buildOverallAssessment,
 };

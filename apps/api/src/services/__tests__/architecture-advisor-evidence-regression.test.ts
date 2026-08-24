@@ -324,5 +324,118 @@ describe(
         );
       }
     );
+
+    test(
+  "critical improvements do not become confirmed critical-risk language",
+  () => {
+    const assessment =
+      __architectureAdvisorTestUtils
+        .buildOverallAssessment({
+          repository: {
+            name: "ExampleRepository",
+          } as any,
+
+          riskScore: 0,
+          maturityLabel: "EMERGING",
+
+          confirmedRiskCount: 0,
+          criticalRiskCount: 0,
+          highRiskCount: 0,
+
+          improvementCount: 1,
+          unverifiedCount: 0,
+
+          evidenceIsSufficient: true,
+        });
+
+    assert.equal(
+      assessment.includes(
+        "confirmed critical risk"
+      ),
+      false,
+      "A CRITICAL improvement must not be described as a confirmed critical risk."
+    );
+
+    assert.equal(
+      assessment.includes(
+        "no confirmed adverse engineering risks detected"
+      ),
+      true
+    );
+  }
+);
+
+test(
+  "high-priority unverified findings do not become confirmed risk language",
+  () => {
+    const assessment =
+      __architectureAdvisorTestUtils
+        .buildOverallAssessment({
+          repository: {
+            name: "ExampleRepository",
+          } as any,
+
+          riskScore: 0,
+          maturityLabel: "DEVELOPING",
+
+          confirmedRiskCount: 0,
+          criticalRiskCount: 0,
+          highRiskCount: 0,
+
+          improvementCount: 0,
+          unverifiedCount: 2,
+
+          evidenceIsSufficient: true,
+        });
+
+    assert.equal(
+      assessment.includes(
+        "confirmed high-priority risk"
+      ),
+      false,
+      "UNVERIFIED findings must not be described as confirmed high-priority risks."
+    );
+
+    assert.equal(
+      assessment.includes(
+        "could not be fully verified"
+      ),
+      true
+    );
+  }
+);
+
+test(
+  "confirmed critical risks produce explicit confirmed-risk language",
+  () => {
+    const assessment =
+      __architectureAdvisorTestUtils
+        .buildOverallAssessment({
+          repository: {
+            name: "ExampleRepository",
+          } as any,
+
+          riskScore: 45,
+          maturityLabel: "DEVELOPING",
+
+          confirmedRiskCount: 1,
+          criticalRiskCount: 1,
+          highRiskCount: 0,
+
+          improvementCount: 3,
+          unverifiedCount: 2,
+
+          evidenceIsSufficient: true,
+        });
+
+    assert.equal(
+      assessment.includes(
+        "1 confirmed critical risk"
+      ),
+      true,
+      "A genuine confirmed CRITICAL risk must be described explicitly as confirmed."
+    );
+  }
+);
   }
 );
