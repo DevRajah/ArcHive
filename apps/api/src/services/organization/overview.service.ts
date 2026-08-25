@@ -214,6 +214,27 @@ export const getOrganizationOverview = async (
       riskTotal,
       riskCount,
     );
+  /**
+ * Percentage of tracked repositories that currently have an
+ * evidence-sufficient Architecture Advisor risk assessment.
+ *
+ * This is intentionally separate from analysisCoveragePercentage.
+ *
+ * analysisCoveragePercentage:
+ *   "Has ArcHive generated repository intelligence?"
+ *
+ * riskAssessmentCoveragePercentage:
+ *   "Can ArcHive currently make a trustworthy risk judgement?"
+ */
+  const riskAssessmentCoveragePercentage =
+    totalRepositories === 0
+      ? 0
+      : Number(
+        (
+          (riskCount / totalRepositories) *
+          100
+        ).toFixed(1),
+      );
 
   /**
    * null means:
@@ -259,6 +280,7 @@ export const getOrganizationOverview = async (
     warningRepositories,
 
     criticalRepositories,
+
 
     /**
      * Advisor snapshots that exist but cannot yet support
@@ -316,5 +338,6 @@ export const getOrganizationOverview = async (
             100
           ).toFixed(1),
         ),
+    riskAssessmentCoveragePercentage,
   };
 };

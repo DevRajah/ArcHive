@@ -94,6 +94,8 @@ export interface OrganizationOverview {
   OrganizationRiskLevel | null;
 
   analysisCoveragePercentage: number;
+
+  riskAssessmentCoveragePercentage: number;
 }
 
 /**
