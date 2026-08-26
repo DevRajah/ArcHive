@@ -1,18 +1,14 @@
 "use client";
 
-import {
-  useMemo,
-  useState,
-} from "react";
-
-import Link from "next/link";
-
+import { useMemo, useState } from "react";
 import {
   ArrowDown,
   ArrowUp,
   Search,
   Trophy,
 } from "lucide-react";
+
+import Link from "next/link";
 
 import {
   Card,
@@ -82,21 +78,36 @@ const rankingTabs: {
   },
 ];
 
+/**
+ * Return the real numeric value when one exists.
+ *
+ * Important:
+ * Do not convert null to zero.
+ *
+ * For riskScore:
+ * - 0 means a legitimate assessed zero-risk score.
+ * - null means the repository does not currently have sufficient
+ *   evidence for canonical risk assessment.
+ */
 function getNumericValue(
   repository: OrganizationRepositoryRanking,
   key: SortKey,
-) {
+): number | null {
   const value = repository[key];
 
-  return typeof value === "number"
+  return typeof value === "number" &&
+    Number.isFinite(value)
     ? value
-    : 0;
+    : null;
 }
 
 function formatScore(
   value: number | null | undefined,
 ) {
-  if (typeof value !== "number") {
+  if (
+    typeof value !== "number" ||
+    !Number.isFinite(value)
+  ) {
     return "N/A";
   }
 
@@ -108,7 +119,11 @@ function formatScore(
 function getScoreBadgeVariant(
   score: number,
   isRisk: boolean,
-): "default" | "secondary" | "outline" | "destructive" {
+):
+  | "default"
+  | "secondary"
+  | "outline"
+  | "destructive" {
   if (isRisk) {
     if (score >= 75) {
       return "destructive";
@@ -149,7 +164,10 @@ export default function RepositoryRankings({
 
   const availableLanguages = useMemo(() => {
     const languages = repositories
-      .map((repository) => repository.language)
+      .map(
+        (repository) =>
+          repository.language,
+      )
       .filter(
         (
           item,
@@ -160,8 +178,8 @@ export default function RepositoryRankings({
 
     return Array.from(
       new Set(languages),
-    ).sort((a, b) =>
-      a.localeCompare(b),
+    ).sort((first, second) =>
+      first.localeCompare(second),
     );
   }, [repositories]);
 
@@ -191,19 +209,50 @@ export default function RepositoryRankings({
       },
     );
 
-    filtered.sort((first, second) => {
-      const firstScore = getNumericValue(
-        first,
-        activeTab,
-      );
+    filtered.sort(
+      (first, second) => {
+        const firstScore =
+          getNumericValue(
+            first,
+            activeTab,
+          );
 
-      const secondScore = getNumericValue(
-        second,
-        activeTab,
-      );
+        const secondScore =
+          getNumericValue(
+            second,
+            activeTab,
+          );
 
-      return secondScore - firstScore;
-    });
+        /**
+         * Missing scores stay unavailable and sort after
+         * repositories that have real scores.
+         *
+         * This matters most for the Risk tab:
+         *
+         * assessed riskScore = 0
+         * is NOT equivalent to
+         * unassessed riskScore = null
+         */
+        if (
+          firstScore === null &&
+          secondScore === null
+        ) {
+          return 0;
+        }
+
+        if (firstScore === null) {
+          return 1;
+        }
+
+        if (secondScore === null) {
+          return -1;
+        }
+
+        return (
+          secondScore - firstScore
+        );
+      },
+    );
 
     if (resultLimit === "ALL") {
       return filtered;
@@ -329,190 +378,208 @@ export default function RepositoryRankings({
           }
         >
           <TabsList className="mb-6 flex h-auto flex-wrap justify-start">
-            {rankingTabs.map((tab) => (
-              <TabsTrigger
+            {rankingTabs.map(
+              (tab) => (
+                <TabsTrigger
+                  key={tab.value}
+                  value={tab.value}
+                >
+                  {tab.label}
+                </TabsTrigger>
+              ),
+            )}
+          </TabsList>
+
+          {rankingTabs.map(
+            (tab) => (
+              <TabsContent
                 key={tab.value}
                 value={tab.value}
               >
-                {tab.label}
-              </TabsTrigger>
-            ))}
-          </TabsList>
+                {!visibleRepositories.length ? (
+                  <OrganizationEmptyState
+                    icon={Search}
+                    title="No repositories found"
+                    description="Try changing the search term, language filter, or result limit."
+                  />
+                ) : (
+                  <div className="max-h-[620px] overflow-auto rounded-lg border">
+                    <table className="w-full min-w-[950px] text-sm">
+                      <thead className="sticky top-0 z-10 bg-background">
+                        <tr className="border-b">
+                          <th className="w-20 px-4 py-3 text-left font-medium text-muted-foreground">
+                            Rank
+                          </th>
 
-          {rankingTabs.map((tab) => (
-            <TabsContent
-              key={tab.value}
-              value={tab.value}
-            >
-              {!visibleRepositories.length ? (
-                <OrganizationEmptyState
-                  icon={Search}
-                  title="No repositories found"
-                  description="Try changing the search term, language filter, or result limit."
-                />
-              ) : (
-                <div className="max-h-[620px] overflow-auto rounded-lg border">
-                  <table className="w-full min-w-[950px] text-sm">
-                    <thead className="sticky top-0 z-10 bg-background">
-                      <tr className="border-b">
-                        <th className="w-20 px-4 py-3 text-left font-medium text-muted-foreground">
-                          Rank
-                        </th>
+                          <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                            Repository
+                          </th>
 
-                        <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                          Repository
-                        </th>
+                          <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                            Language
+                          </th>
 
-                        <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                          Language
-                        </th>
+                          <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                            Score
+                          </th>
 
-                        <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                          Score
-                        </th>
+                          <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                            Activity
+                          </th>
 
-                        <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                          Activity
-                        </th>
+                          <th className="px-4 py-3 text-right font-medium text-muted-foreground">
+                            Action
+                          </th>
+                        </tr>
+                      </thead>
 
-                        <th className="px-4 py-3 text-right font-medium text-muted-foreground">
-                          Action
-                        </th>
-                      </tr>
-                    </thead>
+                      <tbody>
+                        {visibleRepositories.map(
+                          (
+                            repository,
+                            index,
+                          ) => {
+                            const score =
+                              getNumericValue(
+                                repository,
+                                activeTab,
+                              );
 
-                    <tbody>
-                      {visibleRepositories.map(
-                        (
-                          repository,
-                          index,
-                        ) => {
-                          const score =
-                            getNumericValue(
-                              repository,
-                              activeTab,
-                            );
+                            const isRisk =
+                              activeTab ===
+                              "riskScore";
 
-                          const isRisk =
-                            activeTab ===
-                            "riskScore";
+                            const TrendIcon =
+                              isRisk
+                                ? ArrowUp
+                                : ArrowDown;
 
-                          const TrendIcon =
-                            isRisk
-                              ? ArrowUp
-                              : ArrowDown;
-
-                          return (
-                            <tr
-                              key={
-                                repository.repositoryId
-                              }
-                              className="border-b transition-colors last:border-b-0 hover:bg-muted/40"
-                            >
-                              <td className="px-4 py-4">
-                                <Badge
-                                  variant={
-                                    index < 3
-                                      ? "default"
-                                      : "secondary"
-                                  }
-                                >
-                                  #{index + 1}
-                                </Badge>
-                              </td>
-
-                              <td className="px-4 py-4">
-                                <div className="font-medium">
-                                  {
-                                    repository.repositoryName
-                                  }
-                                </div>
-
-                                <div className="mt-1 text-xs text-muted-foreground">
-                                  {
-                                    repository.repositoryFullName
-                                  }
-                                </div>
-                              </td>
-
-                              <td className="px-4 py-4">
-                                <Badge variant="outline">
-                                  {repository.language ??
-                                    "Unknown"}
-                                </Badge>
-                              </td>
-
-                              <td className="px-4 py-4">
-                                <div className="flex items-center gap-2">
-                                  <TrendIcon
-                                    className={`h-4 w-4 ${
-                                      isRisk
-                                        ? "text-destructive"
-                                        : "text-emerald-500"
-                                    }`}
-                                  />
-
+                            return (
+                              <tr
+                                key={
+                                  repository.repositoryId
+                                }
+                                className="border-b transition-colors last:border-b-0 hover:bg-muted/40"
+                              >
+                                <td className="px-4 py-4">
                                   <Badge
-                                    variant={getScoreBadgeVariant(
-                                      score,
-                                      isRisk,
-                                    )}
+                                    variant={
+                                      index < 3
+                                        ? "default"
+                                        : "secondary"
+                                    }
                                   >
-                                    {formatScore(
-                                      score,
+                                    #{index + 1}
+                                  </Badge>
+                                </td>
+
+                                <td className="px-4 py-4">
+                                  <div className="font-medium">
+                                    {
+                                      repository.repositoryName
+                                    }
+                                  </div>
+
+                                  <div className="mt-1 text-xs text-muted-foreground">
+                                    {
+                                      repository.repositoryFullName
+                                    }
+                                  </div>
+                                </td>
+
+                                <td className="px-4 py-4">
+                                  <Badge variant="outline">
+                                    {repository.language ??
+                                      "Unknown"}
+                                  </Badge>
+                                </td>
+
+                                <td className="px-4 py-4">
+                                  <div className="flex items-center gap-2">
+                                    {score !== null && (
+                                      <TrendIcon
+                                        className={`h-4 w-4 ${
+                                          isRisk
+                                            ? "text-destructive"
+                                            : "text-emerald-500"
+                                        }`}
+                                      />
                                     )}
-                                  </Badge>
-                                </div>
-                              </td>
 
-                              <td className="px-4 py-4">
-                                <div className="flex flex-wrap gap-2">
-                                  <Badge variant="outline">
-                                    {
-                                      repository.engineeringEventCount
-                                    }{" "}
-                                    events
-                                  </Badge>
+                                    <Badge
+                                      variant={
+                                        score === null
+                                          ? "outline"
+                                          : getScoreBadgeVariant(
+                                              score,
+                                              isRisk,
+                                            )
+                                      }
+                                    >
+                                      {formatScore(
+                                        score,
+                                      )}
+                                    </Badge>
 
-                                  <Badge variant="outline">
-                                    {
-                                      repository.architectureChangeCount
-                                    }{" "}
-                                    architecture
-                                  </Badge>
+                                    {isRisk &&
+                                      score ===
+                                        null && (
+                                        <span className="text-xs text-muted-foreground">
+                                          Not assessed
+                                        </span>
+                                      )}
+                                  </div>
+                                </td>
 
-                                  <Badge variant="outline">
-                                    {
-                                      repository.recommendationCount
-                                    }{" "}
-                                    recommendations
-                                  </Badge>
-                                </div>
-                              </td>
+                                <td className="px-4 py-4">
+                                  <div className="flex flex-wrap gap-2">
+                                    <Badge variant="outline">
+                                      {
+                                        repository.engineeringEventCount
+                                      }{" "}
+                                      events
+                                    </Badge>
 
-                              <td className="px-4 py-4 text-right">
-                                <Button
-                                  asChild
-                                  size="sm"
-                                  variant="outline"
-                                >
-                                  <Link
-                                    href={`/repositories/${repository.repositoryId}`}
+                                    <Badge variant="outline">
+                                      {
+                                        repository.architectureChangeCount
+                                      }{" "}
+                                      architecture
+                                    </Badge>
+
+                                    <Badge variant="outline">
+                                      {
+                                        repository.recommendationCount
+                                      }{" "}
+                                      recommendations
+                                    </Badge>
+                                  </div>
+                                </td>
+
+                                <td className="px-4 py-4 text-right">
+                                  <Button
+                                    asChild
+                                    size="sm"
+                                    variant="outline"
                                   >
-                                    View Repository
-                                  </Link>
-                                </Button>
-                              </td>
-                            </tr>
-                          );
-                        },
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </TabsContent>
-          ))}
+                                    <Link
+                                      href={`/repositories/${repository.repositoryId}`}
+                                    >
+                                      View Repository
+                                    </Link>
+                                  </Button>
+                                </td>
+                              </tr>
+                            );
+                          },
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </TabsContent>
+            ),
+          )}
         </Tabs>
       </CardContent>
     </Card>
