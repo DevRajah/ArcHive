@@ -14,6 +14,7 @@ import type {
   RepositoryHighlights,
   ReportStatusResponse,
   RiskBreakdown,
+  RiskAssessmentContext,
   TechnologyAnalysis,
 } from "@/types/report.types";
 
@@ -205,9 +206,9 @@ function normalizeRiskBreakdown(
   const highestSeverity =
     value.highestSeverity ===
       "CRITICAL" ||
-    value.highestSeverity === "HIGH" ||
-    value.highestSeverity === "MEDIUM" ||
-    value.highestSeverity === "LOW"
+      value.highestSeverity === "HIGH" ||
+      value.highestSeverity === "MEDIUM" ||
+      value.highestSeverity === "LOW"
       ? value.highestSeverity
       : null;
 
@@ -240,6 +241,61 @@ function normalizeRiskBreakdown(
   };
 }
 
+function normalizeRiskAssessment(
+  value: unknown,
+): RiskAssessmentContext | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const totalRepositories =
+    asNumber(
+      value.totalRepositories,
+    );
+
+  const assessedRepositories =
+    asNumber(
+      value.assessedRepositories,
+    );
+
+  const unassessedRepositories =
+    asNumber(
+      value.unassessedRepositories,
+    );
+
+  const assessmentCoveragePercentage =
+    asNumber(
+      value.assessmentCoveragePercentage,
+    );
+
+  const averageRiskScore =
+    asNullableNumber(
+      value.averageRiskScore,
+    );
+
+  const rawRiskLevel =
+    asNullableString(
+      value.overallRiskLevel,
+    );
+
+  const overallRiskLevel =
+    rawRiskLevel === "CRITICAL" ||
+      rawRiskLevel === "HIGH" ||
+      rawRiskLevel === "MEDIUM" ||
+      rawRiskLevel === "LOW"
+      ? rawRiskLevel
+      : null;
+
+  return {
+    totalRepositories,
+    assessedRepositories,
+    unassessedRepositories,
+    assessmentCoveragePercentage,
+    averageRiskScore,
+    overallRiskLevel,
+  };
+}
+
 function normalizeTechnologyAnalysis(
   value: unknown,
 ): TechnologyAnalysis {
@@ -254,41 +310,41 @@ function normalizeTechnologyAnalysis(
       value.topTechnologies,
     )
       ? value.topTechnologies
-          .filter(isRecord)
-          .map((technology) => ({
-            name: asString(
-              technology.name,
-              "Unknown technology",
+        .filter(isRecord)
+        .map((technology) => ({
+          name: asString(
+            technology.name,
+            "Unknown technology",
+          ),
+
+          usageCount: asNumber(
+            technology.usageCount,
+          ),
+
+          category:
+            asNullableString(
+              technology.category,
             ),
 
-            usageCount: asNumber(
-              technology.usageCount,
+          percentage:
+            asNullableNumber(
+              technology.percentage,
             ),
-
-            category:
-              asNullableString(
-                technology.category,
-              ),
-
-            percentage:
-              asNullableNumber(
-                technology.percentage,
-              ),
-          }))
+        }))
       : [];
 
   const categories =
     isRecord(value.categories)
       ? Object.fromEntries(
-          Object.entries(
-            value.categories,
-          ).map(
-            ([category, count]) => [
-              category,
-              asNumber(count),
-            ],
-          ),
-        )
+        Object.entries(
+          value.categories,
+        ).map(
+          ([category, count]) => [
+            category,
+            asNumber(count),
+          ],
+        ),
+      )
       : {};
 
   return {
@@ -319,11 +375,11 @@ function normalizeTrendAnalysis(
   const direction =
     value.direction ===
       "IMPROVING" ||
-    value.direction ===
+      value.direction ===
       "DECLINING" ||
-    value.direction ===
+      value.direction ===
       "STABLE" ||
-    value.direction ===
+      value.direction ===
       "UNKNOWN"
       ? value.direction
       : "UNKNOWN";
@@ -331,16 +387,16 @@ function normalizeTrendAnalysis(
   const points =
     Array.isArray(value.points)
       ? value.points
-          .filter(isRecord)
-          .map((point) => ({
-            label: asString(
-              point.label,
-            ),
+        .filter(isRecord)
+        .map((point) => ({
+          label: asString(
+            point.label,
+          ),
 
-            value: asNumber(
-              point.value,
-            ),
-          }))
+          value: asNumber(
+            point.value,
+          ),
+        }))
       : [];
 
   return {
@@ -435,6 +491,7 @@ function normalizeReport(
       compatibility: null,
       isLegacy: false,
       analytics: null,
+      riskAssessment: null,
     };
   }
 
@@ -456,6 +513,7 @@ function normalizeReport(
       compatibility: "LEGACY",
       isLegacy: true,
       analytics: null,
+      riskAssessment: null,
     };
   }
 
@@ -518,7 +576,69 @@ function normalizeReport(
           normalizeRepositoryHighlights(
             rawSnapshot.repositoryHighlights,
           ),
+
       },
+      /*
+  * V2/V3 reports predate persisted risk-assessment coverage.
+  * Do not reconstruct it from historical data.
+  */
+      riskAssessment: null,
+    };
+  }
+
+  if (rawSchemaVersion === 4) {
+    const rawSnapshot =
+      reportData as Record<
+        string,
+        unknown
+      >;
+
+    return {
+      ...report,
+
+      schemaVersion: 4,
+
+      compatibility: "SUPPORTED",
+
+      isLegacy: false,
+
+      analytics: {
+        executiveSummary:
+          normalizeExecutiveSummary(
+            rawSnapshot.executiveSummary,
+          ),
+
+        executiveKpis:
+          normalizeExecutiveKpis(
+            rawSnapshot.executiveKpis,
+          ),
+
+        riskBreakdown:
+          normalizeRiskBreakdown(
+            rawSnapshot.riskBreakdown,
+          ),
+
+        technologyAnalysis:
+          normalizeTechnologyAnalysis(
+            rawSnapshot.technologyAnalysis,
+          ),
+
+        trendAnalysis:
+          normalizeTrendAnalysis(
+            rawSnapshot.trendAnalysis,
+          ),
+
+        repositoryHighlights:
+          normalizeRepositoryHighlights(
+            rawSnapshot.repositoryHighlights,
+          ),
+      },
+
+      riskAssessment:
+        normalizeRiskAssessment(
+          rawSnapshot.riskAssessment,
+        ),
+
     };
   }
 
@@ -538,6 +658,8 @@ function normalizeReport(
     compatibility: "UNSUPPORTED",
     isLegacy: false,
     analytics: null,
+    riskAssessment: null,
+
   };
 }
 

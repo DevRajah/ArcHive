@@ -3,12 +3,14 @@ import type {
   ExecutiveKpis,
   ExecutiveReportAnalytics,
   ExecutiveReportSnapshotV3,
+  ExecutiveReportSnapshotV4,
   ExecutiveSummary,
   ReportRiskSeverity,
   ReportSchemaVersion,
   ReportTrendDirection,
   RepositoryHighlight,
   RepositoryHighlights,
+  RiskAssessmentContext,
   RiskBreakdown,
   TechnologyAnalysis,
   TechnologyInsight,
@@ -27,12 +29,14 @@ export type {
   EngineeringTrendAnalysis,
   ExecutiveKpis,
   ExecutiveReportSnapshotV3,
+  ExecutiveReportSnapshotV4,
   ExecutiveSummary,
   ReportRiskSeverity,
   ReportSchemaVersion,
   ReportTrendDirection,
   RepositoryHighlight,
   RepositoryHighlights,
+  RiskAssessmentContext,
   RiskBreakdown,
   TechnologyAnalysis,
   TechnologyInsight,
@@ -115,18 +119,27 @@ export type PersonalExecutiveReportSnapshotV3 =
   ExecutiveReportSnapshotV3<
     OrganizationDashboardSnapshot
   >;
+  /**
+   * 
+   */
+export type PersonalExecutiveReportSnapshotV4 =
+  ExecutiveReportSnapshotV4<
+    OrganizationDashboardSnapshot
+  >;
 
 /**
  * Executive Report schemas deliberately understood by this frontend.
  *
  * V1 is legacy.
  * V2 is supported historical.
- * V3 is supported current.
+ * V3 is supported current supported historical.
+ * V4 is supported current
  */
 export type ExecutiveReportSnapshot =
   | ExecutiveReportSnapshotV1
   | ExecutiveReportSnapshotV2
-  | PersonalExecutiveReportSnapshotV3;
+  | PersonalExecutiveReportSnapshotV3
+  | PersonalExecutiveReportSnapshotV4;
 
 /**
  * Minimal representation of a persisted Executive Report whose schema
@@ -284,4 +297,18 @@ export interface NormalizedExecutiveReport
    */
   analytics:
     ExecutiveReportAnalytics | null;
+
+  /*
+ * Schema V4 risk-assessment context.
+ *
+ * null for:
+ * - V1
+ * - V2
+ * - V3
+ * - queued/failed reports
+ *
+ * The frontend must not reconstruct this context for older reports.
+ */
+riskAssessment:
+  RiskAssessmentContext | null;
 }
