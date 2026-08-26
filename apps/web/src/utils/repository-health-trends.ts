@@ -5,26 +5,49 @@ import type {
   RepositoryHealthRiskLevel,
 } from "@/types/repository-health-trends.types";
 
-/*
- * The backend may represent scores as decimals such as 0.82 or whole
- * percentages such as 82. Keeping this conversion in one place prevents
- * each component from implementing its own slightly different logic.
+/**
+ * Normalise a real health/risk score without destroying unavailable state.
+ *
+ * Important semantics:
+ *
+ * 0    = a legitimate measured score
+ * null = the score is unavailable / not assessed
+ *
+ * Never turn null or undefined into zero.
  */
-export function normalizeHealthScore(value: number | null | undefined) {
+export function normalizeHealthScore(
+  value: number,
+): number;
+
+export function normalizeHealthScore(
+  value: null | undefined,
+): null;
+
+export function normalizeHealthScore(
+  value: number | null | undefined,
+): number | null;
+
+export function normalizeHealthScore(
+  value: number | null | undefined,
+): number | null {
   if (
     typeof value !== "number" ||
     !Number.isFinite(value)
   ) {
-    return 0;
+    return null;
   }
 
-  const normalized = Math.abs(value) <= 1
-    ? value * 100
-    : value;
+  const normalized =
+    Math.abs(value) <= 1
+      ? value * 100
+      : value;
 
   return Math.max(
     0,
-    Math.min(100, Math.round(normalized)),
+    Math.min(
+      100,
+      Math.round(normalized),
+    ),
   );
 }
 
@@ -38,11 +61,14 @@ export function normalizeHealthDelta(
     return null;
   }
 
-  const normalized = Math.abs(value) <= 1
-    ? value * 100
-    : value;
+  const normalized =
+    Math.abs(value) <= 1
+      ? value * 100
+      : value;
 
-  return Number(normalized.toFixed(1));
+  return Number(
+    normalized.toFixed(1),
+  );
 }
 
 export function formatHealthDate(
@@ -58,10 +84,13 @@ export function formatHealthDate(
     return value;
   }
 
-  return new Intl.DateTimeFormat("en-GB", {
-    dateStyle: "long",
-    timeStyle: "short",
-  }).format(date);
+  return new Intl.DateTimeFormat(
+    "en-GB",
+    {
+      dateStyle: "long",
+      timeStyle: "short",
+    },
+  ).format(date);
 }
 
 export function formatCompactHealthDate(
@@ -77,10 +106,13 @@ export function formatCompactHealthDate(
     return value;
   }
 
-  return new Intl.DateTimeFormat("en-GB", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(date);
+  return new Intl.DateTimeFormat(
+    "en-GB",
+    {
+      dateStyle: "medium",
+      timeStyle: "short",
+    },
+  ).format(date);
 }
 
 export function getHealthDirectionLabel(
@@ -91,7 +123,9 @@ export function getHealthDirectionLabel(
     | null
     | undefined,
 ) {
-  switch (direction?.toUpperCase()) {
+  switch (
+    direction?.toUpperCase()
+  ) {
     case "IMPROVING":
     case "IMPROVED":
     case "INCREASED":
@@ -118,7 +152,9 @@ export function getRiskLevelLabel(
     | null
     | undefined,
 ) {
-  switch (riskLevel?.toUpperCase()) {
+  switch (
+    riskLevel?.toUpperCase()
+  ) {
     case "CRITICAL":
       return "Critical Risk";
 
@@ -130,6 +166,7 @@ export function getRiskLevelLabel(
 
     case "LOW":
       return "Low Risk";
+
     case "UNASSESSED":
       return "Not Assessed";
 
@@ -138,39 +175,54 @@ export function getRiskLevelLabel(
   }
 }
 
+/**
+ * Build a metric only from values that actually exist.
+ *
+ * Missing score remains null.
+ * Missing previous score remains null.
+ *
+ * We only calculate our own delta when both current and previous
+ * scores are genuinely available.
+ */
 export function createFallbackMetric(
   score: number | null | undefined,
   previousScore?: number | null,
   delta?: number | null,
 ): RepositoryHealthMetric {
-  const normalizedScore = normalizeHealthScore(score);
+  const normalizedScore =
+    normalizeHealthScore(score);
 
   const normalizedPrevious =
-    previousScore === null ||
-      previousScore === undefined
-      ? null
-      : normalizeHealthScore(previousScore);
+    normalizeHealthScore(
+      previousScore,
+    );
 
   const resolvedDelta =
-    delta === null || delta === undefined
-      ? normalizedPrevious === null
-        ? null
-        : normalizedScore - normalizedPrevious
-      : normalizeHealthDelta(delta);
+    delta !== null &&
+    delta !== undefined
+      ? normalizeHealthDelta(delta)
+      : normalizedScore !== null &&
+          normalizedPrevious !== null
+        ? normalizedScore -
+          normalizedPrevious
+        : null;
 
   return {
     score: normalizedScore,
-    previousScore: normalizedPrevious,
+    previousScore:
+      normalizedPrevious,
     delta: resolvedDelta,
   };
 }
 
-export function getSnapshotDate(snapshot: {
-  recordedAt?: string;
-  generatedAt?: string;
-  createdAt?: string;
-  capturedAt?: string;
-}) {
+export function getSnapshotDate(
+  snapshot: {
+    recordedAt?: string;
+    generatedAt?: string;
+    createdAt?: string;
+    capturedAt?: string;
+  },
+) {
   return (
     snapshot.recordedAt ??
     snapshot.generatedAt ??
