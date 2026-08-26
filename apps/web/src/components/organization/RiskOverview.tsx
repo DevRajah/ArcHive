@@ -9,7 +9,6 @@ import Link from "next/link";
 
 import {
   AlertTriangle,
-  CheckCircle2,
   Search,
   ShieldAlert,
   ShieldCheck,
@@ -54,31 +53,31 @@ const riskLevels: {
   label: string;
   description: string;
 }[] = [
-  {
-    value: "CRITICAL",
-    label: "Critical",
-    description:
-      "Immediate engineering attention required",
-  },
-  {
-    value: "HIGH",
-    label: "High",
-    description:
-      "Significant engineering risk detected",
-  },
-  {
-    value: "MEDIUM",
-    label: "Medium",
-    description:
-      "Improvements should be scheduled",
-  },
-  {
-    value: "LOW",
-    label: "Low",
-    description:
-      "Repository is currently stable",
-  },
-];
+    {
+      value: "CRITICAL",
+      label: "Critical",
+      description:
+        "Immediate engineering attention required",
+    },
+    {
+      value: "HIGH",
+      label: "High",
+      description:
+        "Significant engineering risk detected",
+    },
+    {
+      value: "MEDIUM",
+      label: "Medium",
+      description:
+        "Improvements should be scheduled",
+    },
+    {
+      value: "LOW",
+      label: "Low",
+      description:
+        "Low confirmed risk based on available assessed evidence",
+    },
+  ];
 
 function getRiskBadgeVariant(
   level: string,
@@ -114,21 +113,7 @@ function getRiskIcon(level: string) {
   }
 }
 
-function normalizeRiskScore(
-  score: number | null | undefined,
-) {
-  if (
-    typeof score !== "number" ||
-    !Number.isFinite(score)
-  ) {
-    return 0;
-  }
 
-  return Math.min(
-    100,
-    Math.max(0, score),
-  );
-}
 
 function formatRiskScore(
   score: number | null | undefined,
@@ -212,7 +197,7 @@ export default function RiskOverview({
             const matchesRisk =
               activeFilter === "ALL" ||
               repository.riskLevel ===
-                activeFilter;
+              activeFilter;
 
             const matchesSearch =
               normalizedSearch.length === 0 ||
@@ -232,16 +217,10 @@ export default function RiskOverview({
       return [...filtered].sort(
         (first, second) => {
           const firstRisk =
-            typeof first.overallRiskScore ===
-            "number"
-              ? first.overallRiskScore
-              : 0;
+            first.overallRiskScore;
 
           const secondRisk =
-            typeof second.overallRiskScore ===
-            "number"
-              ? second.overallRiskScore
-              : 0;
+            second.overallRiskScore;
 
           switch (sortBy) {
             case "RISK_LOW":
@@ -285,9 +264,9 @@ export default function RiskOverview({
   if (!totalRisks) {
     return (
       <OrganizationEmptyState
-        icon={CheckCircle2}
-        title="No organization risks detected"
-        description="Risk information will appear when analysed repositories contain architecture, engineering quality, maturity, or production readiness concerns."
+        icon={ShieldAlert}
+        title="No assessed repository risks available"
+        description="ArcHive does not currently have repository risk assessments with sufficient evidence to display here. Repositories without sufficient risk evidence are not classified as LOW risk."
       />
     );
   }
@@ -403,11 +382,10 @@ export default function RiskOverview({
                     level.value,
                   )
                 }
-                className={`rounded-xl border p-4 text-left transition ${
-                  isActive
-                    ? "border-primary bg-primary/5 ring-1 ring-primary"
-                    : "hover:border-primary/30 hover:bg-muted/50"
-                }`}
+                className={`rounded-xl border p-4 text-left transition ${isActive
+                  ? "border-primary bg-primary/5 ring-1 ring-primary"
+                  : "hover:border-primary/30 hover:bg-muted/50"
+                  }`}
               >
                 <div className="flex items-center justify-between gap-3">
                   <Badge
@@ -429,28 +407,26 @@ export default function RiskOverview({
 
                 <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-muted">
                   <div
-                    className={`h-full rounded-full ${
+                    className={`h-full rounded-full ${level.value ===
+                      "CRITICAL" ||
                       level.value ===
-                        "CRITICAL" ||
-                      level.value ===
-                        "HIGH"
-                        ? "bg-red-500"
-                        : level.value ===
-                            "MEDIUM"
-                          ? "bg-yellow-500"
-                          : "bg-emerald-500"
-                    }`}
+                      "HIGH"
+                      ? "bg-red-500"
+                      : level.value ===
+                        "MEDIUM"
+                        ? "bg-yellow-500"
+                        : "bg-emerald-500"
+                      }`}
                     style={{
                       width:
                         totalRisks > 0
-                          ? `${
-                              (counts[
-                                level
-                                  .value
-                              ] /
-                                totalRisks) *
-                              100
-                            }%`
+                          ? `${(counts[
+                            level
+                              .value
+                          ] /
+                            totalRisks) *
+                          100
+                          }%`
                           : "0%",
                     }}
                   />
@@ -476,7 +452,7 @@ export default function RiskOverview({
           </p>
 
           {searchTerm ||
-          activeFilter !== "ALL" ? (
+            activeFilter !== "ALL" ? (
             <Button
               type="button"
               size="sm"
@@ -506,10 +482,8 @@ export default function RiskOverview({
                     repository.riskLevel,
                   );
 
-                const normalizedScore =
-                  normalizeRiskScore(
-                    repository.overallRiskScore,
-                  );
+                const riskScore =
+                  repository.overallRiskScore;
 
                 return (
                   <Card
@@ -582,10 +556,10 @@ export default function RiskOverview({
                             <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-muted">
                               <div
                                 className={`h-full rounded-full transition-all duration-500 ${getRiskProgressClass(
-                                  normalizedScore,
+                                  riskScore,
                                 )}`}
                                 style={{
-                                  width: `${normalizedScore}%`,
+                                  width: `${riskScore}%`,
                                 }}
                               />
                             </div>
