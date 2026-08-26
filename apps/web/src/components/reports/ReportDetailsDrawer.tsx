@@ -15,6 +15,7 @@ import {
   History,
   Lightbulb,
   ShieldAlert,
+  ShieldCheck,
   Sparkles,
   TrendingUp,
 } from "lucide-react";
@@ -753,6 +754,113 @@ export function ReportDetailsDrawer({
                     </div>
                   ) : null}
                 </section>
+
+                {report.riskAssessment ? (
+                  <section>
+                    <div className="mb-4 flex items-center gap-2">
+                      <ShieldAlert className="h-5 w-5 text-muted-foreground" />
+
+                      <h2 className="text-xl font-semibold">
+                        Risk Assessment Coverage
+                      </h2>
+                    </div>
+
+                    <Card>
+                      <CardContent className="p-6">
+                        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                          <KpiCard
+                            label="Total Repositories"
+                            value={
+                              report.riskAssessment
+                                .totalRepositories
+                            }
+                            helper="Repositories included in this report snapshot."
+                            icon={GitBranch}
+                          />
+
+                          <KpiCard
+                            label="Assessed for Risk"
+                            value={
+                              report.riskAssessment
+                                .assessedRepositories
+                            }
+                            helper="Repositories with sufficient canonical risk evidence."
+                            icon={ShieldCheck}
+                          />
+
+                          <KpiCard
+                            label="Unassessed for Risk"
+                            value={
+                              report.riskAssessment
+                                .unassessedRepositories
+                            }
+                            helper="Repositories without sufficient evidence for canonical risk assessment."
+                            icon={AlertTriangle}
+                          />
+
+                          <KpiCard
+                            label="Risk Assessment Coverage"
+                            value={`${report.riskAssessment.assessmentCoveragePercentage}%`}
+                            helper="Share of repositories with canonical risk assessment."
+                            icon={Activity}
+                          />
+
+                          <KpiCard
+                            label="Average Assessed Risk"
+                            value={
+                              report.riskAssessment
+                                .averageRiskScore === null
+                                ? "Not assessed"
+                                : report.riskAssessment
+                                  .averageRiskScore
+                            }
+                            helper="Average across assessed repositories only."
+                            icon={ShieldAlert}
+                          />
+
+                          <KpiCard
+                            label="Assessed Risk Level"
+                            value={
+                              report.riskAssessment
+                                .overallRiskLevel ??
+                              "Not assessed"
+                            }
+                            helper="Backend-owned risk classification across the assessed repository population."
+                            icon={ShieldAlert}
+                          />
+                        </div>
+
+                        {report.riskAssessment
+                          .unassessedRepositories > 0 ? (
+                          <div className="mt-5 rounded-xl border border-amber-500/30 bg-amber-500/5 p-4">
+                            <div className="flex gap-3">
+                              <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-500" />
+
+                              <div>
+                                <p className="font-semibold">
+                                  Risk coverage is incomplete
+                                </p>
+
+                                <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                                  {report.riskAssessment
+                                    .unassessedRepositories}{" "}
+                                  {report.riskAssessment
+                                    .unassessedRepositories === 1
+                                    ? "repository does"
+                                    : "repositories do"}{" "}
+                                  not have sufficient evidence
+                                  for canonical risk
+                                  assessment in this immutable
+                                  report snapshot.
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        ) : null}
+                      </CardContent>
+                    </Card>
+                  </section>
+                ) : null}
 
                 <section>
                   <div className="mb-4 flex items-center gap-2">
