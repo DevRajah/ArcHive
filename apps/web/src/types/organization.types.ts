@@ -31,9 +31,18 @@ export interface OrganizationOverview {
   analyzedRepositories: number;
   unanalyzedRepositories: number;
 
+  /*
+   * Repository risk classifications.
+   *
+   * Important:
+   * `unassessedRiskRepositories` is separate from the LOW/healthy
+   * population. These repositories do not currently have sufficient
+   * Architecture Advisor evidence for a canonical risk assessment.
+   */
   healthyRepositories: number;
   warningRepositories: number;
   criticalRepositories: number;
+  unassessedRiskRepositories: number;
 
   decliningRepositories: number;
   improvingRepositories: number;
@@ -43,11 +52,29 @@ export interface OrganizationOverview {
   averageEngineeringQualityScore: number | null;
   averageProductionReadinessScore: number | null;
   averageMaturityScore: number | null;
+
+  /*
+   * Null means there is currently no assessable organization-level
+   * risk population.
+   *
+   * Zero remains a legitimate value when assessed repositories have
+   * an average risk score of zero.
+   */
   averageRiskScore: number | null;
 
   overallRiskLevel: OrganizationRiskLevel;
 
+  /*
+   * These are deliberately different concepts.
+   *
+   * analysisCoveragePercentage:
+   * How much of the repository portfolio has general intelligence.
+   *
+   * riskAssessmentCoveragePercentage:
+   * How much has sufficient evidence for canonical risk assessment.
+   */
   analysisCoveragePercentage: number;
+  riskAssessmentCoveragePercentage: number;
 }
 
 export interface OrganizationRepositoryRanking {
@@ -61,7 +88,13 @@ export interface OrganizationRepositoryRanking {
   productionReadinessScore: number;
   maturityScore: number;
   confidenceScore: number;
-  riskScore: number;
+  /*
+ * Null means Architecture Advisor risk is not assessable for this
+ * repository from the currently available evidence.
+ *
+ * Do not convert null to zero: zero is a legitimate assessed risk score.
+ */
+  riskScore: number | null;
 
   overallScore: number;
 
