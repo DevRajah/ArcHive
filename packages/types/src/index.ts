@@ -14,17 +14,26 @@ export type {
   ReportSchemaVersion,
   ReportRiskSeverity,
   ReportTrendDirection,
+
   ExecutiveSummary,
   ExecutiveKpis,
+
   RiskBreakdown,
+  RiskAssessmentContext,
+
   TechnologyInsight,
   TechnologyAnalysis,
+
   TrendPoint,
   EngineeringTrendAnalysis,
+
   RepositoryHighlight,
   RepositoryHighlights,
+
   ExecutiveReportAnalytics,
+
   ExecutiveReportSourceMetadata,
+
   ExecutiveReportSnapshotV3,
-  
+  ExecutiveReportSnapshotV4,
 } from "./executive-report.types";

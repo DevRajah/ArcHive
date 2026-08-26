@@ -10,6 +10,11 @@ import {
   CURRENT_REPORT_SCHEMA_VERSION,
 } from "@archive/types";
 
+import type {
+  ExecutiveReportSourceMetadata,
+  ExecutiveReportSnapshotV4,
+} from "@archive/types";
+
 import {
   EXECUTIVE_REPORT_QUEUE_NAME,
   redisConnection,
@@ -28,6 +33,7 @@ import {
 } from "../reports/kpi-builder";
 
 import {
+  buildRiskAssessmentContext,
   buildRiskBreakdown,
 } from "../reports/risk-analysis";
 
@@ -226,18 +232,30 @@ const buildReportOwnershipFilter = (
  */
 const getSourceMetadata = (
   source: ReportSource,
-) => {
+): ExecutiveReportSourceMetadata => {
   if (source.type === "USER") {
+    if (!source.userId?.trim()) {
+      throw new Error(
+        "A USER report source requires a userId.",
+      );
+    }
+
     return {
-      sourceType: "USER" as const,
+      sourceType: "USER",
       sourceId: source.userId,
       userId: source.userId,
       teamId: null,
     };
   }
 
+  if (!source.teamId?.trim()) {
+    throw new Error(
+      "A TEAM report source requires a teamId.",
+    );
+  }
+
   return {
-    sourceType: "TEAM" as const,
+    sourceType: "TEAM",
     sourceId: source.teamId,
     userId: null,
     teamId: source.teamId,
@@ -345,6 +363,10 @@ const generateExecutiveReport = async ({
   const riskBreakdown =
     buildRiskBreakdown(dashboard);
 
+  const riskAssessment =
+    buildRiskAssessmentContext(
+      dashboard,
+    );
   const technologyAnalysis =
     buildTechnologyAnalysis(dashboard);
 
@@ -380,7 +402,9 @@ const generateExecutiveReport = async ({
   const sourceMetadata =
     getSourceMetadata(source);
 
-  const reportSnapshot = {
+  const reportSnapshot: ExecutiveReportSnapshotV4<
+    ReportDashboard
+  > = {
     /*
      * The persisted Executive Report schema version is owned by the
      * shared contract package.
@@ -408,6 +432,8 @@ const generateExecutiveReport = async ({
     executiveKpis,
 
     riskBreakdown,
+
+    riskAssessment,
 
     technologyAnalysis,
 

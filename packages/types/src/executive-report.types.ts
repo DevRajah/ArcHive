@@ -10,7 +10,7 @@
  * contract changes in a way that consumers need to distinguish.
  */
 export const CURRENT_REPORT_SCHEMA_VERSION =
-  3 as const;
+  4 as const;
 
 /**
  * Executive Report schema versions that this ArcHive codebase
@@ -29,6 +29,7 @@ export const CURRENT_REPORT_SCHEMA_VERSION =
 export type ReportSchemaVersion =
   | 1
   | 2
+  | 3
   | typeof CURRENT_REPORT_SCHEMA_VERSION;
 
 export type ReportRiskSeverity =
@@ -36,6 +37,42 @@ export type ReportRiskSeverity =
   | "HIGH"
   | "MEDIUM"
   | "LOW";
+/**
+ * Risk-assessment context persisted in Schema V4 reports.
+ *
+ * Important semantics:
+ *
+ * assessedRepositories:
+ * Repositories for which ArcHive has a canonical risk assessment.
+ *
+ * unassessedRepositories:
+ * Repositories where engineering analysis may exist, but there is not
+ * enough canonical Advisor evidence to claim a risk level.
+ *
+ * assessmentCoveragePercentage:
+ * Percentage of repositories with a canonical risk assessment.
+ *
+ * averageRiskScore:
+ * Average across assessed repositories only.
+ *
+ * A null averageRiskScore means no trustworthy aggregate risk score is
+ * available. It must never be converted to zero because zero represents
+ * genuinely low measured risk.
+ */
+export interface RiskAssessmentContext {
+  totalRepositories: number;
+
+  assessedRepositories: number;
+  unassessedRepositories: number;
+
+  assessmentCoveragePercentage: number;
+
+  averageRiskScore: number | null;
+
+  overallRiskLevel:
+  | ReportRiskSeverity
+  | null;
+}
 
 export type ReportTrendDirection =
   | "IMPROVING"
@@ -138,17 +175,17 @@ export interface ExecutiveReportAnalytics {
  */
 export type ExecutiveReportSourceMetadata =
   | {
-      sourceType: "USER";
-      sourceId: string;
-      userId: string;
-      teamId: null;
-    }
+    sourceType: "USER";
+    sourceId: string;
+    userId: string;
+    teamId: null;
+  }
   | {
-      sourceType: "TEAM";
-      sourceId: string;
-      userId: null;
-      teamId: string;
-    };
+    sourceType: "TEAM";
+    sourceId: string;
+    userId: null;
+    teamId: string;
+  };
 
 /**
  * Shared fields emitted by the current V3 report worker.
@@ -161,6 +198,37 @@ export interface ExecutiveReportSnapshotV3<
   TOrganization,
 > extends ExecutiveReportAnalytics {
   schemaVersion:
+  typeof CURRENT_REPORT_SCHEMA_VERSION;
+
+  reportId: string;
+  title: string;
+  description: string | null;
+  generatedAt: string;
+
+  source: ExecutiveReportSourceMetadata;
+
+  organization: TOrganization;
+}
+
+/**
+ * Schema V4 extends the shared Executive Report contract with explicit
+ * risk-assessment context.
+ *
+ * Future me:
+ * Engineering analysis coverage and risk-assessment coverage are not
+ * equivalent.
+ *
+ * A repository may have engineering intelligence while still lacking
+ * sufficient canonical Advisor evidence for a trustworthy risk
+ * assessment.
+ *
+ * V4 persists that distinction so the frontend, PDF and CSV can all
+ * represent unavailable risk honestly instead of treating it as zero.
+ */
+export interface ExecutiveReportSnapshotV4<
+  TOrganization,
+> extends ExecutiveReportAnalytics {
+  schemaVersion:
     typeof CURRENT_REPORT_SCHEMA_VERSION;
 
   reportId: string;
@@ -169,6 +237,8 @@ export interface ExecutiveReportSnapshotV3<
   generatedAt: string;
 
   source: ExecutiveReportSourceMetadata;
+
+  riskAssessment: RiskAssessmentContext;
 
   organization: TOrganization;
 }
