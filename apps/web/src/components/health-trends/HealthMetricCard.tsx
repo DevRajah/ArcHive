@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+
 import {
   ArrowDownRight,
   ArrowRight,
@@ -8,13 +9,17 @@ import {
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+
 import {
   normalizeHealthDelta,
   normalizeHealthScore,
 } from "@/utils/repository-health-trends";
 
 import type { LucideIcon } from "lucide-react";
-import type { RepositoryHealthMetric } from "@/types/repository-health-trends.types";
+
+import type {
+  RepositoryHealthMetric,
+} from "@/types/repository-health-trends.types";
 
 interface HealthMetricCardProps {
   title: string;
@@ -25,10 +30,18 @@ interface HealthMetricCardProps {
   inverseTrend?: boolean;
 }
 
-/*
- * Risk is the one score where a decrease is normally positive.
- * The inverseTrend property lets us represent that without duplicating
- * the full card component.
+/**
+ * Displays one repository health metric.
+ *
+ * Important semantics:
+ *
+ * score === 0
+ *   means a genuine measured zero.
+ *
+ * score === null
+ *   means the metric is unavailable / not assessed.
+ *
+ * The frontend must never convert the second state into the first.
  */
 export function HealthMetricCard({
   title,
@@ -38,35 +51,49 @@ export function HealthMetricCard({
   index = 0,
   inverseTrend = false,
 }: HealthMetricCardProps) {
-  const score = normalizeHealthScore(metric.score);
+  const score =
+    normalizeHealthScore(
+      metric.score,
+    );
 
   const previousScore =
-    metric.previousScore === null ||
-    metric.previousScore === undefined
-      ? null
-      : normalizeHealthScore(
-          metric.previousScore,
-        );
+    normalizeHealthScore(
+      metric.previousScore,
+    );
 
-  const delta = normalizeHealthDelta(metric.delta);
+  const delta =
+    normalizeHealthDelta(
+      metric.delta,
+    );
 
-  const hasDelta = delta !== null;
-  const isPositive = hasDelta && delta > 0;
-  const isNegative = hasDelta && delta < 0;
+  const hasScore =
+    score !== null;
 
-  const isHealthyChange = inverseTrend
-    ? isNegative
-    : isPositive;
+  const hasDelta =
+    delta !== null;
 
-  const isUnhealthyChange = inverseTrend
-    ? isPositive
-    : isNegative;
+  const isPositive =
+    hasDelta && delta > 0;
 
-  const TrendIcon = isPositive
-    ? ArrowUpRight
-    : isNegative
-      ? ArrowDownRight
-      : ArrowRight;
+  const isNegative =
+    hasDelta && delta < 0;
+
+  const isHealthyChange =
+    inverseTrend
+      ? isNegative
+      : isPositive;
+
+  const isUnhealthyChange =
+    inverseTrend
+      ? isPositive
+      : isNegative;
+
+  const TrendIcon =
+    isPositive
+      ? ArrowUpRight
+      : isNegative
+        ? ArrowDownRight
+        : ArrowRight;
 
   return (
     <motion.article
@@ -80,7 +107,10 @@ export function HealthMetricCard({
       }}
       transition={{
         duration: 0.35,
-        delay: Math.min(index * 0.04, 0.2),
+        delay: Math.min(
+          index * 0.04,
+          0.2,
+        ),
       }}
       className="rounded-xl border border-border bg-card p-5 shadow-sm"
     >
@@ -108,7 +138,11 @@ export function HealthMetricCard({
           <TrendIcon className="h-3.5 w-3.5" />
 
           {hasDelta
-            ? `${delta > 0 ? "+" : ""}${delta}`
+            ? `${
+                delta > 0
+                  ? "+"
+                  : ""
+              }${delta}`
             : "No delta"}
         </div>
       </div>
@@ -117,29 +151,48 @@ export function HealthMetricCard({
         {title}
       </p>
 
-      <div className="mt-1 flex items-end gap-2">
-        <p className="text-4xl font-bold tracking-tight">
-          {score}
-        </p>
+      {hasScore ? (
+        <>
+          <div className="mt-1 flex items-end gap-2">
+            <p className="text-4xl font-bold tracking-tight">
+              {score}
+            </p>
 
-        <span className="pb-1 text-sm text-muted-foreground">
-          /100
-        </span>
-      </div>
+            <span className="pb-1 text-sm text-muted-foreground">
+              /100
+            </span>
+          </div>
 
-      <div className="mt-4 h-2 overflow-hidden rounded-full bg-muted">
-        <motion.div
-          initial={{ width: 0 }}
-          animate={{
-            width: `${score}%`,
-          }}
-          transition={{
-            duration: 0.7,
-            ease: "easeOut",
-          }}
-          className="h-full rounded-full bg-primary"
-        />
-      </div>
+          <div className="mt-4 h-2 overflow-hidden rounded-full bg-muted">
+            <motion.div
+              initial={{
+                width: 0,
+              }}
+              animate={{
+                width: `${score}%`,
+              }}
+              transition={{
+                duration: 0.7,
+                ease: "easeOut",
+              }}
+              className="h-full rounded-full bg-primary"
+            />
+          </div>
+        </>
+      ) : (
+        <div className="mt-2 rounded-lg border border-dashed border-border bg-muted/20 p-4">
+          <p className="text-xl font-bold tracking-tight">
+            Not available
+          </p>
+
+          <p className="mt-2 text-xs leading-5 text-muted-foreground">
+            ArcHive does not currently
+            have sufficient evidence to
+            present a reliable value for
+            this metric.
+          </p>
+        </div>
+      )}
 
       <div className="mt-4 flex items-center justify-between gap-3 text-xs">
         <span className="text-muted-foreground">
@@ -154,7 +207,8 @@ export function HealthMetricCard({
       </div>
 
       <p className="mt-4 text-sm leading-6 text-muted-foreground">
-        {metric.explanation ?? description}
+        {metric.explanation ??
+          description}
       </p>
     </motion.article>
   );
