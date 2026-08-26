@@ -515,8 +515,8 @@ export default function OrganizationPage() {
                             data.overview
                                 .averageRiskScore
                         }
-                        description="Average engineering risk across analysed repositories."
-                        icon={
+                        description="Average risk across repositories with sufficient evidence for canonical risk assessment."
+                         icon={
                             <ShieldAlert className="h-6 w-6 text-red-500" />
                         }
                     />
@@ -527,7 +527,7 @@ export default function OrganizationPage() {
                             data.overview
                                 .overallRiskLevel
                         }
-                        description="Portfolio-wide risk classification based on repository analysis."
+                        description="Risk classification across repositories with sufficient evidence for canonical risk assessment."
                         icon={
                             <Activity className="h-6 w-6 text-red-400" />
                         }
@@ -542,6 +542,29 @@ export default function OrganizationPage() {
                         description="Repositories currently meeting ArcHive health thresholds."
                         icon={
                             <ShieldCheck className="h-6 w-6 text-emerald-500" />
+                        }
+                    />
+
+                    <OverviewMetricCard
+                        title="Unassessed Risk"
+                        value={
+                            data.overview
+                                .unassessedRiskRepositories
+                        }
+                        description="Repositories that do not yet have sufficient evidence for a canonical risk assessment."
+                        icon={
+                            <ShieldAlert className="h-6 w-6 text-muted-foreground" />
+                        }
+                    />
+
+                    <OverviewMetricCard
+                        title="Risk Assessment Coverage"
+                        value={
+                            `${data.overview.riskAssessmentCoveragePercentage}%`
+                        }
+                        description="Share of tracked repositories with sufficient evidence for canonical risk assessment."
+                        icon={
+                            <Activity className="h-6 w-6 text-blue-500" />
                         }
                     />
                 </section>
