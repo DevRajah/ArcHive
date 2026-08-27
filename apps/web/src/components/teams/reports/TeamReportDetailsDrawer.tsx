@@ -14,6 +14,7 @@ import {
     GitBranch,
     Lightbulb,
     ShieldAlert,
+    ShieldCheck,
     Sparkles,
     TrendingUp,
 } from "lucide-react";
@@ -290,6 +291,17 @@ export function TeamReportDetailsDrawer({
     onOpenChange,
 }: TeamReportDetailsDrawerProps) {
     const snapshot = report?.reportData;
+
+    /*
+ * Only Schema V4 persists explicit risk-assessment coverage.
+ *
+ * Do not derive this information for historical V3 reports.
+ */
+    const riskAssessment =
+        snapshot &&
+            "riskAssessment" in snapshot
+            ? snapshot.riskAssessment
+            : null;
 
     /*
  * Keep the technology collection explicitly typed so clean production
@@ -626,6 +638,118 @@ export function TeamReportDetailsDrawer({
                                                 ))}
                                             </div>
                                         </section>
+
+                                        {riskAssessment ? (
+                                            <section>
+                                                <div className="mb-4 flex items-center gap-2">
+                                                    <ShieldAlert className="h-5 w-5 text-muted-foreground" />
+
+                                                    <h2 className="text-xl font-semibold">
+                                                        Risk Assessment Coverage
+                                                    </h2>
+                                                </div>
+
+                                                <Card>
+                                                    <CardContent className="p-6">
+                                                        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                                                            <KpiCard
+                                                                label="Total Repositories"
+                                                                value={
+                                                                    riskAssessment
+                                                                        .totalRepositories
+                                                                }
+                                                                helper="Repositories included in this Team report snapshot."
+                                                                icon={GitBranch}
+                                                            />
+
+                                                            <KpiCard
+                                                                label="Assessed for Risk"
+                                                                value={
+                                                                    riskAssessment
+                                                                        .assessedRepositories
+                                                                }
+                                                                helper="Repositories with sufficient canonical risk evidence."
+                                                                icon={ShieldCheck}
+                                                            />
+
+                                                            <KpiCard
+                                                                label="Unassessed for Risk"
+                                                                value={
+                                                                    riskAssessment
+                                                                        .unassessedRepositories
+                                                                }
+                                                                helper="Repositories without sufficient evidence for canonical risk assessment."
+                                                                icon={AlertTriangle}
+                                                            />
+
+                                                            <KpiCard
+                                                                label="Risk Assessment Coverage"
+                                                                value={`${riskAssessment.assessmentCoveragePercentage}%`}
+                                                                helper="Share of Team repositories with canonical risk assessment."
+                                                                icon={Activity}
+                                                            />
+
+                                                            <KpiCard
+                                                                label="Average Assessed Risk"
+                                                                value={
+                                                                    riskAssessment
+                                                                        .averageRiskScore ===
+                                                                        null
+                                                                        ? "Not assessed"
+                                                                        : riskAssessment
+                                                                            .averageRiskScore
+                                                                }
+                                                                helper="Average risk across assessed Team repositories only."
+                                                                icon={ShieldAlert}
+                                                            />
+
+                                                            <KpiCard
+                                                                label="Assessed Risk Level"
+                                                                value={
+                                                                    riskAssessment
+                                                                        .overallRiskLevel ??
+                                                                    "Not assessed"
+                                                                }
+                                                                helper="Backend-owned risk classification across the assessed Team repository population."
+                                                                icon={ShieldAlert}
+                                                            />
+                                                        </div>
+
+                                                        {riskAssessment
+                                                            .unassessedRepositories >
+                                                            0 ? (
+                                                            <div className="mt-5 rounded-xl border border-amber-500/30 bg-amber-500/5 p-4">
+                                                                <div className="flex gap-3">
+                                                                    <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-500" />
+
+                                                                    <div>
+                                                                        <p className="font-semibold">
+                                                                            Risk coverage is incomplete
+                                                                        </p>
+
+                                                                        <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                                                                            {
+                                                                                riskAssessment
+                                                                                    .unassessedRepositories
+                                                                            }{" "}
+                                                                            {riskAssessment
+                                                                                .unassessedRepositories ===
+                                                                                1
+                                                                                ? "repository does"
+                                                                                : "repositories do"}{" "}
+                                                                            not have sufficient evidence
+                                                                            for canonical risk
+                                                                            assessment in this immutable
+                                                                            Team report snapshot.
+                                                                        </p>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        ) : null}
+                                                    </CardContent>
+                                                </Card>
+                                            </section>
+                                        ) : null}
 
                                         <section>
                                             <div className="mb-4 flex items-center gap-2">

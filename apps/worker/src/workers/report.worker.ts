@@ -469,6 +469,8 @@ const generateExecutiveReport = async ({
 
         riskBreakdown,
 
+        riskAssessment,
+
         technologyAnalysis,
 
         trendAnalysis,

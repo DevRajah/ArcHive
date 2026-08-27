@@ -197,8 +197,13 @@ export type ExecutiveReportSourceMetadata =
 export interface ExecutiveReportSnapshotV3<
   TOrganization,
 > extends ExecutiveReportAnalytics {
-  schemaVersion:
-  typeof CURRENT_REPORT_SCHEMA_VERSION;
+  /*
+   * V3 is permanently Schema 3.
+   *
+   * Do not bind historical schemas to CURRENT_REPORT_SCHEMA_VERSION,
+   * because the current version moves forward over time.
+   */
+  schemaVersion: 3;
 
   reportId: string;
   title: string;
@@ -229,7 +234,7 @@ export interface ExecutiveReportSnapshotV4<
   TOrganization,
 > extends ExecutiveReportAnalytics {
   schemaVersion:
-    typeof CURRENT_REPORT_SCHEMA_VERSION;
+  typeof CURRENT_REPORT_SCHEMA_VERSION;
 
   reportId: string;
   title: string;

@@ -13,6 +13,10 @@ import type {
 } from "./kpi-builder";
 
 import type {
+    RiskAssessmentContext,
+} from "@archive/types";
+
+import type {
     RiskBreakdown,
 } from "./risk-analysis";
 
@@ -121,6 +125,7 @@ export const generateReportPdf = async ({
     executiveSummary,
     executiveKpis,
     riskBreakdown,
+    riskAssessment,
     technologyAnalysis,
     trendAnalysis,
     repositoryHighlights,
@@ -134,6 +139,7 @@ export const generateReportPdf = async ({
     executiveSummary: ExecutiveSummary;
     executiveKpis: ExecutiveKpis;
     riskBreakdown: RiskBreakdown;
+    riskAssessment: RiskAssessmentContext;
     technologyAnalysis: TechnologyAnalysis;
     trendAnalysis: EngineeringTrendAnalysis;
     repositoryHighlights: RepositoryHighlights;
@@ -212,68 +218,40 @@ export const generateReportPdf = async ({
         .text(`Report ID: ${reportId}`, {
             align: "center",
         });
-
     document.addPage();
 
     /**
-     * Executive summary
+     * Executive Summary
+     *
+     * Keep the human-readable assessment together before moving
+     * into the numerical report sections.
      */
     addSectionHeading(
         document,
         "Executive Summary",
     );
 
+    document
+        .font("Helvetica-Bold")
+        .fontSize(12)
+        .text(
+            executiveSummary.headline ||
+            "Executive summary not available",
+        )
+        .moveDown(0.5)
+        .font("Helvetica")
+        .fontSize(11)
+        .text(
+            executiveSummary.overallHealth ||
+            "No overall engineering-health summary was stored for this report.",
+        );
+
+    /**
+     * Executive KPIs
+     */
     addSectionHeading(
         document,
         "Executive KPIs",
-    );
-
-    addSectionHeading(
-        document,
-        "Risk Breakdown",
-    );
-
-    addMetric(
-        document,
-        "Critical risks",
-        riskBreakdown.critical,
-    );
-
-    addMetric(
-        document,
-        "High risks",
-        riskBreakdown.high,
-    );
-
-    addMetric(
-        document,
-        "Medium risks",
-        riskBreakdown.medium,
-    );
-
-    addMetric(
-        document,
-        "Low risks",
-        riskBreakdown.low,
-    );
-
-    addMetric(
-        document,
-        "Unclassified risks",
-        riskBreakdown.unknown,
-    );
-
-    addMetric(
-        document,
-        "Total risks",
-        riskBreakdown.total,
-    );
-
-    addMetric(
-        document,
-        "Highest severity",
-        riskBreakdown.highestSeverity ??
-        "None identified",
     );
 
     addMetric(
@@ -312,16 +290,127 @@ export const generateReportPdf = async ({
         executiveKpis.engineeringEvents,
     );
 
-    document
-        .font("Helvetica-Bold")
-        .fontSize(12)
-        .text(executiveSummary.headline)
-        .moveDown(0.5)
-        .font("Helvetica")
-        .fontSize(11)
-        .text(
-            executiveSummary.overallHealth,
-        );
+    /**
+     * Schema V4 Risk Assessment Coverage
+     *
+     * Important semantics:
+     *
+     * assessment coverage tells us how much of the repository
+     * population could actually receive a canonical risk assessment.
+     *
+     * averageRiskScore and overallRiskLevel apply ONLY to that
+     * assessed population.
+     *
+     * null must remain unavailable. It must never become 0 or LOW.
+     */
+    addSectionHeading(
+        document,
+        "Risk Assessment Coverage",
+    );
+
+    addMetric(
+        document,
+        "Total repositories",
+        riskAssessment.totalRepositories,
+    );
+
+    addMetric(
+        document,
+        "Repositories assessed for risk",
+        riskAssessment.assessedRepositories,
+    );
+
+    addMetric(
+        document,
+        "Repositories unassessed for risk",
+        riskAssessment.unassessedRepositories,
+    );
+
+    addMetric(
+        document,
+        "Risk assessment coverage",
+        `${riskAssessment.assessmentCoveragePercentage}%`,
+    );
+
+    addMetric(
+        document,
+        "Average assessed risk",
+        riskAssessment.averageRiskScore === null
+            ? "Not assessed"
+            : riskAssessment.averageRiskScore,
+    );
+
+    addMetric(
+        document,
+        "Assessed risk level",
+        riskAssessment.overallRiskLevel ??
+        "Not assessed",
+    );
+
+    /**
+     * Risk Breakdown
+     *
+     * This breakdown contains only repositories admitted to the
+     * backend-owned canonical risk population.
+     */
+    addSectionHeading(
+        document,
+        "Risk Breakdown",
+    );
+
+    addMetric(
+        document,
+        "Critical",
+        riskBreakdown.critical,
+    );
+
+    addMetric(
+        document,
+        "High",
+        riskBreakdown.high,
+    );
+
+    addMetric(
+        document,
+        "Medium",
+        riskBreakdown.medium,
+    );
+
+    addMetric(
+        document,
+        "Low",
+        riskBreakdown.low,
+    );
+
+    addMetric(
+        document,
+        "Unclassified",
+        riskBreakdown.unknown,
+    );
+
+    addMetric(
+        document,
+        "Total assessed repositories",
+        riskBreakdown.total,
+    );
+
+    addMetric(
+        document,
+        "Highest assessed severity",
+        riskBreakdown.highestSeverity ??
+        "Not assessed",
+    );
+
+    // document
+    //     .font("Helvetica-Bold")
+    //     .fontSize(12)
+    //     .text(executiveSummary.headline)
+    //     .moveDown(0.5)
+    //     .font("Helvetica")
+    //     .fontSize(11)
+    //     .text(
+    //         executiveSummary.overallHealth,
+    //     );
 
     addSectionHeading(
         document,
@@ -575,13 +664,7 @@ export const generateReportPdf = async ({
         )
         .moveDown(0.3)
         .text(
-            `Repositories at risk: ${getOverviewMetric(
-                overview,
-                [
-                    "highRiskRepositories",
-                    "repositoriesAtRisk",
-                ],
-            )}`,
+            `Risk assessment coverage: ${riskAssessment.assessmentCoveragePercentage}% (${riskAssessment.assessedRepositories} of ${riskAssessment.totalRepositories} repositories assessed)`,
         );
 
     /**
@@ -608,13 +691,12 @@ export const generateReportPdf = async ({
         )
         .moveDown(0.3)
         .text(
-            `Identified risks: ${getArrayLength(
-                organization.risks,
-            )}`,
+            `Repositories with assessed risk: ${riskAssessment.assessedRepositories}`,
         )
         .moveDown(0.3)
         .text(
             `Activity records: ${getArrayLength(
+                organization.activity?.items ??
                 organization.activity,
             )}`,
         );

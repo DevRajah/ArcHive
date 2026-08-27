@@ -1,5 +1,6 @@
 import type {
   ExecutiveReportSnapshotV3,
+  ExecutiveReportSnapshotV4,
   ReportTrendDirection,
   RepositoryHighlight,
 } from "@archive/types";
@@ -385,25 +386,32 @@ export type TeamReportTrendDirection =
   ReportTrendDirection;
 
 /*
- * Schema V3 is the same persisted Executive Report schema for USER and
- * TEAM reports.
+ * Team Executive Reports use the same persisted shared report schemas
+ * as USER Executive Reports.
  *
- * The shared contract owns:
+ * V3:
+ * Shared USER / TEAM Executive Report contract with source metadata.
  *
- * - schemaVersion
- * - persisted report-source metadata
- * - executive summary
- * - executive KPIs
- * - risk breakdown
- * - technology analysis
- * - engineering trend analysis
- * - repository highlights
+ * V4:
+ * Adds explicit risk-assessment coverage semantics while preserving the
+ * same Team Dashboard snapshot in the `organization` field.
  *
- * Team reports specialise only the immutable dashboard snapshot stored
- * in the `organization` field.
+ * Historical V3 Team reports remain readable. Newly generated reports
+ * use V4.
  */
+export type TeamExecutiveReportSnapshotV3 =
+  ExecutiveReportSnapshotV3<
+    TeamDashboard
+  >;
+
+export type TeamExecutiveReportSnapshotV4 =
+  ExecutiveReportSnapshotV4<
+    TeamDashboard
+  >;
+
 export type TeamExecutiveReportSnapshot =
-  ExecutiveReportSnapshotV3<TeamDashboard>;
+  | TeamExecutiveReportSnapshotV3
+  | TeamExecutiveReportSnapshotV4;
 
 export interface TeamExecutiveReport {
   id: string;
