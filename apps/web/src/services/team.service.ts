@@ -312,8 +312,11 @@ class TeamService {
     }
 
     /**
-     * Fetch one Team Report with its stored Schema v3 snapshot.
-     */
+   * Fetch one Team Report with its persisted Executive Report snapshot.
+   *
+   * Historical Schema V3 and current Schema V4 reports are both supported
+   * by the frontend Team report contract.
+   */
     async getTeamReport(
         teamId: string,
         reportId: string,
