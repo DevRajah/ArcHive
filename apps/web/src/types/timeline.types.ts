@@ -15,6 +15,7 @@ export type TimelineEventType =
  * Severity tells us how important or risky a timeline event is.
  */
 export type TimelineSeverity =
+  | "INFO"
   | "LOW"
   | "MEDIUM"
   | "HIGH"

@@ -130,14 +130,14 @@ const clamp = (
 | Where it does not, we derive a sensible visual importance level.
 |--------------------------------------------------------------------------
 */
-
 const normalizeSeverity = (
     value: unknown,
-    fallback: TimelineSeverity = "LOW",
+    fallback: TimelineSeverity = "INFO",
 ): TimelineSeverity => {
     const normalized = asString(value).toUpperCase();
 
     if (
+        normalized === "INFO" ||
         normalized === "LOW" ||
         normalized === "MEDIUM" ||
         normalized === "HIGH" ||
@@ -299,11 +299,7 @@ const normalizeEngineeringEvent = (
 
         severity: normalizeSeverity(
             event.severity,
-            commitCount >= 10
-                ? "HIGH"
-                : commitCount >= 4
-                    ? "MEDIUM"
-                    : "LOW",
+            "INFO",
         ),
 
         timestamp: toIsoDate(
@@ -390,7 +386,7 @@ const normalizeArchitectureChange = (
 
         severity: normalizeSeverity(
             change.severity,
-            severityFromImportance(importanceScore),
+            "INFO",
         ),
 
         timestamp: toIsoDate(
@@ -492,7 +488,7 @@ const normalizeIntelligenceSnapshot = (
                 ? `Repository intelligence was recalculated with an average score of ${averageScore}.`
                 : "Repository intelligence was recalculated.",
 
-        severity: "LOW",
+        severity: "INFO",
 
         timestamp: toIsoDate(snapshot.createdAt),
 
@@ -565,7 +561,7 @@ const normalizeAdvisorSnapshot = (
 
     const advisorEventSeverity: TimelineSeverity =
         !evidenceIsSufficient
-            ? "LOW"
+            ? "INFO"
             : overallRiskScore >= 80
                 ? "CRITICAL"
                 : overallRiskScore >= 60

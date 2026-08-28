@@ -89,6 +89,7 @@ const supportedEventTypes: TimelineEventType[] = [
 ];
 
 const supportedSeverities: TimelineSeverity[] = [
+  "INFO",
   "LOW",
   "MEDIUM",
   "HIGH",

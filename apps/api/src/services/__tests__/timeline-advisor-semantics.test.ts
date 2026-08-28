@@ -36,7 +36,7 @@ const resolveAdvisorTimelineSeverity = ({
     );
 
   if (!evidenceIsSufficient) {
-    return "LOW";
+    return "INFO";
   }
 
   if (overallRiskScore >= 80) {

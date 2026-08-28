@@ -40,57 +40,61 @@ const EVENT_TYPES: Array<{
   label: string;
   value: "ALL" | TimelineEventType;
 }> = [
-  {
-    label: "All event types",
-    value: "ALL",
-  },
-  {
-    label: "Engineering Events",
-    value: "ENGINEERING_EVENT",
-  },
-  {
-    label: "Architecture Changes",
-    value: "ARCHITECTURE_CHANGE",
-  },
-  {
-    label: "Intelligence Snapshots",
-    value: "INTELLIGENCE_SNAPSHOT",
-  },
-  {
-    label: "Architecture Advisor",
-    value: "ARCHITECTURE_ADVISOR",
-  },
-  {
-    label: "Health Trends",
-    value: "HEALTH_TREND",
-  },
-];
+    {
+      label: "All event types",
+      value: "ALL",
+    },
+    {
+      label: "Engineering Events",
+      value: "ENGINEERING_EVENT",
+    },
+    {
+      label: "Architecture Changes",
+      value: "ARCHITECTURE_CHANGE",
+    },
+    {
+      label: "Intelligence Snapshots",
+      value: "INTELLIGENCE_SNAPSHOT",
+    },
+    {
+      label: "Architecture Advisor",
+      value: "ARCHITECTURE_ADVISOR",
+    },
+    {
+      label: "Health Trends",
+      value: "HEALTH_TREND",
+    },
+  ];
 
 const SEVERITIES: Array<{
   label: string;
   value: "ALL" | TimelineSeverity;
 }> = [
-  {
-    label: "All severities",
-    value: "ALL",
-  },
-  {
-    label: "Low",
-    value: "LOW",
-  },
-  {
-    label: "Medium",
-    value: "MEDIUM",
-  },
-  {
-    label: "High",
-    value: "HIGH",
-  },
-  {
-    label: "Critical",
-    value: "CRITICAL",
-  },
-];
+    {
+      label: "All severities",
+      value: "ALL",
+    },
+    {
+      label: "Info",
+      value: "INFO",
+    },
+    {
+      label: "Low",
+      value: "LOW",
+    },
+    {
+      label: "Medium",
+      value: "MEDIUM",
+    },
+    {
+      label: "High",
+      value: "HIGH",
+    },
+    {
+      label: "Critical",
+      value: "CRITICAL",
+    },
+  ];
 
 /**
  * Timeline requests use 25 items per page because that is also the
@@ -346,9 +350,8 @@ export default function TimelinePage() {
                 disabled={isFetching}
               >
                 <RefreshCw
-                  className={`mr-2 h-4 w-4 ${
-                    isFetching ? "animate-spin" : ""
-                  }`}
+                  className={`mr-2 h-4 w-4 ${isFetching ? "animate-spin" : ""
+                    }`}
                 />
                 Reload
               </Button>
@@ -359,11 +362,10 @@ export default function TimelinePage() {
                 disabled={refreshTimeline.isPending}
               >
                 <RotateCcw
-                  className={`mr-2 h-4 w-4 ${
-                    refreshTimeline.isPending
+                  className={`mr-2 h-4 w-4 ${refreshTimeline.isPending
                       ? "animate-spin"
                       : ""
-                  }`}
+                    }`}
                 />
                 {refreshTimeline.isPending
                   ? "Rebuilding..."

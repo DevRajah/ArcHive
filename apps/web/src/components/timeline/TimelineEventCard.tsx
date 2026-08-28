@@ -59,11 +59,17 @@ function getEventIcon(type: TimelineEventType) {
 /**
  * Gives each severity a clear badge treatment.
  *
- * These use existing Tailwind theme colours instead of hard-coded custom
- * colour values.
+ * INFO is intentionally neutral because informational timeline events
+ * describe repository activity without implying engineering risk.
+ *
+ * LOW through CRITICAL represent progressively stronger risk or
+ * attention signals.
  */
 function getSeverityClassName(severity: TimelineSeverity) {
   switch (severity) {
+    case "INFO":
+      return "border-slate-500/30 bg-slate-500/10 text-slate-600 dark:text-slate-400";
+
     case "LOW":
       return "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400";
 

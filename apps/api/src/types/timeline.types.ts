@@ -20,6 +20,7 @@ export type TimelineEventType =
   | "TIMELINE_ENTRY";
 
 export type TimelineSeverity =
+  | "INFO"
   | "LOW"
   | "MEDIUM"
   | "HIGH"
