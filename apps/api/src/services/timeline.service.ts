@@ -506,6 +506,96 @@ const normalizeIntelligenceSnapshot = (
 
 /*
 |--------------------------------------------------------------------------
+| Intelligence snapshot timeline compression
+|--------------------------------------------------------------------------
+|
+| Repository intelligence snapshots are valuable historical evidence, but
+| showing every recalculation in the default timeline creates unnecessary
+| noise.
+|
+| We keep the first snapshot and then surface another snapshot only when at
+| least one canonical intelligence score moves by a meaningful amount.
+|
+| The complete snapshot history remains available when the user explicitly
+| filters the timeline to INTELLIGENCE_SNAPSHOT events.
+|--------------------------------------------------------------------------
+*/
+
+const INTELLIGENCE_TIMELINE_CHANGE_THRESHOLD = 3;
+
+const getIntelligenceTimelineScores = (
+    event: TimelineEvent,
+): number[] => {
+    const metadata = event.metadata;
+
+    return [
+        metadata.engineeringQualityScore,
+        metadata.repositoryMaturityScore,
+        metadata.productionReadinessScore,
+        metadata.architectureScore,
+        metadata.repositoryHealthScore,
+    ].map((value) =>
+        typeof value === "number"
+            ? value
+            : 0,
+    );
+};
+
+const hasMeaningfulIntelligenceChange = (
+    previous: TimelineEvent,
+    current: TimelineEvent,
+): boolean => {
+    const previousScores =
+        getIntelligenceTimelineScores(previous);
+
+    const currentScores =
+        getIntelligenceTimelineScores(current);
+
+    return currentScores.some(
+        (score, index) =>
+            Math.abs(
+                score - previousScores[index],
+            ) >= INTELLIGENCE_TIMELINE_CHANGE_THRESHOLD,
+    );
+};
+
+const compressIntelligenceTimeline = (
+    snapshots: TimelineEvent[],
+): TimelineEvent[] => {
+    if (snapshots.length <= 1) {
+        return snapshots;
+    }
+
+    const compressed: TimelineEvent[] = [
+        snapshots[0],
+    ];
+
+    for (
+        let index = 1;
+        index < snapshots.length;
+        index += 1
+    ) {
+        const previousSnapshot =
+            snapshots[index - 1];
+
+        const currentSnapshot =
+            snapshots[index];
+
+        if (
+            hasMeaningfulIntelligenceChange(
+                previousSnapshot,
+                currentSnapshot,
+            )
+        ) {
+            compressed.push(currentSnapshot);
+        }
+    }
+
+    return compressed;
+};
+
+/*
+|--------------------------------------------------------------------------
 | Architecture Advisor Snapshot normaliser
 |--------------------------------------------------------------------------
 */
@@ -1151,6 +1241,12 @@ export const getRepositoryTimeline = async (
             ),
         );
 
+    const compressedIntelligenceSnapshots =
+        compressIntelligenceTimeline(
+            normalizedIntelligenceSnapshots,
+        );
+
+
     const normalizedAdvisorSnapshots =
         advisorSnapshots.map((snapshot) =>
             normalizeAdvisorSnapshot(
@@ -1173,9 +1269,30 @@ export const getRepositoryTimeline = async (
             repositoryId,
         );
 
+    /*
+| Explicit snapshot filtering is an audit/history request, so preserve every
+| stored snapshot. The general timeline uses the compressed representation.
+*/
+    const intelligenceTimelineEvents =
+        options.type === "INTELLIGENCE_SNAPSHOT"
+            ? normalizedIntelligenceSnapshots
+            : compressedIntelligenceSnapshots;
+    /*
+    | Summary counts describe the complete stored evidence history, not only the
+    | events selected for presentation in the default feed.
+    */
+    const completeEvidenceTimeline: TimelineEvent[] = [
+        ...normalizedEngineeringEvents,
+        ...normalizedArchitectureChanges,
+        ...normalizedIntelligenceSnapshots,
+        ...normalizedAdvisorSnapshots,
+        ...healthTrendEvents,
+        ...normalizedTimelineEntries,
+    ];
     const completeTimeline: TimelineEvent[] = [
         ...normalizedEngineeringEvents,
         ...normalizedArchitectureChanges,
+        ...intelligenceTimelineEvents,
         ...normalizedIntelligenceSnapshots,
         ...normalizedAdvisorSnapshots,
         ...healthTrendEvents,
@@ -1188,7 +1305,7 @@ export const getRepositoryTimeline = async (
     | user searches or switches event categories.
     */
     const summary = buildTimelineSummary(
-        completeTimeline,
+        completeEvidenceTimeline,
     );
 
     const filteredTimeline =
