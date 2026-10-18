@@ -6,7 +6,7 @@ Whether you are fixing a bug, improving documentation, proposing a new engineeri
 
 ArcHive is built as an open engineering platform whose goal is to help developers better understand software systems through explainable repository intelligence.
 
-This document explains how to contribute effectively while maintaining the quality, consistency and architectural principles of the project.
+This document explains how to contribute effectively while maintaining the quality, consistency and architectural principles of the project..
 
 ---
 
