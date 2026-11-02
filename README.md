@@ -1,6 +1,6 @@
 # 🧠 ArcHive
 
-> Engineering Intelligence Platform for understanding, classifying and tracking software repositories..
+> Engineering Intelligence Platform for understanding, classifying and tracking software repositories.
 
 ArcHive automatically analyses software repositories and transforms raw engineering activity into meaningful intelligence.
 
